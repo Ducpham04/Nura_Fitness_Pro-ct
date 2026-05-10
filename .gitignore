@@ -1,0 +1,53 @@
+# Environment variables
+.env
+.env.local
+.env.production
+.env.*
+!.env.example
+
+# Frontend
+-Fit_Ai_Challenge_Wep-App_FE/node_modules/
+-Fit_Ai_Challenge_Wep-App_FE/dist/
+-Fit_Ai_Challenge_Wep-App_FE/.vite/
+
+# Backend
+Fit_Ai_Challenge_Web-App_BE/target/
+Fit_Ai_Challenge_Web-App_BE/uploads/
+Fit_Ai_Challenge_Web-App_BE/.mvn/wrapper/maven-wrapper.jar
+
+# Python AI
+fitness-ai-service/venv/
+fitness-ai-service/__pycache__/
+fitness-ai-service/**/__pycache__/
+fitness-ai-service/.pytest_cache/
+
+# Archives / build exports
+*.tar
+*.tar.gz
+*.zip
+*.jar
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Backups
+backups/
+*.sql
+
+# Temporary files
+tmp/
+temp/
+
+

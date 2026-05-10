@@ -1,0 +1,432 @@
+{
+  "description": "Mock database for Vietnamese food items with nutritional information and cost estimates",
+  "version": "1.0",
+  "last_updated": "2024-01-15",
+  
+  "food_categories": {
+    "proteins": {
+      "chicken_breast": {
+        "name_vn": "Ức gà",
+        "calories_per_100g": 165,
+        "protein_per_100g": 31,
+        "carb_per_100g": 0,
+        "fat_per_100g": 3.6,
+        "cost_per_100g": 8000
+      },
+      "chicken_thigh": {
+        "name_vn": "Đùi gà",
+        "calories_per_100g": 200,
+        "protein_per_100g": 25,
+        "carb_per_100g": 0,
+        "fat_per_100g": 11,
+        "cost_per_100g": 7000
+      },
+      "beef_lean": {
+        "name_vn": "Thịt bò nạc",
+        "calories_per_100g": 250,
+        "protein_per_100g": 26,
+        "carb_per_100g": 0,
+        "fat_per_100g": 15,
+        "cost_per_100g": 30000
+      },
+      "pork_tenderloin": {
+        "name_vn": "Thịt heo nạc",
+        "calories_per_100g": 220,
+        "protein_per_100g": 24,
+        "carb_per_100g": 0,
+        "fat_per_100g": 13,
+        "cost_per_100g": 25000
+      },
+      "salmon": {
+        "name_vn": "Cá hồi",
+        "calories_per_100g": 200,
+        "protein_per_100g": 20,
+        "carb_per_100g": 0,
+        "fat_per_100g": 13,
+        "cost_per_100g": 40000
+      },
+      "tofu": {
+        "name_vn": "Đậu phụ",
+        "calories_per_100g": 80,
+        "protein_per_100g": 8,
+        "carb_per_100g": 2,
+        "fat_per_100g": 4,
+        "cost_per_100g": 5000
+      },
+      "eggs": {
+        "name_vn": "Trứng gà",
+        "calories_per_100g": 155,
+        "protein_per_100g": 13,
+        "carb_per_100g": 1,
+        "fat_per_100g": 11,
+        "cost_per_100g": 3500
+      },
+      "mackerel": {
+        "name_vn": "Cá thu",
+        "calories_per_100g": 180,
+        "protein_per_100g": 20,
+        "carb_per_100g": 0,
+        "fat_per_100g": 10,
+        "cost_per_100g": 15000
+      },
+      "shrimp": {
+        "name_vn": "Tôm",
+        "calories_per_100g": 120,
+        "protein_per_100g": 24,
+        "carb_per_100g": 0,
+        "fat_per_100g": 2,
+        "cost_per_100g": 35000
+      }
+    },
+    
+    "carbohydrates": {
+      "white_rice": {
+        "name_vn": "Cơm trắng",
+        "calories_per_100g": 130,
+        "protein_per_100g": 2.7,
+        "carb_per_100g": 28,
+        "fat_per_100g": 0.3,
+        "cost_per_100g": 2000
+      },
+      "brown_rice": {
+        "name_vn": "Cơm gạo lứt",
+        "calories_per_100g": 120,
+        "protein_per_100g": 2.6,
+        "carb_per_100g": 25,
+        "fat_per_100g": 0.9,
+        "cost_per_100g": 4000
+      },
+      "sweet_potato": {
+        "name_vn": "Khoai lang",
+        "calories_per_100g": 90,
+        "protein_per_100g": 1.6,
+        "carb_per_100g": 20,
+        "fat_per_100g": 0.1,
+        "cost_per_100g": 8000
+      },
+      "oats": {
+        "name_vn": "Yến mạch",
+        "calories_per_100g": 380,
+        "protein_per_100g": 13,
+        "carb_per_100g": 66,
+        "fat_per_100g": 6,
+        "cost_per_100g": 16000
+      },
+      "rice_noodles": {
+        "name_vn": "Bún tươi",
+        "calories_per_100g": 110,
+        "protein_per_100g": 1.8,
+        "carb_per_100g": 25,
+        "fat_per_100g": 0.2,
+        "cost_per_100g": 6000
+      },
+      "bread_white": {
+        "name_vn": "Bánh mì trắng",
+        "calories_per_100g": 265,
+        "protein_per_100g": 9,
+        "carb_per_100g": 49,
+        "fat_per_100g": 3,
+        "cost_per_100g": 8000
+      },
+      "bread_brown": {
+        "name_vn": "Bánh mì đen",
+        "calories_per_100g": 240,
+        "protein_per_100g": 9,
+        "carb_per_100g": 44,
+        "fat_per_100g": 2.5,
+        "cost_per_100g": 12000
+      }
+    },
+    
+    "vegetables": {
+      "morning_glory": {
+        "name_vn": "Rau muống",
+        "calories_per_100g": 25,
+        "protein_per_100g": 2,
+        "carb_per_100g": 3,
+        "fat_per_100g": 0.5,
+        "cost_per_100g": 5000
+      },
+      "broccoli": {
+        "name_vn": "Súp lơ xanh",
+        "calories_per_100g": 34,
+        "protein_per_100g": 2.8,
+        "carb_per_100g": 7,
+        "fat_per_100g": 0.4,
+        "cost_per_100g": 15000
+      },
+      "carrot": {
+        "name_vn": "Cà rốt",
+        "calories_per_100g": 41,
+        "protein_per_100g": 0.9,
+        "carb_per_100g": 10,
+        "fat_per_100g": 0.2,
+        "cost_per_100g": 8000
+      },
+      "cucumber": {
+        "name_vn": "Dưa leo",
+        "calories_per_100g": 15,
+        "protein_per_100g": 0.7,
+        "carb_per_100g": 3.6,
+        "fat_per_100g": 0.1,
+        "cost_per_100g": 10000
+      },
+      "tomato": {
+        "name_vn": "Cà chua",
+        "calories_per_100g": 18,
+        "protein_per_100g": 0.9,
+        "carb_per_100g": 3.9,
+        "fat_per_100g": 0.2,
+        "cost_per_100g": 8000
+      },
+      "pumpkin": {
+        "name_vn": "Bí đỏ",
+        "calories_per_100g": 35,
+        "protein_per_100g": 1,
+        "carb_per_100g": 8,
+        "fat_per_100g": 0.1,
+        "cost_per_100g": 6000
+      },
+      "okra": {
+        "name_vn": "Đậu bắp",
+        "calories_per_100g": 33,
+        "protein_per_100g": 2,
+        "carb_per_100g": 7,
+        "fat_per_100g": 0.1,
+        "cost_per_100g": 12000
+      }
+    },
+    
+    "fruits": {
+      "banana": {
+        "name_vn": "Chuối",
+        "calories_per_100g": 89,
+        "protein_per_100g": 1.1,
+        "carb_per_100g": 23,
+        "fat_per_100g": 0.3,
+        "cost_per_100g": 10000
+      },
+      "apple": {
+        "name_vn": "Táo",
+        "calories_per_100g": 52,
+        "protein_per_100g": 0.3,
+        "carb_per_100g": 14,
+        "fat_per_100g": 0.2,
+        "cost_per_100g": 20000
+      },
+      "orange": {
+        "name_vn": "Cam",
+        "calories_per_100g": 47,
+        "protein_per_100g": 0.9,
+        "carb_per_100g": 12,
+        "fat_per_100g": 0.1,
+        "cost_per_100g": 15000
+      },
+      "avocado": {
+        "name_vn": "Bơ",
+        "calories_per_100g": 160,
+        "protein_per_100g": 2,
+        "carb_per_100g": 9,
+        "fat_per_100g": 15,
+        "cost_per_100g": 35000
+      },
+      "dragon_fruit": {
+        "name_vn": "Thanh long",
+        "calories_per_100g": 60,
+        "protein_per_100g": 1.2,
+        "carb_per_100g": 13,
+        "fat_per_100g": 0.4,
+        "cost_per_100g": 12000
+      }
+    },
+    
+    "dairy": {
+      "milk_fresh": {
+        "name_vn": "Sữa tươi không đường",
+        "calories_per_100ml": 65,
+        "protein_per_100ml": 3.4,
+        "carb_per_100ml": 4.8,
+        "fat_per_100ml": 3.6,
+        "cost_per_100ml": 4000
+      },
+      "yogurt_plain": {
+        "name_vn": "Sữa chua không đường",
+        "calories_per_100g": 60,
+        "protein_per_100g": 3.5,
+        "carb_per_100g": 4.7,
+        "fat_per_100g": 3.3,
+        "cost_per_100g": 5000
+      },
+      "cheese": {
+        "name_vn": "Phô mai",
+        "calories_per_100g": 350,
+        "protein_per_100g": 25,
+        "carb_per_100g": 1.3,
+        "fat_per_100g": 27,
+        "cost_per_100g": 50000
+      }
+    },
+    
+    "fats": {
+      "cooking_oil": {
+        "name_vn": "Dầu ăn",
+        "calories_per_100ml": 900,
+        "protein_per_100ml": 0,
+        "carb_per_100ml": 0,
+        "fat_per_100ml": 100,
+        "cost_per_100ml": 12000
+      },
+      "olive_oil": {
+        "name_vn": "Dầu olive",
+        "calories_per_100ml": 884,
+        "protein_per_100ml": 0,
+        "carb_per_100ml": 0,
+        "fat_per_100ml": 100,
+        "cost_per_100ml": 50000
+      },
+      "almonds": {
+        "name_vn": "Hạnh nhân",
+        "calories_per_100g": 580,
+        "protein_per_100g": 21,
+        "carb_per_100g": 22,
+        "fat_per_100g": 50,
+        "cost_per_100g": 80000
+      },
+      "peanuts": {
+        "name_vn": "Đậu phộng",
+        "calories_per_100g": 570,
+        "protein_per_100g": 26,
+        "carb_per_100g": 16,
+        "fat_per_100g": 49,
+        "cost_per_100g": 25000
+      }
+    },
+    
+    "vietnamese_dishes": {
+      "com_tam": {
+        "name_vn": "Cơm tấm sườn nướng",
+        "typical_calories": 700,
+        "typical_protein": 25,
+        "typical_carb": 80,
+        "typical_fat": 25,
+        "typical_cost": 35000
+      },
+      "pho_bo": {
+        "name_vn": "Phở bò",
+        "typical_calories": 450,
+        "typical_protein": 20,
+        "typical_carb": 65,
+        "typical_fat": 12,
+        "typical_cost": 40000
+      },
+      "bun_cha": {
+        "name_vn": "Bún chả",
+        "typical_calories": 550,
+        "typical_protein": 25,
+        "typical_carb": 70,
+        "typical_fat": 15,
+        "typical_cost": 45000
+      },
+      "com_ga": {
+        "name_vn": "Cơm gà Hải Nam",
+        "typical_calories": 650,
+        "typical_protein": 35,
+        "typical_carb": 75,
+        "typical_fat": 20,
+        "typical_cost": 45000
+      },
+      "mi_quang": {
+        "name_vn": "Mì Quảng",
+        "typical_calories": 500,
+        "typical_protein": 20,
+        "typical_carb": 70,
+        "typical_fat": 15,
+        "typical_cost": 40000
+      },
+      "banh_mi": {
+        "name_vn": "Bánh mì thịt",
+        "typical_calories": 450,
+        "typical_protein": 20,
+        "typical_carb": 50,
+        "typical_fat": 18,
+        "typical_cost": 25000
+      }
+    }
+  },
+  
+  "budget_tiers": {
+    "low": {
+      "description": "Student budget < 80,000 VND/day",
+      "recommended_proteins": ["eggs", "tofu", "chicken_breast", "mackerel"],
+      "recommended_carbs": ["white_rice", "sweet_potato", "oats"],
+      "tips": [
+        "Mua ức gà theo kg để tiết kiệm 20%",
+        "Thay cá hồi bằng cá thu cho nguồn omega-3 giá rẻ",
+        "Trứng là nguồn protein chất lượng cao giá rẻ nhất"
+      ]
+    },
+    "medium": {
+      "description": "Standard budget 80,000-150,000 VND/day",
+      "recommended_proteins": ["chicken_breast", "chicken_thigh", "salmon", "shrimp"],
+      "recommended_carbs": ["brown_rice", "oats", "sweet_potato", "bread_brown"],
+      "tips": [
+        "Kết hợp protein động vật và thực vật đa dạng",
+        "Sử dụng sữa tươi không đường làm nguồn protein bổ sung",
+        "Thêm các loại hạt vào bữa phụ"
+      ]
+    },
+    "high": {
+      "description": "Premium budget > 150,000 VND/day",
+      "recommended_proteins": ["beef_lean", "salmon", "shrimp", "chicken_breast"],
+      "recommended_carbs": ["brown_rice", "oats", "quinoa", "sweet_potato"],
+      "recommended_supplements": ["whey_protein", "creatine", "multivitamin"],
+      "tips": [
+        "Sử dụng whey protein isolate sau tập",
+        "Ưu tiên thực phẩm hữu cơ",
+        "Thêm các loại hạt cao cấp (óc chó, hạnh nhân)"
+      ]
+    }
+  },
+  
+  "meal_templates": {
+    "breakfast_high_protein": {
+      "items": [
+        {"food": "oats", "amount": "50g"},
+        {"food": "milk_fresh", "amount": "250ml"},
+        {"food": "eggs", "amount": "2 quả"},
+        {"food": "banana", "amount": "1 quả"}
+      ]
+    },
+    "breakfast_budget": {
+      "items": [
+        {"food": "eggs", "amount": "2 quả"},
+        {"food": "bread_white", "amount": "2 lát"},
+        {"food": "banana", "amount": "1 quả"}
+      ]
+    },
+    "lunch_standard": {
+      "items": [
+        {"food": "white_rice", "amount": "150g"},
+        {"food": "chicken_breast", "amount": "150g"},
+        {"food": "morning_glory", "amount": "150g"},
+        {"food": "cooking_oil", "amount": "5ml"}
+      ]
+    },
+    "lunch_muscle_gain": {
+      "items": [
+        {"food": "brown_rice", "amount": "200g"},
+        {"food": "beef_lean", "amount": "200g"},
+        {"food": "broccoli", "amount": "200g"},
+        {"food": "carrot", "amount": "100g"}
+      ]
+    },
+    "dinner_weight_loss": {
+      "items": [
+        {"food": "sweet_potato", "amount": "150g"},
+        {"food": "chicken_breast", "amount": "100g"},
+        {"food": "broccoli", "amount": "200g"},
+        {"food": "cucumber", "amount": "100g"}
+      ]
+    }
+  }
+}

@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: fit-challenge-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-fit_challenge}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-123456}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - fit-network
+    command: --default-authentication-plugin=mysql_native_password
+
+  # Spring Boot Backend
+  spring-boot:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: fit-challenge-spring
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://db:3306/fit_challenge?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-123456}
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-du-an-safjhdskfjskjliuuasdhaos-2321}
+      JWT_EXPIRATION: 86400000
+      # AI Service (inside Docker network, use service name)
+      AI_SERVICE_URL: http://python-ai:5001
+      # File Upload
+      UPLOAD_PATH: ${UPLOAD_PATH:-/app/uploads/}
+      APP_PUBLIC_BASE_URL: ${APP_PUBLIC_BASE_URL:-http://localhost:8080}
+      # CORS (Local development)
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000,http://localhost:5174,http://localhost:5175}
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - spring_logs:/app/logs
+    ports:
+      - "8080:8080"
+    networks:
+      - fit-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Python FastAPI AI Service
+  python-ai:
+    build:
+      context: ./fitness-ai-service
+      dockerfile: Dockerfile
+    container_name: fit-challenge-python-ai
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: 5001
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost:5174,http://localhost:5175
+    ports:
+      - "5001:5001"
+    networks:
+      - fit-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Adminer (DB UI) - points to the SAME db volume used by backend
+  adminer:
+    image: adminer
+    container_name: fit-challenge-adminer
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db
+    networks:
+      - fit-network
+
+networks:
+  fit-network:
+    driver: bridge
+
+volumes:
+  db_data:
+  spring_logs:
+    driver: local

@@ -1,0 +1,60 @@
+# ============================================================
+# FITNIT CHALLENGE — Windsurf AI Rules
+# Mục tiêu: Code chất lượng cao, tiết kiệm token tối đa
+# ============================================================
+
+## ROLE
+Senior Java/Python Engineer chuyên AI Fitness SaaS.
+Stack: Java 17 + Spring Boot 3.5 + FastAPI + MySQL + MediaPipe.
+
+## CORE RULES (KHÔNG được vi phạm)
+- KHÔNG dùng Lombok @Data (chỉ @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor)
+- KHÔNG tạo file mới khi chưa được yêu cầu rõ ràng
+- KHÔNG giải thích code trừ khi được hỏi
+- KHÔNG thêm comment thừa — chỉ comment khi logic phức tạp
+- KHÔNG import thư viện mới khi chưa có trong pom.xml/requirements.txt
+- KHÔNG refactor code ngoài phạm vi yêu cầu
+- Luôn dùng FetchType.LAZY cho @ManyToOne và @OneToMany
+
+## OUTPUT FORMAT
+- Chỉ trả code, không giải thích dài dòng
+- Nếu sửa file: chỉ show đoạn thay đổi, không show toàn bộ file
+- Nếu tạo method: chỉ tạo method được yêu cầu
+- Nếu cần hỏi: tối đa 1 câu hỏi ngắn
+
+## JAVA RULES
+- Package: com.example.fitchallenge
+- Entity: @Table lowercase, @Column snake_case, nullable=false cho field bắt buộc
+- DTO: dùng Java Record thay class thông thường
+- Service: interface + impl tách biệt
+- Exception: dùng GlobalExceptionHandler đã có
+- Response: wrap trong ApiResponse<T>
+- Timestamp: ZonedDateTime, KHÔNG dùng java.util.Date
+
+## PYTHON/FASTAPI RULES
+- Dùng Pydantic v2 cho request/response model
+- Async endpoint khi có I/O (file, DB, external API)
+- Mediapipe: khởi tạo 1 lần ở startup, không tạo lại mỗi request
+- Trả về JSON có field: success, data, error, processing_time_ms
+
+## AI SERVICE RULES
+- Rep counter: dùng joint angle thresholding, KHÔNG dùng ML model nặng
+- Form score: trả về 0-100 INT, KHÔNG float
+- WebSocket: gửi JSON nhỏ gọn {rep, score, feedback, timestamp}
+- Feedback message: tối đa 10 từ tiếng Việt
+
+## DATABASE RULES
+- Dùng schema từ V1__init_schema.sql
+- KHÔNG dùng EAGER loading
+- Query phức tạp: dùng @Query JPQL, KHÔNG native query trừ khi cần
+- Pagination: luôn dùng Pageable
+
+## TOKEN TIẾT KIỆM
+- Khi hỏi về 1 file: paste chỉ method liên quan, không cả file
+- Khi fix bug: chỉ paste stack trace + method bị lỗi
+- Khi tạo CRUD: chỉ nói "tạo CRUD cho [Entity]", không paste entity code
+
+## FORBIDDEN
+- Không dùng: @Data, @SneakyThrows, MapStruct (chưa setup)
+- Không suggest: Docker Compose thay đổi, thêm dependency chưa cần
+- Không tạo: Unit test trừ khi được yêu cầu

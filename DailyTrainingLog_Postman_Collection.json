@@ -1,0 +1,206 @@
+{
+  "info": {
+    "name": "Daily Training Log API",
+    "description": "API collection for testing Daily Training Log endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create/Update Daily Training Log",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text",
+            "description": "JWT token from login"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"repsCompleted\": 15,\n  \"setsCompleted\": 1,\n  \"score\": 85,\n  \"confidence\": 0.92,\n  \"actualDurationMinutes\": 5\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/user/daily-training-logs?trainingPlanId=7&dayNumber=1&challengeId=9&status=completed",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "user",
+            "daily-training-logs"
+          ],
+          "query": [
+            {
+              "key": "trainingPlanId",
+              "value": "7",
+              "description": "Training Plan ID"
+            },
+            {
+              "key": "dayNumber",
+              "value": "1",
+              "description": "Day number (1, 2, 3, ...)"
+            },
+            {
+              "key": "challengeId",
+              "value": "9",
+              "description": "Challenge ID"
+            },
+            {
+              "key": "status",
+              "value": "completed",
+              "description": "Status: not_started, in_progress, completed, skipped"
+            }
+          ]
+        },
+        "description": "Create or update a daily training log with full analysis data"
+      },
+      "response": []
+    },
+    {
+      "name": "Create Daily Training Log - Minimal",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/user/daily-training-logs?trainingPlanId=7&dayNumber=1&challengeId=9&status=in_progress",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "user",
+            "daily-training-logs"
+          ],
+          "query": [
+            {
+              "key": "trainingPlanId",
+              "value": "7"
+            },
+            {
+              "key": "dayNumber",
+              "value": "1"
+            },
+            {
+              "key": "challengeId",
+              "value": "9"
+            },
+            {
+              "key": "status",
+              "value": "in_progress"
+            }
+          ]
+        },
+        "description": "Create daily training log with minimal data (only status)"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Daily Training Logs by Plan",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/user/daily-training-logs/plan/7",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "user",
+            "daily-training-logs",
+            "plan",
+            "7"
+          ]
+        },
+        "description": "Get all daily training logs for a specific training plan"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Daily Training Logs by Plan and Day",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/user/daily-training-logs/plan/7/day/1",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "user",
+            "daily-training-logs",
+            "plan",
+            "7",
+            "day",
+            "1"
+          ]
+        },
+        "description": "Get daily training logs for a specific training plan and day"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "YOUR_JWT_TOKEN_HERE",
+      "type": "string",
+      "description": "Get this from browser DevTools → Application → Local Storage → token"
+    }
+  ]
+}
+
+
+
+
+
