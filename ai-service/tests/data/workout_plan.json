@@ -1,0 +1,18 @@
+{
+  "user_profile": {
+    "weight": 75.0,
+    "height": 180.0,
+    "age": 28,
+    "gender": "male",
+    "activity_level": "moderate",
+    "goal": "muscle_gain",
+    "budget_per_day": 150000,
+    "fitness_level": "intermediate",
+    "dietary_restrictions": []
+  },
+  "days": 4,
+  "available_equipment": ["Tạ đôi (Dumbbells)", "Xà đơn", "Ghế tập"],
+  "workout_intensity": "high",
+  "workout_duration_minutes": 60,
+  "preferences": ["Ưu tiên tập ngực và tay sau", "Không thích chạy bộ"]
+}

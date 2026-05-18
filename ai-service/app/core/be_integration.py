@@ -3,7 +3,11 @@ Backend Integration Module
 Handles communication between AI Service and Java Backend
 Converts between Pydantic schemas and BE entities
 """
+import os
 import json
+import uuid
+import requests
+from dataclasses import asdict
 from typing import Dict, List, Optional, Any
 from datetime import datetime, date
 from dataclasses import dataclass
@@ -164,7 +168,7 @@ class BEIntegration:
                 else:
                     expiry_info = f" [Expires in {days_until} days]"
             
-            context_lines.append(f"- {item.food_name}: {item.quantity_grams}g{item.expiry_info}")
+            context_lines.append(f"- {item.food_name}: {item.quantity_grams}g{expiry_info}")
         
         return "\n".join(context_lines)
     
@@ -211,7 +215,7 @@ class BEIntegration:
         # Build AI generation context
         ai_context = {
             "generated_at": datetime.now().isoformat(),
-            "model": "gemini-3.1-flash-lite",
+            "model": "groq",
             "user_preferences": request_context.get("preferences", {}),
             "inventory_used": request_context.get("inventory_used", []),
             "budget_tier": request_context.get("budget_tier", "medium"),
@@ -352,16 +356,33 @@ def save_ai_plan_to_be(
     """
     Convert and prepare AI plan for saving to Backend
     
-    In production, this would make HTTP POST to BE API
+    This function makes an HTTP POST request to the Backend API.
     """
     plan = BEIntegration.convert_ai_plan_to_be_format(
         ai_response, user_id, template_id, request_context
     )
     
-    # TODO: Make HTTP POST to BE API
-    # response = requests.post(
-    #     f"{BE_API_URL}/api/personalized-plans/{user_id}/create",
-    #     json={...plan data...}
-    # )
+    # Get Backend API URL from environment variables
+    be_api_url = os.getenv("BE_API_URL")
+    if not be_api_url:
+        print("ERROR: BE_API_URL environment variable not set. Cannot save plan to backend.")
+        # Depending on requirements, you might want to raise an exception here
+        # raise ValueError("BE_API_URL not configured")
+        return plan # Return plan without saving
+
+    # The endpoint in the backend to create a personalized plan
+    # IMPORTANT: This path needs to match the actual API on the Java backend
+    endpoint = f"{be_api_url}/api/personalized-plans"
     
+    try:
+        print(f"--- Sending AI plan to Backend API at {endpoint} for user {user_id} ---")
+        # Convert dataclass to dictionary, then to JSON
+        plan_dict = asdict(plan)
+        response = requests.post(endpoint, json=plan_dict, headers={'Content-Type': 'application/json'})
+        response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+        print(f"--- Successfully saved plan to Backend. Status: {response.status_code} ---")
+    except requests.exceptions.RequestException as e:
+        print(f"ERROR: Failed to send plan to Backend API. Error: {e}")
+        # Handle the error appropriately (e.g., log it, maybe retry)
+
     return plan

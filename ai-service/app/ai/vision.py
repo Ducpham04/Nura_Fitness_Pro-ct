@@ -1,6 +1,6 @@
 """
 AI Vision (Model 3) - Food Recognition and Calorie Estimation
-Uses Google Gemini for analyzing food images
+Uses Groq Llama 3.2 Vision for analyzing food images
 """
 import os
 import io
@@ -8,13 +8,12 @@ import base64
 import json
 from typing import List, Optional, Tuple
 from PIL import Image
-import google.generativeai as genai
 from ..schemas.nutrition import (
     FoodTrackingRequest, FoodTrackingResponse, FoodRecognitionResult
 )
 
 
-# System Prompt for Gemini Vision - Food Recognition
+# System Prompt for Groq Vision - Food Recognition
 VISION_SYSTEM_PROMPT = """You are a nutrition expert specializing in Vietnamese cuisine. Analyze food images and provide accurate nutritional estimates.
 
 TASK:
@@ -102,17 +101,33 @@ IMPORTANT:
 
 class AIVision:
     """
-    AI Vision for food recognition using Google Gemini
+    AI Vision for food recognition using Groq
     """
     
     def __init__(self):
-        """Initialize Gemini client"""
-        api_key = os.getenv("GEMINI_API_KEY")
+        """Initialize Groq client for Vision"""
+        api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
-            raise ValueError("GEMINI_API_KEY environment variable not set")
+            raise ValueError("GROQ_API_KEY environment variable not set")
         
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-3.1-pro-preview')
+        try:
+            import httpx
+            from openai import OpenAI
+            # Ensure no proxy environment variables interfere with OpenAI client
+            os.environ.pop("HTTP_PROXY", None)
+            os.environ.pop("HTTPS_PROXY", None)
+            os.environ.pop("ALL_PROXY", None)
+            
+            self.client = OpenAI(
+                base_url="https://api.groq.com/openai/v1",
+                api_key=api_key,
+                http_client=httpx.Client()
+            )
+            # Use Llama 3.2 Vision model on Groq
+            self.model_name = "llama-3.2-11b-vision-preview"
+        except Exception as e:
+            print(f"❌ Could not initialize Groq Vision client: {e}")
+            raise e
         
         # Calorie thresholds for advice
         self.CALORIE_THRESHOLDS = {
@@ -157,7 +172,7 @@ class AIVision:
     
     def _preprocess_image_to_bytes(self, image_base64: str) -> Tuple[bytes, Tuple[int, int]]:
         """
-        Preprocess image and return bytes for Gemini API
+        Preprocess image and return bytes for Groq API
         
         Returns:
             (image_bytes, (width, height))
@@ -213,10 +228,10 @@ class AIVision:
         request: FoodTrackingRequest
     ) -> FoodTrackingResponse:
         """
-        Analyze food image and return nutritional information using Gemini
+        Analyze food image and return nutritional information using Groq Vision
         """
-        # Preprocess image
-        processed_image_bytes, original_size = self._preprocess_image_to_bytes(request.image_base64)
+        # Preprocess image to base64 (Groq needs base64 in a specific format)
+        processed_base64, _ = self._preprocess_image(request.image_base64)
         
         # Build prompt with context
         context_info = ""
@@ -228,29 +243,30 @@ class AIVision:
         prompt_text = f"{VISION_SYSTEM_PROMPT}\n\nAnalyze this Vietnamese food image and provide nutritional information.{context_info}\n\nReturn ONLY valid JSON."
         
         try:
-            # Call Gemini Vision
-            response = self.model.generate_content(
-                [prompt_text, processed_image_bytes],
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.3,
-                    max_output_tokens=2000
-                )
+            # Call Groq Vision
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt_text},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{processed_base64}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3
             )
             
-            # Parse response - extract JSON
-            response_text = response.text
-            try:
-                result = json.loads(response_text)
-            except json.JSONDecodeError:
-                # Try to extract JSON from markdown code blocks
-                if "```json" in response_text:
-                    json_str = response_text.split("```json")[1].split("```")[0].strip()
-                    result = json.loads(json_str)
-                elif "```" in response_text:
-                    json_str = response_text.split("```")[1].strip()
-                    result = json.loads(json_str)
-                else:
-                    raise ValueError("Could not parse JSON from Gemini response")
+            # Parse response
+            response_text = response.choices[0].message.content
+            result = json.loads(response_text)
             
             # Process recognized foods
             foods = []
@@ -340,7 +356,7 @@ class AIVision:
         image_base64: str
     ) -> dict:
         """
-        Estimate portion size of a specific food item using Gemini
+        Estimate portion size of a specific food item using Groq
         """
         processed_image_bytes, _ = self._preprocess_image_to_bytes(image_base64)
         
@@ -356,15 +372,28 @@ OUTPUT JSON:
 """
         
         try:
-            response = self.model.generate_content(
-                [prompt, processed_image_bytes],
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.3,
-                    max_output_tokens=500
-                )
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{base64.b64encode(processed_image_bytes).decode('utf-8')}"
+                                },
+                            },
+                        ],
+                    }
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.3,
+                max_tokens=500,
             )
             
-            response_text = response.text
+            response_text = response.choices[0].message.content or ""
             try:
                 return json.loads(response_text)
             except json.JSONDecodeError:
@@ -375,7 +404,7 @@ OUTPUT JSON:
                     json_str = response_text.split("```")[1].strip()
                     return json.loads(json_str)
                 else:
-                    raise ValueError("Could not parse JSON from Gemini response")
+                    raise ValueError("Could not parse JSON from Groq response")
             
         except Exception as e:
             raise ValueError(f"Portion estimation failed: {str(e)}")

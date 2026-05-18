@@ -1,0 +1,18 @@
+{
+  "user_profile": {
+    "weight": 80.0,
+    "height": 182.0,
+    "age": 32,
+    "gender": "male",
+    "activity_level": "active",
+    "goal": "muscle_gain",
+    "budget_per_day": 200000,
+    "fitness_level": "advanced",
+    "dietary_restrictions": ["High protein only"]
+  },
+  "days": 1,
+  "preferences": ["Thích tập ngực và lưng"],
+  "workout_intensity": "high",
+  "available_equipment": ["Tạ đòn", "Tạ đôi", "Xà đơn"],
+  "workout_duration_minutes": 60
+}

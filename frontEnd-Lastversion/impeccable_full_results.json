@@ -1,0 +1,38 @@
+[
+  {
+    "antipattern": "pure-black-white",
+    "name": "Pure black background",
+    "description": "Pure #000000 as a background color looks harsh and unnatural. Tint it slightly toward your brand hue (e.g., oklch(12% 0.01 250)) for a more refined feel.",
+    "severity": "warning",
+    "file": "/Users/vanduc/Documents/Work/FitnitChallenge/frontEnd-Lastversion/src/pages/WelCome.tsx",
+    "line": 67,
+    "snippet": "bg-black"
+  },
+  {
+    "antipattern": "pure-black-white",
+    "name": "Pure black background",
+    "description": "Pure #000000 as a background color looks harsh and unnatural. Tint it slightly toward your brand hue (e.g., oklch(12% 0.01 250)) for a more refined feel.",
+    "severity": "warning",
+    "file": "/Users/vanduc/Documents/Work/FitnitChallenge/frontEnd-Lastversion/src/pages/WelCome.tsx",
+    "line": 262,
+    "snippet": "bg-black"
+  },
+  {
+    "antipattern": "pure-black-white",
+    "name": "Pure black background",
+    "description": "Pure #000000 as a background color looks harsh and unnatural. Tint it slightly toward your brand hue (e.g., oklch(12% 0.01 250)) for a more refined feel.",
+    "severity": "warning",
+    "file": "/Users/vanduc/Documents/Work/FitnitChallenge/frontEnd-Lastversion/src/pages/WelCome.tsx",
+    "line": 306,
+    "snippet": "bg-black"
+  },
+  {
+    "antipattern": "pure-black-white",
+    "name": "Pure black background",
+    "description": "Pure #000000 as a background color looks harsh and unnatural. Tint it slightly toward your brand hue (e.g., oklch(12% 0.01 250)) for a more refined feel.",
+    "severity": "warning",
+    "file": "/Users/vanduc/Documents/Work/FitnitChallenge/frontEnd-Lastversion/src/pages/WelCome.tsx",
+    "line": 383,
+    "snippet": "bg-black"
+  }
+]

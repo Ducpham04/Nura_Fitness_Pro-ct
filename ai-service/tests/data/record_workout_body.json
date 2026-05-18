@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Squats",
+    "muscle_group": "Đùi",
+    "sets": 3,
+    "reps": "12",
+    "rest_seconds": 90,
+    "equipment": "Tạ đòn",
+    "notes": "Hoàn thành tốt"
+  },
+  {
+    "name": "Bench Press",
+    "muscle_group": "Ngực",
+    "sets": 3,
+    "reps": "10",
+    "rest_seconds": 90,
+    "equipment": "Tạ đôi",
+    "notes": "Hơi nặng ở hiệp cuối"
+  }
+]

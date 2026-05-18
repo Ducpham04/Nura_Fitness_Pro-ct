@@ -27,14 +27,16 @@ class IntegratedDailyPlan(BaseModel):
 
 class FullPlanRequest(BaseModel):
     """Request for generating integrated meal + workout plan"""
+    user_id: str = Field(..., description="Unique identifier for the user")
     user_profile: UserProfile
     days: int = Field(default=7, ge=1, le=14)
     preferences: Optional[List[str]] = Field(default_factory=list)
     
     # Workout preferences
     workout_intensity: str = Field(default="moderate", description="low, moderate, high")
-    available_equipment: List[str] = Field(default_factory=list, description=["Tạ đôi", "Máy cáp", "Không cần"])
+    available_equipment: List[str] = Field(default_factory=list, description="List of available equipment: Tạ đôi, Máy cáp, Không cần")
     workout_duration_minutes: int = Field(default=45, ge=15, le=120)
+    inventory: Optional[List[str]] = Field(default_factory=list, description="List of items currently in user's kitchen")
 
 
 class FullPlanResponse(BaseModel):

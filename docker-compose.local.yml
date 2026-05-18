@@ -2,26 +2,25 @@ version: '3.8'
 
 services:
   db:
-    image: mysql:8.0
+    image: postgres:16-alpine
     container_name: fit-challenge-db
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-fit_challenge}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
-      MYSQL_CHARACTER_SET_SERVER: utf8mb4
-      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+      POSTGRES_DB: ${POSTGRES_DB:-fit_challenge}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-123456}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fit_challenge"]
       interval: 5s
       timeout: 5s
       retries: 10
     networks:
       - fit-network
-    command: --default-authentication-plugin=mysql_native_password
 
   # Spring Boot Backend
   spring-boot:
@@ -36,8 +35,8 @@ services:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://db:3306/fit_challenge?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-root}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://db:5432/fit_challenge}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-123456}
       # JWT
       JWT_SECRET: ${JWT_SECRET:-du-an-safjhdskfjskjliuuasdhaos-2321}
@@ -66,7 +65,7 @@ services:
   # Python FastAPI AI Service
   python-ai:
     build:
-      context: ./fitness-ai-service
+      context: ./ai-service
       dockerfile: Dockerfile
     container_name: fit-challenge-python-ai
     restart: unless-stopped

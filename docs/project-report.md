@@ -15,7 +15,7 @@ Môi trường local sử dụng `docker-compose.local.yml` (DB + BE + AI) và F
 ### 2.1 Sơ đồ mức cao
 
 - **Browser** → **Frontend (Vite/React)** → gọi **Backend (Spring Boot)** qua REST
-- **Backend** → **MySQL** (Spring Data JPA)
+- **Backend** → **PostgreSQL** (Spring Data JPA)
 - **Backend** → gọi **AI Service** qua HTTP (port 5001) khi cần chấm điểm/phân tích
 - **Frontend** có thể gọi **AI Service** trực tiếp (tùy flow realtime qua WebSocket)
 
@@ -41,7 +41,7 @@ Môi trường local sử dụng `docker-compose.local.yml` (DB + BE + AI) và F
 - **Java 17**
 - **Spring Boot** `3.5.7`
   - `spring-boot-starter-web`, `data-jpa`, `security`, `validation`
-- **MySQL** connector
+- **PostgreSQL** connector
 - **JWT**: `io.jsonwebtoken (jjwt)` `0.11.5`
 
 > Lưu ý: `pom.xml` vẫn còn dependency AWS S3 SDK (di sản từ dự án cũ), nhưng flow hiện tại dùng uploads local.
@@ -56,7 +56,7 @@ Môi trường local sử dụng `docker-compose.local.yml` (DB + BE + AI) và F
 
 ### 3.4 Database
 
-- **MySQL 8.0** (Docker image `mysql:8.0`)
+- **PostgreSQL 16** (Docker image `postgres:16-alpine`)
 
 ## 4) API & tính năng đã hoàn thành
 

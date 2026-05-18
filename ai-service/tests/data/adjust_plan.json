@@ -1,0 +1,33 @@
+{
+  "current_plan": {
+    "day": "Thứ Ba",
+    "meals": [
+      {
+        "meal_type": "lunch",
+        "items": [
+          {"name": "Cá hồi áp chảo", "amount": "150g", "calories": 300, "protein": 30, "carb": 0, "fat": 15, "estimated_cost": 45000}
+        ]
+      }
+    ],
+    "total_calories": 300,
+    "total_protein": 30,
+    "total_carb": 0,
+    "total_fat": 15,
+    "estimated_cost": 45000
+  },
+  "constraint": "Cá hồi đắt quá, mình không mua nữa. Hãy đổi món khác dựa trên đồ có sẵn trong tủ lạnh.",
+  "inventory": [
+    "Thịt bò (200g)",
+    "Bắp cải (1/2 bắp)",
+    "Trứng gà (2 quả)",
+    "Dầu hào"
+  ],
+  "user_profile": {
+    "weight": 75,
+    "height": 180,
+    "age": 30,
+    "gender": "male",
+    "goal": "muscle_gain",
+    "budget_per_day": 100000
+  }
+}

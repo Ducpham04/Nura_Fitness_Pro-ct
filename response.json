@@ -1,0 +1,1 @@
+{"success":true,"message":"Body profile saved successfully","data":{"id":22,"userId":149,"height":170.0,"weight":70.0,"bmi":24.22,"bodyFat":15.0,"muscleMass":35.0,"age":25,"gender":"MALE","experienceLevel":"intermediate","goal":"muscle","injuryNotes":"none","createdAt":"2026-05-14T00:30:13.052975+07:00","updatedAt":"2026-05-14T00:30:13.052994+07:00"}}

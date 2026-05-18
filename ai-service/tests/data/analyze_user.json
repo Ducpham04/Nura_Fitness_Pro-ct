@@ -1,0 +1,16 @@
+{
+  "weight": 75.5,
+  "height": 178.0,
+  "age": 28,
+  "gender": "male",
+  "body_fat_percentage": 18.5,
+  "activity_level": "moderate",
+  "goal": "muscle_gain",
+  "budget_per_day": 120000,
+  "fitness_level": "intermediate",
+  "dietary_restrictions": ["không ăn hành", "dị ứng lạc"],
+  "meal_prep_time": 30,
+  "cooking_equipment": ["nồi", "chảo", "nồi chiên không dính"],
+  "work_schedule": "office_8to5",
+  "has_kitchen_at_work": false
+}

@@ -11,7 +11,9 @@ from typing import List, Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+# pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
+# pyrefly: ignore [missing-import]
 from fastapi.responses import JSONResponse
 import uvicorn
 
@@ -21,12 +23,17 @@ load_dotenv()
 # Add app directory to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+from app.schemas.smart_meal_catalog import SmartMealCatalogRequest
+from app.ai.smart_meal_catalog import generate_smart_catalog_plan
+from app.schemas.smart_meal_dish import SmartDishPlanRequest
+from app.ai.smart_meal_dish import generate_smart_dish_plan
 from app.schemas.nutrition import (
     UserProfile, NutritionPlanRequest, NutritionPlanResponse,
     DailyPlan, Meal, MealItem, FoodTrackingRequest, FoodTrackingResponse,
     GoalType, FitnessLevel, MealType, AdjustmentRequest, AdjustmentResponse,
-    CheatMealRequest, CheatMealResponse
+    CheatMealRequest, CheatMealResponse, MealContextRequest, MealContextResponse
 )
+from app.schemas.workout import WorkoutSession
 from app.schemas.full_plan import FullPlanRequest, FullPlanResponse
 from app.core.analyzer import BodyAnalyzer, NutritionValidator
 from app.ai.planner import AIPlanner
@@ -84,7 +91,7 @@ async def root():
     }
 
 
-@app.post("/analyze-user", response_model=dict)
+@app.post("/analyze-user", response_model=dict) # tạm thời không cần vì BE đang dùng công thức để tính.
 async def analyze_user(user_profile: UserProfile):
     """
     Analyze user profile and return comprehensive metrics
@@ -120,6 +127,38 @@ async def analyze_user(user_profile: UserProfile):
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
+@app.post("/smart-meal-plan", response_model=dict)
+async def smart_meal_plan(request: SmartMealCatalogRequest):
+    """
+    Catalog-constrained Groq recommender: returns only meal slots with food_id + quantity (grams).
+    Java recomputes nutrition and spend from foods master table.
+    """
+    try:
+        outcome = generate_smart_catalog_plan(request)
+        return outcome.model_dump()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Smart meal generation failed: {str(e)}")
+
+
+@app.post("/smart-meal-plan-dish", response_model=dict)
+async def smart_meal_plan_dish(request: SmartDishPlanRequest):
+    """
+    Hybrid planner: Groq chooses dish_id only.
+
+    Java performs recipe lookup, quantity solving, macro math, pricing, and
+    inventory reconciliation.
+    """
+    try:
+        outcome = generate_smart_dish_plan(request)
+        return outcome.model_dump()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Smart dish meal generation failed: {str(e)}")
+
+
 @app.post("/plan", response_model=NutritionPlanResponse)
 async def generate_plan(request: NutritionPlanRequest):
     """
@@ -148,6 +187,21 @@ async def generate_plan(request: NutritionPlanRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Plan generation failed: {str(e)}")
+
+@app.post("/generate-meal-from-context", response_model=MealContextResponse)
+async def generate_meal_from_context(request: MealContextRequest):
+    """
+    Generate a single daily meal plan from target calories, budget, and inventory
+    """
+    try:
+        result = planner.generate_meal_from_context(
+            target_calories=request.targetCalories,
+            budget=request.budget,
+            inventory=request.inventory
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate meal: {str(e)}")
 
 
 @app.post("/track-food", response_model=FoodTrackingResponse)
@@ -359,14 +413,32 @@ async def generate_full_plan(request: FullPlanRequest):
     - Takes user preferences into account
     """
     try:
-        # Add user preferences to request if available
-        user_id = str(id(request.user_profile))  # Simple user ID generation
-        pref_constraints = preference_store.generate_prompt_constraints(user_id)
-        
+        # Generate the integrated plan
         full_plan = integrated_planner.generate_full_plan(request)
         return full_plan
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Full plan generation failed: {str(e)}")
+
+
+@app.post("/workout-plan", response_model=List[WorkoutSession])
+async def generate_workout_plan(request: FullPlanRequest):
+    """
+    Generate standalone workout training plan
+    """
+    try:
+        from app.ai.workout_planner import WorkoutPlanner
+        wp = WorkoutPlanner()
+        sessions = wp.generate_plan(
+            user_profile=request.user_profile,
+            days=request.days,
+            available_equipment=request.available_equipment,
+            workout_intensity=request.workout_intensity,
+            duration_minutes=request.workout_duration_minutes,
+            preferences=request.preferences
+        )
+        return sessions
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Workout plan generation failed: {str(e)}")
 
 
 # User Preference Endpoints
@@ -552,9 +624,37 @@ async def delete_plan_history(user_id: str, plan_id: str):
     return {"success": True, "message": f"Deleted all versions of plan {plan_id}"}
 
 
+@app.post("/chat")
+async def chat(request: dict):
+    """
+    General AI Coach chat endpoint
+    """
+    try:
+        user_id = request.get("user_id")
+        message = request.get("message")
+        history = request.get("history", [])
+        
+        if not message:
+            raise HTTPException(status_code=400, detail="Message is required")
+            
+        # Get user preferences if available
+        preferences = preference_store.get_user_preferences(user_id) if user_id else {}
+        
+        # Call planner for chat
+        response = planner.chat(message, history, preferences)
+        
+        return {
+            "success": True,
+            "response": response,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+
 if __name__ == "__main__":
     print("🚀 Starting Fitness AI Service")
-    print("🤖 AI Provider: Google Gemini 1.5 Flash")
+    print("🤖 AI Provider: Groq (Llama 3.3 & 3.2 Vision)")
     print("📡 Available endpoints:")
     print("  POST /analyze-user        - Analyze user profile")
     print("  POST /plan                - Generate nutrition plan (Model 2)")
@@ -598,8 +698,8 @@ if __name__ == "__main__":
     print("  GET  /docs                - Swagger UI documentation")
     print()
     print("⚠️  Required environment variable:")
-    print("  - GEMINI_API_KEY: Your Google Gemini API key")
-    print("    Get from: https://makersuite.google.com/app/apikey")
+    print("  - GROQ_API_KEY: Your Groq API key")
+    print("    Get from: https://console.groq.com/keys")
     print()
     
     uvicorn.run(

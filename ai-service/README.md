@@ -10,8 +10,8 @@ This service implements **Model 2 (Personal Coach/Planner)** and **Model 3 (AI V
 
 | Model | Name | Description | Technology |
 |-------|------|-------------|------------|
-| **Model 2** | Personal Coach | Meal planning with budget constraints | Google Gemini + Rule-based |
-| **Model 3** | AI Vision | Food recognition & calorie estimation | Google Gemini Vision |
+| **Model 2** | Personal Coach | Meal planning with budget constraints | Groq + Rule-based |
+| **Model 3** | AI Vision | Food recognition & calorie estimation | Groq Vision |
 
 ---
 
@@ -52,14 +52,14 @@ pip install -r requirements.txt
 # Copy the example file
 cp .env.example .env
 
-# Edit .env and add your Gemini API key
-GEMINI_API_KEY=AIzaSyAh1faj1qTxh7QLjM6qf_TyKZH8znwoKnA
+# Edit .env and add your Groq API key
+GROQ_API_KEY=your_groq_api_key_here
 ```
 
 **Option B: Export directly**
 
 ```bash
-export GEMINI_API_KEY="AIzaSyAh1faj1qTxh7QLjM6qf_TyKZH8znwoKnA"
+export GROQ_API_KEY="your_groq_api_key_here"
 ```
 
 ### 3. Run Server
@@ -237,16 +237,15 @@ curl -X POST http://localhost:8001/adjust-plan \
 
 ## 🧠 AI Technology
 
-This service uses **Google Gemini 1.5 Flash** for:
+This service uses **Groq-hosted Llama models** for:
 - Meal planning with natural language understanding
 - Vietnamese food recognition from images
 - Calorie estimation and portion analysis
 
-### Why Gemini?
-- ✅ Miễn phí tier hào phóng (1,500 requests/ngày)
-- ✅ Hỗ trợ tốt tiếng Việt
-- ✅ Vision capabilities mạnh
-- ✅ Giá rẻ hơn OpenAI GPT-4o
+### Why Groq?
+- Fast OpenAI-compatible API
+- Supports Llama text and vision models
+- One `GROQ_API_KEY` for meal planning, workout planning, and vision flows
 
 ---
 
@@ -335,7 +334,8 @@ The AI has been trained on 50+ Vietnamese dishes:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GEMINI_API_KEY` | Yes | Google Gemini API key |
+| `GROQ_API_KEY` | Yes | Groq API key |
+| `GROQ_SMART_MEAL_MODEL` | No | Smart meal model (default: `llama-3.1-8b-instant`) |
 | `PORT` | No | Server port (default: 8001) |
 
 ---

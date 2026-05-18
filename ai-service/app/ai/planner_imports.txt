@@ -1,0 +1,15 @@
+"""
+AI Personal Coach (Model 2) - Meal Planning with Groq
+Handles intelligent meal planning with budget constraints
+"""
+import os
+import json
+import time
+from typing import List, Optional, Dict
+from ..schemas.nutrition import (
+    UserProfile, NutritionPlanRequest, NutritionPlanResponse,
+    DailyPlan, Meal, MealItem, MealType, GoalType
+)
+from ..core.analyzer import BodyAnalyzer
+from ..core.validator import PlanValidator
+from ..core.quality_scorer import QualityScorer

@@ -1,0 +1,22 @@
+{
+  "user_profile": {
+    "weight": 72.0,
+    "height": 175.0,
+    "age": 27,
+    "gender": "male",
+    "activity_level": "moderate",
+    "goal": "muscle_gain",
+    "budget_per_day": 70000,
+    "fitness_level": "intermediate",
+    "dietary_restrictions": []
+  },
+  "days": 3,
+  "preferences": [
+    "Ức gà (1kg)", 
+    "Trứng gà (6 quả)", 
+    "Gạo tẻ (2kg)", 
+    "Nước mắm", 
+    "Dầu ăn", 
+    "Gia vị cơ bản"
+  ]
+}

@@ -17,7 +17,7 @@ chmod +x ./dev.sh
 What it does:
 
 - Starts Docker services using `docker-compose.local.yml`:
-  - MySQL (3306)
+  - PostgreSQL (5432)
   - Spring Boot backend (8080)
   - Python AI service (5001)
   - Adminer (8081)

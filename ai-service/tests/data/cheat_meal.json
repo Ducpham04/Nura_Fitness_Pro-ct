@@ -1,0 +1,9 @@
+{
+  "food_consumed": "1 cái Pizza hải sản cỡ vừa",
+  "calories_consumed": 1200,
+  "user_daily_target": 2200,
+  "user_profile": {
+    "goal": "weight_loss",
+    "fitness_level": "intermediate"
+  }
+}

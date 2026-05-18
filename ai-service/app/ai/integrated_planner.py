@@ -5,7 +5,6 @@ Adjusts macros based on workout intensity
 import os
 import json
 from typing import List, Dict
-import google.generativeai as genai
 from ..schemas.nutrition import UserProfile, NutritionPlanRequest
 from ..schemas.workout import WorkoutSession, SessionType
 from ..schemas.full_plan import FullPlanRequest, FullPlanResponse, IntegratedDailyPlan
@@ -21,11 +20,9 @@ class IntegratedPlanner:
     
     def __init__(self):
         """Initialize component planners"""
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
-            raise ValueError("GEMINI_API_KEY environment variable not set")
-        
-        genai.configure(api_key=api_key)
+            raise ValueError("GROQ_API_KEY environment variable not set")
         
         self.meal_planner = AIPlanner()
         self.workout_planner = WorkoutPlanner()
@@ -53,7 +50,8 @@ class IntegratedPlanner:
         meal_plan_request = NutritionPlanRequest(
             user_profile=request.user_profile,
             days=request.days,
-            preferences=request.preferences
+            preferences=request.preferences,
+            inventory=request.inventory if hasattr(request, 'inventory') else []
         )
         
         # Temporarily override target calculation with adjusted values
@@ -108,54 +106,17 @@ class IntegratedPlanner:
         )
     
     def _generate_workout_plan(self, request: FullPlanRequest) -> List[WorkoutSession]:
-        """Generate workout sessions for the week"""
-        # Use workout planner to generate sessions
-        # For now, create template based on fitness level
-        sessions = []
-        
-        split = self._get_workout_split(request.user_profile.fitness_level.value)
-        
-        for day_num in range(1, request.days + 1):
-            session_type = split[(day_num - 1) % len(split)]
-            
-            if session_type == SessionType.REST:
-                session = WorkoutSession(
-                    day=f"Day {day_num}",
-                    day_number=day_num,
-                    session_type=SessionType.REST,
-                    is_rest_day=True,
-                    duration_minutes=0,
-                    muscle_groups_targeted=[],
-                    estimated_calories_burned=0,
-                    warmup=[],
-                    exercises=[],
-                    cardio=None,
-                    cooldown=[],
-                    notes=["Ngày nghỉ ngơi phục hồi"]
-                )
-            else:
-                session = WorkoutSession(
-                    day=f"Day {day_num}",
-                    day_number=day_num,
-                    session_type=session_type,
-                    is_rest_day=False,
-                    duration_minutes=request.workout_duration_minutes,
-                    muscle_groups_targeted=self._get_muscle_groups(session_type),
-                    estimated_calories_burned=self._estimate_calories_burned(
-                        session_type, 
-                        request.workout_duration_minutes,
-                        request.workout_intensity
-                    ),
-                    warmup=self._get_warmup_routine(),
-                    exercises=self._get_exercises_template(session_type),
-                    cardio=None,
-                    cooldown=self._get_cooldown_routine(),
-                    notes=[f"Intensity: {request.workout_intensity}"]
-                )
-            
-            sessions.append(session)
-        
-        return sessions
+        """
+        Generate workout plan sessions using AI WorkoutPlanner
+        """
+        return self.workout_planner.generate_plan(
+            user_profile=request.user_profile,
+            days=request.days,
+            available_equipment=request.available_equipment,
+            workout_intensity=request.workout_intensity,
+            duration_minutes=request.workout_duration_minutes,
+            preferences=request.preferences
+        )
     
     def _calculate_adjusted_targets(
         self, 
@@ -241,6 +202,9 @@ class IntegratedPlanner:
         }.get(intensity, 1.0)
         
         return int(base_cal_per_minute * duration * intensity_multiplier)
+    
+    def _get_warmup_routine(self) -> List[str]:
+        return ["Chạy bộ nhẹ 5 phút", "Xoay khớp vai 30 giây", "Xoay khớp hông 30 giây"]
     
     def _get_warmup_routine(self) -> List[str]:
         return ["Chạy bộ nhẹ 5 phút", "Xoay khớp vai 30 giây", "Xoay khớp hông 30 giây"]

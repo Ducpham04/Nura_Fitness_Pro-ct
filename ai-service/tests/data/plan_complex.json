@@ -1,0 +1,15 @@
+{
+  "user_profile": {
+    "weight": 65.0,
+    "height": 165.0,
+    "age": 24,
+    "gender": "female",
+    "activity_level": "light",
+    "goal": "maintenance",
+    "budget_per_day": 100000,
+    "fitness_level": "intermediate",
+    "dietary_restrictions": ["vegetarian"]
+  },
+  "days": 7,
+  "preferences": ["thích ăn các loại hạt", "thích bơ"]
+}

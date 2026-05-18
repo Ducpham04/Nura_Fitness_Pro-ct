@@ -5,7 +5,7 @@ Tài liệu mô tả **các entity JPA** trong `Fit_Ai_Challenge_Web-App_BE`, pa
 ## Tổng quan
 
 - **Tổng số entities**: **26** class `@Entity`
-- **Công nghệ**: Hibernate/JPA + MySQL
+- **Công nghệ**: Hibernate/JPA + PostgreSQL
 - **Package**: `com.example.fitchallenge.Entity`
 
 ---

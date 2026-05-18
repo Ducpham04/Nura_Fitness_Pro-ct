@@ -3,7 +3,7 @@ Pydantic Schemas for AI Service (Models 2 & 3)
 Defines data structures for meal planning and food tracking
 """
 from pydantic import BaseModel, Field, validator
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Dict
 from enum import Enum
 
 
@@ -20,6 +20,15 @@ class FitnessLevel(str, Enum):
     BEGINNER = "beginner"
     INTERMEDIATE = "intermediate"
     ADVANCED = "advanced"
+
+
+class ActivityLevel(str, Enum):
+    """User daily activity levels"""
+    SEDENTARY = "sedentary"
+    LIGHTLY_ACTIVE = "lightly_active"
+    MODERATE = "moderate"
+    VERY_ACTIVE = "very_active"
+    EXTRA_ACTIVE = "extra_active"
 
 
 class MealType(str, Enum):
@@ -71,7 +80,7 @@ class DailyPlan(BaseModel):
     estimated_cost: int = Field(..., ge=0, description="Total daily cost in VND")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "day": "Monday",
                 "meals": [
@@ -132,6 +141,7 @@ class NutritionPlanRequest(BaseModel):
     user_profile: UserProfile
     days: int = Field(default=7, ge=1, le=14, description="Number of days to plan")
     preferences: Optional[List[str]] = Field(default_factory=list)
+    inventory: Optional[List[str]] = Field(default_factory=list, description="List of items currently in user's kitchen")
 
 
 class NutritionPlanResponse(BaseModel):
@@ -201,3 +211,16 @@ class CheatMealResponse(BaseModel):
     compensation_plan: str
     exercise_compensation: Optional[str] = None
     meal_adjustments: List[str]
+
+class MealContextRequest(BaseModel):
+    """Request from Spring Boot with context for meal generation"""
+    targetCalories: int
+    budget: int
+    inventory: List[str]
+
+class MealContextResponse(BaseModel):
+    """Response returned to Spring Boot"""
+    meals: List[Meal]
+    total_calories: int
+    total_cost: int
+    shopping_list: List[str]

@@ -1,11 +1,11 @@
 """
-AI Personal Coach (Model 2) - Meal Planning with Google Gemini
+AI Personal Coach (Model 2) - Meal Planning with Groq
 Handles intelligent meal planning with budget constraints
 """
 import os
 import json
+import time
 from typing import List, Optional, Dict
-import google.generativeai as genai
 from ..schemas.nutrition import (
     UserProfile, NutritionPlanRequest, NutritionPlanResponse,
     DailyPlan, Meal, MealItem, MealType, GoalType
@@ -15,103 +15,20 @@ from ..core.validator import PlanValidator
 from ..core.quality_scorer import QualityScorer
 
 
-# System Prompt for Gemini - Specialist Fitness Coach
-BASE_SYSTEM_PROMPT = """You are a Specialist Fitness Coach certified by ACSM (American College of Sports Medicine) with expertise in sports nutrition and meal planning for Vietnamese athletes.
-
-YOUR EXPERTISE:
-- Sports nutrition and meal timing
-- Vietnamese cuisine and local ingredients
-- Budget-conscious meal planning
-- Macronutrient distribution for different fitness goals
-- Food safety and preparation guidelines"""
+# System Prompt for Groq - Master Chef & Nutrition Expert
+BASE_SYSTEM_PROMPT = """Bạn là Chuyên gia Dinh dưỡng & Đầu bếp am hiểu ẩm thực Việt Nam.
+BẮT BUỘC: Tên món ăn phải bằng tiếng Việt (ví dụ: Cơm tấm sườn nướng, Phở bò, Ức gà áp chảo, Rau muống xào tỏi).
+Quy tắc: Ngon miệng, Không lãng phí, Dinh dưỡng chính xác."""
 
 # Goal-specific prompts
 GOAL_PROMPTS = {
-    "muscle_gain": """SPECIFIC FOCUS: MUSCLE GAIN (HYPERTROPHY)
-
-CRITICAL EMPHASIS:
-1. PROTEIN TIMING: Distribute protein evenly across 4-5 meals (20-30g per meal)
-2. CARB TIMING: Higher carbs around workouts (pre/post-workout meals)
-3. CALORIE SURPLUS: Ensure 200-300kcal surplus above TDEE
-4. PROGRESSIVE OVERLOAD: Meal timing to support recovery and growth
-
-PROTEIN SOURCES PRIORITY:
-- Lean meats: Chicken breast, beef, fish, eggs
-- Complete proteins: Quinoa, dairy, soy
-- Post-workout: Fast-absorbing protein (whey, eggs, lean meat)
-
-MEAL STRUCTURE:
-- Breakfast: High protein + complex carbs (30% daily calories)
-- Pre-workout: Moderate carbs, moderate protein (15% daily calories)
-- Post-workout: High protein + fast carbs (25% daily calories)
-- Dinner: High protein, moderate fat (30% daily calories)
-
-AVOID: Empty calories, excessive sugar, processed foods""",
+    "muscle_gain": """Goal: Hypertrophy. Rules: Even protein (25g+ per meal), 300kcal surplus, high carb pre/post workout.""",
     
-    "weight_loss": """SPECIFIC FOCUS: WEIGHT LOSS (FAT REDUCTION)
-
-CRITICAL EMPHASIS:
-1. CALORIE DEFICIT: Ensure 500kcal deficit below TDEE
-2. HIGH SATIETY: Focus on high-volume, low-calorie foods
-3. PROTEIN PRESERVATION: Maintain high protein (2.2g/kg) to preserve muscle
-4. FIBER INTAKE: High fiber vegetables for fullness
-
-PROTEIN SOURCES PRIORITY:
-- Lean proteins: Chicken breast, fish, egg whites, tofu
-- Plant-based: Legumes, lentils, tempeh
-- Low-calorie: White fish, shellfish, lean pork
-
-MEAL STRUCTURE:
-- Breakfast: High protein, moderate carbs (25% daily calories)
-- Lunch: High volume vegetables + lean protein (35% daily calories)
-- Dinner: Light, protein-focused (25% daily calories)
-- Snacks: High protein, low carb (15% daily calories)
-
-AVOID: Processed foods, sugary drinks, excessive fats, large portions
-EMPHASIZE: Vegetables, lean proteins, portion control, meal frequency""",
+    "weight_loss": """Goal: Fat loss. Rules: 500kcal deficit, high satiety (fiber/volume), protein 2.2g/kg, low calorie density.""",
     
-    "maintenance": """SPECIFIC FOCUS: MAINTENANCE (BODY COMPOSITION)
-
-CRITICAL EMPHASIS:
-1. CALORIE BALANCE: Match TDEE exactly
-2. MACRO BALANCE: Balanced 40% protein, 40% carbs, 20% fat
-3. NUTRIENT DENSITY: Focus on micronutrient-rich whole foods
-4. SUSTAINABILITY: Flexible, enjoyable meal patterns
-
-PROTEIN SOURCES PRIORITY:
-- Variety of proteins: Meat, fish, dairy, plant-based
-- Whole foods: Minimally processed
-- Seasonal: Fresh, local ingredients
-
-MEAL STRUCTURE:
-- Balanced meals across all 4-5 meals
-- Consistent meal timing
-- Flexible food choices within macro targets
-
-AVOID: Extreme restrictions, overly rigid meal timing
-EMPHASIZE: Variety, balance, sustainability""",
+    "maintenance": """Goal: Balance. Rules: Maintenance calories, 40/40/20 macro split, nutrient dense whole foods.""",
     
-    "endurance": """SPECIFIC FOCUS: ENDURANCE TRAINING
-
-CRITICAL EMPHASIS:
-1. CARB LOADING: Higher carbs for sustained energy
-2. ELECTROLYTETE BALANCE: Potassium, sodium, magnesium rich foods
-3. TIMING: Carbs before/after long sessions
-4. HYDRATION SUPPORT: Water-rich foods
-
-PROTEIN SOURCES PRIORITY:
-- Moderate protein: 1.6g/kg bodyweight
-- Recovery foods: Tart cherry, beet juice, antioxidant-rich foods
-- Carb sources: Rice, pasta, oats, bananas, sweet potatoes
-
-MEAL STRUCTURE:
-- Pre-training: High carb, moderate protein (30% daily calories)
-- During training: Quick carbs if sessions > 90min
-- Post-training: Carb + protein recovery (25% daily calories)
-- Rest days: Lower carb, higher fat (45% daily calories)
-
-AVOID: Heavy fats before training, excessive fiber before long sessions
-EMPHASIZE: Carb timing, hydration, electrolyte balance"""
+    "endurance": """Goal: Performance. Rules: High carbs for glycogen, electrolyte balance (K, Na, Mg), timing around training."""
 }
 
 
@@ -176,67 +93,88 @@ CONSTRAINTS:
 4. Variety: Rotate foods across days, avoid repetition
 5. Practicality: Use commonly available ingredients in Vietnamese markets
 
-OUTPUT FORMAT - STRICT JSON ONLY:
+INVENTORY STRATEGY:
+- Priority 1: Sử dụng tối đa các nguyên liệu trong DANH SÁCH CÓ SẴN.
+- Priority 2: Nếu dùng đồ có sẵn, 'estimated_cost' BẮT BUỘC phải là 0 VND.
+- Priority 3: Chỉ mua thêm đồ mới nếu đồ có sẵn không đủ đáp ứng dinh dưỡng.
+- Chi phí: 'estimated_cost' của thực đơn = Tổng tiền mua đồ mới. Tổng này <= budget_per_day.
+
+OUTPUT FORMAT (STRICT JSON):
 {
     "daily_plans": [
         {
-            "day": "Day 1",
+            "day": "Day X",
             "meals": [
                 {
                     "meal_type": "breakfast",
                     "items": [
                         {
-                            "name": "Tên món tiếng Việt",
-                            "amount": "Serving size (e.g., '150g', '1 bowl')",
-                            "calories": int,
-                            "protein": float,
-                            "carb": float,
-                            "fat": float,
-                            "estimated_cost": int (VND)
+                            "name": "Món ăn",
+                            "amount": "150g",
+                            "calories": 400,
+                            "protein": 30.5,
+                            "carb": 40.0,
+                            "fat": 10.0,
+                            "estimated_cost": 30000
                         }
                     ]
                 }
             ],
-            "total_calories": int,
-            "total_protein": float,
-            "total_carb": float,
-            "total_fat": float,
-            "shopping_list": ["item1", "item2", ...],
-            "estimated_cost": int
+            "total_calories": 2000,
+            "total_protein": 150.0,
+            "total_carb": 200.0,
+            "total_fat": 60.0,
+            "shopping_list": ["item1", "item2"],
+            "estimated_cost": 100000
         }
     ],
-    "recommendations": [
-        "Tip 1 for user",
-        "Tip 2 for user"
-    ]
+    "recommendations": ["Tip 1", "Tip 2"]
 }
 
 IMPORTANT:
-- Output ONLY valid JSON, no markdown, no explanations
-- All amounts in Vietnamese units (g, kg, bowl, plate, slice)
-- All costs in VND
-- Food names in Vietnamese
-- Ensure JSON is properly formatted with double quotes
+- Output ONLY valid JSON, no markdown, no explanations.
+- All amounts in Vietnamese units (g, kg, bowl, plate, slice).
+- All costs in VND (integer only).
+- Food names in Vietnamese.
+- meal_type MUST be exactly one of: "breakfast", "lunch", "dinner", "snack".
+- Nutritional values (calories, protein, carb, fat) MUST be NUMBERS only. DO NOT include "g" or "kcal" units in the values.
+- Ensure JSON is properly formatted with double quotes.
 """
 
 
 class AIPlanner:
     """
-    AI Personal Coach for meal planning using Google Gemini
+    AI Personal Coach for meal planning using Groq
     """
     
     def __init__(self):
-        """Initialize Gemini client"""
-        api_key = os.getenv("GEMINI_API_KEY")
+        """Initialize Groq client"""
+        api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
-            raise ValueError("GEMINI_API_KEY environment variable not set")
+            raise ValueError("GROQ_API_KEY environment variable not set")
         
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-3.1-flash-lite')
+        try:
+            import httpx
+            from openai import OpenAI
+            # Ensure no proxy environment variables interfere with OpenAI client
+            os.environ.pop("HTTP_PROXY", None)
+            os.environ.pop("HTTPS_PROXY", None)
+            os.environ.pop("ALL_PROXY", None)
+            
+            self.client_type = "groq"
+            self.client = OpenAI(
+                base_url="https://api.groq.com/openai/v1",
+                api_key=api_key,
+                http_client=httpx.Client()
+            )
+            self.model_name = "llama-3.1-8b-instant"
+        except Exception as e:
+            print(f"❌ Could not initialize Groq client: {e}")
+            raise e
     
     def _parse_json_response(self, response_text: str) -> dict:
         """
-        Parse JSON from Gemini response with fallback for markdown blocks
+        Parse JSON from Groq response with fallback for markdown blocks
         """
         try:
             return json.loads(response_text)
@@ -245,7 +183,7 @@ class AIPlanner:
                 if delimiter in response_text:
                     json_str = response_text.split(delimiter)[1].split("```")[0].strip()
                     return json.loads(json_str)
-            raise ValueError("Could not parse JSON from Gemini response")
+            raise ValueError("Could not parse JSON from Groq response")
     
     def _prepare_user_context(self, request: NutritionPlanRequest) -> Dict:
         """
@@ -276,7 +214,8 @@ class AIPlanner:
             "meal_distribution": analysis["meal_distribution"],
             "days_to_plan": request.days,
             "budget_recommendations": analysis["budget_recommendations"],
-            "lifestyle_context": lifestyle_context
+            "lifestyle_context": lifestyle_context,
+            "inventory": request.inventory if hasattr(request, 'inventory') else []
         }
     
     def _build_lifestyle_context(self, profile: UserProfile) -> Dict:
@@ -339,7 +278,7 @@ class AIPlanner:
     
     def generate_plan(self, request: NutritionPlanRequest) -> NutritionPlanResponse:
         """
-        Generate nutrition plan using Gemini with day-by-day generation and validation
+        Generate nutrition plan using Groq with day-by-day generation and validation
         """
         # Prepare context
         context = self._prepare_user_context(request)
@@ -347,19 +286,19 @@ class AIPlanner:
         target_protein = context["macro_targets"]["protein"]
         daily_budget = request.user_profile.budget_per_day
         
+        # State tracking for inventory across days
+        current_inventory = context.get("inventory", [])
         daily_plans = []
         
-        # Generate day by day to avoid truncation
-        for day_num in range(1, request.days + 1):
-            day_plan = self._generate_single_day(
-                day_num=day_num,
-                context=context,
-                previous_days=daily_plans,
-                target_calories=target_calories,
-                target_protein=target_protein,
-                daily_budget=daily_budget
-            )
-            daily_plans.append(day_plan)
+        # Generate multi-day plan in one shot to save tokens and time
+        print(f"🍱 [AI Planner] Generating {request.days}-day plan at once...")
+        daily_plans = self._generate_multi_day_plan(
+            request=request,
+            context=context,
+            target_calories=target_calories,
+            target_protein=target_protein,
+            daily_budget=daily_budget
+        )
         
         # Validate entire week
         weekly_budget = daily_budget * request.days
@@ -407,6 +346,70 @@ class AIPlanner:
             recommendations=recommendations
         )
     
+    def _generate_multi_day_plan(
+        self,
+        request: NutritionPlanRequest,
+        context: Dict,
+        target_calories: int,
+        target_protein: float,
+        daily_budget: int,
+        max_retries: int = 2
+    ) -> List[DailyPlan]:
+        """Generate entire multi-day plan in one shot"""
+        goal = context.get("user_profile", {}).get("goal", "maintenance")
+        system_prompt = get_system_prompt(goal)
+        
+        # Build compact inventory list
+        inventory_str = ", ".join(request.preferences) if request.preferences else "None"
+        
+        prompt = f"""Lập kế hoạch ăn uống trong {request.days} ngày.
+BẮT BUỘC:
+1. Đủ {request.days} ngày. Đánh số Day 1, Day 2, ...
+2. KHÔNG LẶP LẠI món ăn giữa các ngày.
+3. ƯU TIÊN DÙNG đồ có sẵn: {inventory_str}. Nếu dùng, estimated_cost = 0.
+4. Ngân sách: {daily_budget} VND/ngày.
+5. Mục tiêu: {target_calories} kcal, {target_protein}g protein mỗi ngày.
+
+User Profile: {json.dumps(context['user_profile'], ensure_ascii=False)}
+
+Trả về ONLY JSON trong mảng 'daily_plans'."""
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=[
+                        {"role": "system", "content": system_prompt + "\n" + PROMPT_SUFFIX},
+                        {"role": "user", "content": prompt}
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.7
+                )
+                response_text = response.choices[0].message.content
+                ai_response = self._parse_json_response(response_text)
+                
+                # Extract and normalize plans
+                plans_data = ai_response.get("daily_plans", [])
+                
+                # If AI returned a single object instead of list (happens sometimes)
+                if isinstance(plans_data, dict):
+                    plans_data = [plans_data]
+                
+                daily_plans = []
+                for i, p_data in enumerate(plans_data):
+                    day_num = i + 1
+                    # Use existing robust parser
+                    p_obj = self._parse_daily_plan(p_data, day_num)
+                    daily_plans.append(p_obj)
+                
+                return daily_plans
+
+            except Exception as e:
+                print(f"❌ Multi-day attempt {attempt} failed: {str(e)}")
+                if attempt == max_retries:
+                    # Final fallback: empty list (will trigger validation error later)
+                    return []
+                time.sleep(1)
     def _generate_single_day(
         self,
         day_num: int,
@@ -415,6 +418,7 @@ class AIPlanner:
         target_calories: int,
         target_protein: float,
         daily_budget: int,
+        inventory: List[str] = None,
         max_retries: int = 3
     ) -> DailyPlan:
         """
@@ -437,25 +441,48 @@ class AIPlanner:
         goal = context.get("user_profile", {}).get("goal", "maintenance")
         system_prompt = get_system_prompt(goal)
         
+        # Get goal-specific system prompt
+        goal = context.get("user_profile", {}).get("goal", "maintenance")
+        system_prompt = get_system_prompt(goal)
+        
+        # Build inventory context
+        inventory_str = " - ".join(inventory) if inventory else "Không có"
+        
+        # Build the prompt
+        prompt = f"""BẮT BUỘC:
+1. KHÔNG ĐƯỢC LẶP LẠI các món đã ăn ở các ngày trước: {json.dumps(day_context.get('previous_days', []), ensure_ascii=False)}
+2. ƯU TIÊN SỬ DỤNG kho đồ có sẵn: {inventory_str}
+3. Nếu dùng đồ có sẵn, 'estimated_cost' PHẢI BẰNG 0.
+4. Tổng chi phí mua mới không quá {daily_budget} VND.
+
+User Context:
+{json.dumps(day_context, ensure_ascii=False)}
+
+Nhiệm vụ: Hãy là một đầu bếp sáng tạo. Lên thực đơn cho Day {day_num} sao cho ngon miệng, đủ chất và KHÔNG trùng lặp.
+Nếu đồ có sẵn trong kho ({inventory_str}) có thể nấu được món gì, hãy ưu tiên món đó ngay.
+
+Return ONLY valid JSON for Day {day_num}."""
+
         for attempt in range(1, max_retries + 1):
             try:
-                # Generate prompt with goal-specific instructions
-                prompt = f"{system_prompt}\n\n{PROMPT_SUFFIX}\n\nUser Context:\n{json.dumps(day_context, ensure_ascii=False)}\n\nGenerate meal plan for Day {day_num} ONLY. Return ONLY valid JSON for 1 day."
+                # Add delay to avoid Groq Rate Limits
+                if day_num > 1:
+                    time.sleep(1.0)
                 
-                if attempt > 1:
-                    prompt += "\n\nIMPORTANT: This is a retry attempt. Pay special attention to the target values."
-                
-                # Call Gemini
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=genai.types.GenerationConfig(
-                        temperature=0.7,
-                        max_output_tokens=2000  # Smaller for single day
-                    )
+                # Call AI
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=[
+                        {"role": "system", "content": system_prompt + "\n" + PROMPT_SUFFIX},
+                        {"role": "user", "content": prompt}
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.7
                 )
+                response_text = response.choices[0].message.content
                 
                 # Parse response
-                ai_response = self._parse_json_response(response.text)
+                ai_response = self._parse_json_response(response_text)
                 
                 # Convert to DailyPlan
                 day_data = ai_response.get("daily_plans", [ai_response])[0] if "daily_plans" in ai_response else ai_response
@@ -474,38 +501,78 @@ class AIPlanner:
                         retry_prompt = PlanValidator.generate_retry_prompt(
                             errors, day_context, attempt
                         )
-                        response = self.model.generate_content(
-                            retry_prompt,
-                            generation_config=genai.types.GenerationConfig(
-                                temperature=0.5,
-                                max_output_tokens=2000
-                            )
+                        
+                        response = self.client.chat.completions.create(
+                            model=self.model_name,
+                            messages=[
+                                {"role": "user", "content": retry_prompt}
+                            ],
+                            response_format={"type": "json_object"},
+                            temperature=0.5
                         )
-                        ai_response = self._parse_json_response(response.text)
+                        response_text = response.choices[0].message.content
+
+                        ai_response = self._parse_json_response(response_text)
                         day_data = ai_response.get("daily_plans", [ai_response])[0] if "daily_plans" in ai_response else ai_response
                         day_plan = self._parse_daily_plan(day_data, day_num)
                         return day_plan
                     else:
-                        # Use fallback template on final retry
                         return self._get_fallback_day_plan(day_num, target_calories, target_protein, daily_budget)
                         
             except Exception as e:
+                print(f"❌ Attempt {attempt} failed for Day {day_num}: {str(e)}")
                 if attempt == max_retries:
                     return self._get_fallback_day_plan(day_num, target_calories, target_protein, daily_budget)
                 continue
         
         return self._get_fallback_day_plan(day_num, target_calories, target_protein, daily_budget)
     
+    def _update_inventory(self, current_inventory: List[str], day_plan: DailyPlan) -> List[str]:
+        """
+        Update inventory by removing items used in the daily plan.
+        Very simplified logic: if an item name or keyword from inventory matches a meal item, remove it.
+        """
+        if not current_inventory:
+            return []
+            
+        new_inventory = current_inventory.copy()
+        used_items = []
+        
+        for meal in day_plan.meals:
+            for item in meal.items:
+                # Flexible check: cost is 0 OR item name is mentioned in inventory
+                is_from_inventory = item.estimated_cost == 0
+                if not is_from_inventory:
+                    for inv_item in current_inventory:
+                        if inv_item.lower() in item.name.lower():
+                            is_from_inventory = True
+                            break
+                
+                if is_from_inventory:
+                    used_items.append(item.name.lower())
+        
+        # Remove matched items (simple heuristic)
+        for used in used_items:
+            for inv_item in new_inventory[:]:
+                if used in inv_item.lower() or inv_item.lower() in used:
+                    new_inventory.remove(inv_item)
+                    break
+        
+        return new_inventory
+
     def _parse_daily_plan(self, day_data: dict, day_num: int) -> DailyPlan:
         """Parse daily plan data from AI response"""
         meals = []
         for meal_data in day_data.get("meals", []):
+            raw_meal_type = meal_data.get("meal_type", "")
+            normalized_type = self._normalize_meal_type(raw_meal_type)
+            
             items = [
                 MealItem(**item) 
                 for item in meal_data.get("items", [])
             ]
             meals.append(Meal(
-                meal_type=MealType(meal_data["meal_type"]),
+                meal_type=MealType(normalized_type),
                 items=items
             ))
         
@@ -520,6 +587,25 @@ class AIPlanner:
             estimated_cost=day_data.get("estimated_cost", 0)
         )
     
+    def _normalize_meal_type(self, raw_type: str) -> str:
+        """Normalize Vietnamese meal types to English for Enum compatibility"""
+        val = str(raw_type).lower().strip()
+        mapping = {
+            "sáng": "breakfast",
+            "trưa": "lunch",
+            "tối": "dinner",
+            "phụ": "snack",
+            "bữa sáng": "breakfast",
+            "bữa trưa": "lunch",
+            "bữa tối": "dinner",
+            "bữa phụ": "snack",
+            "snack": "snack",
+            "breakfast": "breakfast",
+            "lunch": "lunch",
+            "dinner": "dinner"
+        }
+        return mapping.get(val, val)
+
     def _get_fallback_day_plan(
         self, day_num: int, target_calories: int, target_protein: float, budget: int
     ) -> DailyPlan:
@@ -569,24 +655,31 @@ class AIPlanner:
         self, 
         current_plan: DailyPlan,
         constraint: str,
-        user_profile: UserProfile
+        user_profile: UserProfile,
+        inventory: List[str] = None
     ) -> Dict:
         """
         Adjust existing plan based on constraint (e.g., ingredient unavailable)
         """
+        inventory_str = " - ".join(inventory) if inventory else "Không có"
+        
         adjustment_prompt = f"""Adjust the following meal plan based on constraint: "{constraint}"
 
 Current Plan:
 {json.dumps(current_plan.dict(), ensure_ascii=False)}
 
+NGUYÊN LIỆU ĐANG CÓ SẴN (Giá 0đ): {inventory_str}
+
 User Budget: {user_profile.budget_per_day} VND/day
 User Goal: {user_profile.goal.value}
 
 RULES:
-1. Replace only the affected meals/items
-2. Maintain similar calories and macros
-3. Stay within budget
-4. Suggest alternatives with similar nutritional profile
+1. Master Chef Mode: Use the updated Inventory to replace the affected meals/items.
+2. Resourcefulness: Prioritize using available ingredients to keep the cost difference low.
+3. If an item from inventory is used, set its 'estimated_cost' to 0.
+4. Maintain similar calories and macros.
+5. Stay within budget.
+6. Suggest alternatives with similar nutritional profile.
 
 OUTPUT JSON:
 {{
@@ -598,29 +691,17 @@ OUTPUT JSON:
 """
         
         try:
-            prompt = f"You are a nutrition expert. Output only valid JSON.\n\n{adjustment_prompt}"
+            prompt_content = f"You are a nutrition expert. Output only valid JSON.\n\n{adjustment_prompt}"
             
-            response = self.model.generate_content(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.5,
-                    max_output_tokens=2000
-                )
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": prompt_content}],
+                response_format={"type": "json_object"},
+                temperature=0.5
             )
             
-            response_text = response.text
-            # Try to parse JSON
-            try:
-                return json.loads(response_text)
-            except json.JSONDecodeError:
-                if "```json" in response_text:
-                    json_str = response_text.split("```json")[1].split("```")[0].strip()
-                    return json.loads(json_str)
-                elif "```" in response_text:
-                    json_str = response_text.split("```")[1].strip()
-                    return json.loads(json_str)
-                else:
-                    raise ValueError("Could not parse JSON from Gemini response")
+            response_text = response.choices[0].message.content
+            return json.loads(response_text)
             
         except Exception as e:
             raise ValueError(f"Failed to adjust plan: {str(e)}")
@@ -654,29 +735,101 @@ OUTPUT JSON:
 """
         
         try:
-            prompt = f"You are a supportive fitness coach. Output only valid JSON.\n\n{cheat_prompt}"
+            prompt_content = f"You are a supportive fitness coach. Output only valid JSON.\n\n{cheat_prompt}"
             
-            response = self.model.generate_content(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.6,
-                    max_output_tokens=1500
-                )
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": prompt_content}],
+                response_format={"type": "json_object"},
+                temperature=0.6
             )
             
-            response_text = response.text
-            # Try to parse JSON
-            try:
-                return json.loads(response_text)
-            except json.JSONDecodeError:
-                if "```json" in response_text:
-                    json_str = response_text.split("```json")[1].split("```")[0].strip()
-                    return json.loads(json_str)
-                elif "```" in response_text:
-                    json_str = response_text.split("```")[1].strip()
-                    return json.loads(json_str)
-                else:
-                    raise ValueError("Could not parse JSON from Gemini response")
+            response_text = response.choices[0].message.content
+            return json.loads(response_text)
             
         except Exception as e:
             raise ValueError(f"Failed to handle cheat meal: {str(e)}")
+
+    def generate_meal_from_context(self, target_calories: int, budget: int, inventory: List[str]) -> Dict:
+        """
+        Generate a single daily meal plan directly from context (target calories, budget, inventory)
+        """
+        inventory_str = ", ".join(inventory) if inventory else "Không có"
+        
+        prompt = f"""Đóng vai trò là chuyên gia dinh dưỡng. Hãy tạo thực đơn 3 bữa tổng cộng khoảng {target_calories} kcal. 
+Bắt buộc phải sử dụng hết các nguyên liệu có sẵn sau: {inventory_str} (giá 0đ). 
+Các nguyên liệu phải mua thêm không được vượt quá {budget} VND. 
+Trả về định dạng JSON nghiêm ngặt.
+
+OUTPUT JSON FORMAT:
+{{
+    "meals": [
+        {{
+            "meal_type": "breakfast",
+            "items": [
+                {{
+                    "name": "Tên món tiếng Việt",
+                    "amount": "Serving size",
+                    "calories": int,
+                    "protein": float,
+                    "carb": float,
+                    "fat": float,
+                    "estimated_cost": int (0 nếu là nguyên liệu có sẵn)
+                }}
+            ]
+        }},
+        ...
+    ],
+    "total_calories": int,
+    "total_cost": int,
+    "shopping_list": ["item1", "item2"]
+}}
+
+IMPORTANT:
+- Output ONLY valid JSON, no markdown, no explanations.
+- All amounts in Vietnamese units (g, kg, bowl).
+- All costs in VND.
+- Ensure the JSON is properly formatted.
+"""
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"},
+                temperature=0.7
+            )
+            return self._parse_json_response(response.choices[0].message.content)
+        except Exception as e:
+            raise ValueError(f"Failed to generate meal from context: {str(e)}")
+    def chat(self, message: str, history: List[Dict] = [], preferences: Dict = {}) -> str:
+        """
+        General fitness coach chat
+        """
+        system_prompt = """You are an elite AI Fitness Coach. Your goal is to provide concise, 
+        science-based, and highly motivating advice on training, nutrition, and recovery.
+        Be encouraging but maintain a professional, 'neural-link' style persona.
+        If a user asks about a specific meal or workout, use their preferences if provided."""
+        
+        if preferences:
+            system_prompt += f"\nUser Preferences: {json.dumps(preferences, ensure_ascii=False)}"
+            
+        messages = [{"role": "system", "content": system_prompt}]
+        
+        # Add history
+        for msg in history[-10:]: # Last 10 messages for context
+            messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+            
+        # Add current message
+        messages.append({"role": "user", "content": message})
+        
+        try:
+            # Groq chat with history
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                temperature=0.7,
+                max_tokens=1000
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            return f"Neural link disrupted. Error: {str(e)}. I recommend sticking to your current plan while I recalibrate."

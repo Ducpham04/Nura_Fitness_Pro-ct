@@ -20,7 +20,7 @@ class IngredientPrice:
 class PriceDatabase:
     """
     Database of real ingredient prices in Vietnam
-    Used to calculate accurate meal costs instead of Gemini estimates
+    Used to calculate accurate meal costs instead of AI estimates
     """
     
     # Vietnam market prices (2024 estimates)
