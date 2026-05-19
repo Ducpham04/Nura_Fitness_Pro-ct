@@ -14,9 +14,19 @@
 Fit_Ai_Challenge_Web-App_BE/target/
 Fit_Ai_Challenge_Web-App_BE/uploads/
 Fit_Ai_Challenge_Web-App_BE/.mvn/wrapper/maven-wrapper.jar
+backend/target/
+backend/uploads/
 
 # Python AI
+venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
 fitness-ai-service/venv/
+fitness-ai-service/data/
+fitness-ai-service/models/*.pkl
 fitness-ai-service/__pycache__/
 fitness-ai-service/**/__pycache__/
 fitness-ai-service/.pytest_cache/
@@ -49,5 +59,3 @@ backups/
 # Temporary files
 tmp/
 temp/
-
-
