@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import {
   Camera, X, Upload, Sparkles, CheckCircle, AlertCircle,
   Loader2, Zap, Brain, Utensils, Flame, Beef, Apple

@@ -1,21 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import { useAuthContext } from '../context/AuthContext';
 import { userService } from '../services/userService';
-import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function DashboardLayout() {
   const { user } = useAuthContext();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     async function checkUserSetup() {
       if (!user) return;
+      if (user.role === 'ADMIN') {
+        setChecking(false);
+        return;
+      }
       try {
         const profile = await userService.getBodyProfile();
-        if (!profile || profile.data == null) {
+        if (!profile) {
           console.error('No user profile found or network error, redirecting to onboarding');
           navigate('/onboarding');
           return;
@@ -37,7 +42,7 @@ export default function DashboardLayout() {
             <div className="absolute inset-0 border-4 border-lime/20 rounded-full"></div>
             <div className="absolute inset-0 border-4 border-lime rounded-full border-t-transparent animate-spin"></div>
           </div>
-          <p className="text-neutral-500 font-bold font-grotesk uppercase tracking-widest text-xs animate-pulse">Syncing User Profile...</p>
+          <p className="text-neutral-500 font-bold font-grotesk uppercase tracking-widest text-xs animate-pulse">{t('dashboard.syncingProfile')}</p>
         </div>
       </div>
     );
@@ -46,7 +51,7 @@ export default function DashboardLayout() {
   return (
     <div className="flex h-screen bg-obsidian font-inter overflow-hidden flex-col">
       <Navigation />
-      <main className="flex-1 overflow-y-auto px-6 py-8 pb-32 md:pb-8">
+      <main className="flex-1 overflow-y-auto px-6 pb-32 pt-16 md:py-8">
         <Outlet />
       </main>
     </div>

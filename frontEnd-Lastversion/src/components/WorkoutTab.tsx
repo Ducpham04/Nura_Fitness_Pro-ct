@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Dumbbell, BookOpen, Play, Calendar } from 'lucide-react';
+import { useState } from 'react';
+import { Dumbbell, BookOpen } from 'lucide-react';
 import TrainingView from './TrainingView';
 import TrainingPlansView from './TrainingPlansView';
 

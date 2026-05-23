@@ -1,6 +1,7 @@
-import React, { useState, useEffect, memo } from 'react';
-import { Search, Filter, Trophy, Clock, Users, Play, CheckCircle, Lock, ChevronRight, Video, Zap, Award, Loader2 } from 'lucide-react';
+import { useState, useEffect, memo } from 'react';
+import { Search, Trophy, Clock, Users, Play, CheckCircle, ChevronRight, Video, Zap, Award, Loader2 } from 'lucide-react';
 import { challengeService, type Challenge } from '../services/challengeService';
+import { userService } from '../services/userService';
 
 interface ChallengeUI {
   id: number;
@@ -23,13 +24,6 @@ interface ChallengeUI {
   ends_at: string;
 }
 
-interface SubmissionData {
-  reps: number;
-  formScore: number;
-  caloriesBurned: number;
-  duration: number;
-}
-
 function ChallengesView() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +34,12 @@ function ChallengesView() {
   const [selectedChallenge, setSelectedChallenge] = useState<ChallengeUI | null>(null);
 
   const [backendGoals, setBackendGoals] = useState<any[]>([]);
+
+  const mapDifficulty = (difficulty?: string): ChallengeUI['difficulty'] => {
+    if (difficulty === 'EASY') return 'beginner';
+    if (difficulty === 'HARD') return 'advanced';
+    return 'intermediate';
+  };
 
   useEffect(() => {
     loadChallenges();
@@ -79,15 +79,15 @@ function ChallengesView() {
     id: challenge.id,
     name: challenge.title,
     description: challenge.description,
-    goal: (challenge.goal || 'muscle') as 'lose' | 'muscle' | 'maintain' | 'endurance',
-    difficulty: challenge.difficulty.toLowerCase() as 'beginner' | 'intermediate' | 'advanced',
-    duration: challenge.duration || '1 week',
+    goal: 'endurance' as 'lose' | 'muscle' | 'maintain' | 'endurance',
+    difficulty: mapDifficulty(challenge.difficulty),
+    duration: challenge.duration || `${challenge.durationDays} days`,
     participants: challenge.participants || 0,
     reward_points: challenge.rewardPoints || 0,
     prize_usd: challenge.prizeUsd,
     image: challenge.imageUrl || 'https://images.pexels.com/photos/4162583/pexels-photo-4162583.jpeg?auto=compress&cs=tinysrgb&w=400',
-    exercise: challenge.exercise || challenge.exerciseType,
-    minReps: challenge.minReps,
+    exercise: challenge.exercise || (challenge.exerciseIds?.length ? `${challenge.exerciseIds.length} exercises` : 'Challenge event'),
+    minReps: challenge.minReps || 0,
     passingScore: challenge.passingScore || 85,
     status: (challenge.status === 'ACTIVE' ? 'active' : challenge.status === 'INACTIVE' ? 'ended' : 'upcoming') as 'active' | 'ended' | 'upcoming',
     joined: challenge.joined || false,

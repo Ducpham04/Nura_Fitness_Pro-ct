@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, 
@@ -10,6 +11,7 @@ import {
   Dumbbell, 
   UtensilsCrossed 
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { userService } from '../services/userService';
 
 
@@ -58,7 +60,11 @@ const dietTypes = [
   { id: 'keto', label: 'Keto', icon: '🥑' },
 ];
 
-const steps = [
+const steps: Array<{
+  title: string;
+  subtitle: string;
+  icon: LucideIcon | string;
+}> = [
   { title: 'Your body metrics', subtitle: 'We use this to calculate your daily needs.', icon: Activity },
   { title: 'Your primary goal', subtitle: 'What are you training for?', icon: Target },
   { title: 'Activity level', subtitle: 'How often do you currently exercise?', icon: Heart },
@@ -192,7 +198,7 @@ export default function Onboarding() {
 
     } catch (error) {
       console.error("Lỗi khi lưu Health Profile:", error);
-      alert("Đã có lỗi xảy ra khi lưu hồ sơ!");
+      toast.error("Đã có lỗi xảy ra khi lưu hồ sơ!");
     } finally {
       setIsSubmitting(false);
     }
@@ -203,7 +209,8 @@ export default function Onboarding() {
     else submitProfileToBackend();
   };
 
-  const StepIcon = typeof steps[step].icon === 'string' ? null : steps[step].icon;
+  const StepIcon = typeof steps[step].icon === 'string' ? null : steps[step].icon as LucideIcon;
+  const StepGlyph = typeof steps[step].icon === 'string' ? steps[step].icon : null;
 
   return (
     <div className="min-h-screen bg-obsidian flex items-center justify-center relative overflow-hidden font-inter px-6">
@@ -232,7 +239,7 @@ export default function Onboarding() {
         <div className="glass rounded-3xl p-8 border border-white/5 mb-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-2xl bg-lime/10 flex items-center justify-center">
-               {StepIcon ? <StepIcon className="w-5 h-5 text-lime" /> : <span className="text-xl">{steps[step].icon}</span>}
+               {StepIcon ? <StepIcon className="w-5 h-5 text-lime" /> : <span className="text-xl">{StepGlyph}</span>}
             </div>
             <div>
               <h2 className="font-grotesk font-bold text-white text-xl">{steps[step].title}</h2>

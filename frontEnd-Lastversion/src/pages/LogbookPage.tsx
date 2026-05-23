@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   History, Calendar, Filter, TrendingUp, ChevronRight, 
   Dumbbell, Utensils, Scale, Search, ArrowUpRight, 

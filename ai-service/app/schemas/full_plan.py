@@ -8,6 +8,19 @@ from .nutrition import DailyPlan, UserProfile
 from .workout import WorkoutSession, SessionType
 
 
+class AllowedWorkoutExercise(BaseModel):
+    exercise_id: int = Field(..., ge=1)
+    exercise_name: str = Field(..., min_length=1)
+    exercise_type: str = ""
+    movement_pattern: str = ""
+    primary_muscle: str = ""
+    difficulty_level: str = ""
+    required_equipment: str = "BODYWEIGHT"
+    default_sets: int = Field(..., ge=1)
+    default_reps: int = Field(..., ge=1)
+    default_rest_seconds: int = Field(..., ge=1)
+
+
 class IntegratedDailyPlan(BaseModel):
     """Combined daily meal and workout plan"""
     day: str
@@ -37,6 +50,8 @@ class FullPlanRequest(BaseModel):
     available_equipment: List[str] = Field(default_factory=list, description="List of available equipment: Tạ đôi, Máy cáp, Không cần")
     workout_duration_minutes: int = Field(default=45, ge=15, le=120)
     inventory: Optional[List[str]] = Field(default_factory=list, description="List of items currently in user's kitchen")
+    current_injuries: Optional[str] = ""
+    allowed_exercises: List[AllowedWorkoutExercise] = Field(default_factory=list)
 
 
 class FullPlanResponse(BaseModel):

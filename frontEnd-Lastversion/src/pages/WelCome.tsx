@@ -384,7 +384,7 @@ export default function Welcome() {
           <button onClick={() => setPhase('budget')} className="btn-lime px-8 py-4 text-sm font-grotesk font-bold flex items-center gap-2 mx-auto">
             Bắt đầu thiết lập <ArrowRight className="w-4 h-4" />
           </button>
-          <button onClick={onComplete} className="text-neutral-500 text-xs mt-4 hover:text-neutral-300 transition-colors">
+          <button onClick={() => onComplete(budget, inventoryItems)} className="text-neutral-500 text-xs mt-4 hover:text-neutral-300 transition-colors">
             Bỏ qua, thiết lập sau
           </button>
         </div>

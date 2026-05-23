@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Utensils, ShoppingBag } from 'lucide-react';
 import MealViewEnhanced from './MealViewEnhanced';
 import InventoryView from './InventoryView';

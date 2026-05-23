@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Brain, Zap, X, Dumbbell, Timer, Activity } from 'lucide-react';
+import { useState } from 'react';
+import { Zap, X, Dumbbell, Timer, Activity } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { trainingService } from '../services/trainingService';
 

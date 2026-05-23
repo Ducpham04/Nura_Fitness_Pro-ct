@@ -198,6 +198,7 @@ Các thành phần đã gỡ kèm:
 | `DishRepository` | Query catalog món ăn. |
 | `DishIngredientRepository` | Query công thức món ăn kèm `Food`. |
 | `FoodRepository` | Master ingredient data. |
+| `DishAdminController` | CRUD admin cho `Dish` và `DishIngredient`. |
 | `UserInventoryRepository` | Lấy tủ lạnh để set `fromInventory`. |
 | `PersonalizedNutritionPlanRepository` | Lấy active plan cho FE. |
 | `PersonalizedMealDetailRepository` | Lấy meal theo ngày, fetch dish/items. |

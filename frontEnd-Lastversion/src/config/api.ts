@@ -42,8 +42,8 @@ export const API_ENDPOINTS = {
   // Training
   TRAINING: {
     PLANS: '/training-plans',
-    USER_TRAINING: (userId: number) => `/user-training/${userId}`,
-    LOG: (userId: number) => `/user-training/${userId}/log`,
+    USER_TRAINING: (userId: number) => `/user/training/${userId}`,
+    LOG: (userId: number) => `/user/training/${userId}/log`,
     DAILY_LOGS_BY_PLAN: (planId: number) => `/user/daily-training-logs/plan/${planId}`,
     DAILY_LOGS_SAVE: '/user/daily-training-logs',
     PERSONALIZED_TODAY: '/user/personalized/today',

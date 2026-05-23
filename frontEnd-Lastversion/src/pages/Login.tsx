@@ -2,6 +2,9 @@ import { useState, useMemo } from 'react';
 import { Zap, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { authService } from '../services/authService';
+import { useTranslation } from 'react-i18next';
+import LanguageSelector from '../components/LanguageSelector';
 
 function ParticleField() {
   const particles = useMemo(() => Array.from({ length: 6 }, (_, i) => ({
@@ -22,15 +25,16 @@ function ParticleField() {
 }
 
 export default function Login() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const onLogin = (needsOnboarding: boolean) => navigate(needsOnboarding ? '/onboarding' : '/dashboard');
+  const onLogin = (path: string) => navigate(path);
   const onRegister = () => navigate('/register');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login, error: authError, user } = useAuthContext();
+  const { login, error: authError } = useAuthContext();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +42,7 @@ export default function Login() {
     setLoading(true);
 
     if (!email || !password) {
-      setError('Vui lòng nhập email và mật khẩu');
+      setError(t('auth.missingCredentials'));
       setLoading(false);
       return;
     }
@@ -48,19 +52,23 @@ export default function Login() {
     setLoading(false);
 
     if (success) {
-      // Check if user is new (fullName equals email prefix, indicating incomplete profile)
-      const isNewUser = user?.fullName === email.split('@')[0] || !user?.fullName;
-      console.log(user?.fullName)
-  
-      onLogin(isNewUser);
+      const currentUser = authService.getStoredUser();
+      if (currentUser?.role === 'ADMIN') {
+        onLogin('/admin');
+        return;
+      }
+      onLogin('/dashboard');
     } else {
-      setError(authError || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+      setError(authError || t('auth.loginFailed'));
     }
   };
 
   return (
     <div className="min-h-screen bg-obsidian flex items-center justify-center relative overflow-hidden font-inter px-6">
       <ParticleField />
+      <div className="absolute right-6 top-6 z-20">
+        <LanguageSelector />
+      </div>
 
       {/* BG glows */}
       <div className="absolute top-1/4 right-1/3 w-96 h-96 rounded-full pointer-events-none"
@@ -79,13 +87,13 @@ export default function Login() {
 
         {/* Card */}
         <div className="glass rounded-3xl p-8 border border-white/5 mb-6">
-          <h1 className="font-grotesk font-bold text-2xl text-white mb-2">Đăng nhập</h1>
-          <p className="text-neutral-400 text-sm mb-6">Tiếp tục hành trình fitness của bạn</p>
+          <h1 className="font-grotesk font-bold text-2xl text-white mb-2">{t('auth.loginTitle')}</h1>
+          <p className="text-neutral-400 text-sm mb-6">{t('auth.loginSubtitle')}</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div>
-              <label htmlFor="email" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">Email</label>
+              <label htmlFor="email" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.email')}</label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                 <input
@@ -104,7 +112,7 @@ export default function Login() {
 
             {/* Password */}
             <div>
-              <label htmlFor="password" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">Mật khẩu</label>
+              <label htmlFor="password" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.password')}</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                 <input
@@ -123,7 +131,7 @@ export default function Login() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -141,7 +149,7 @@ export default function Login() {
             {/* Forgot password */}
             <div className="flex justify-end">
               <button type="button" className="text-electric text-xs font-grotesk font-medium hover:text-white transition-colors">
-                Quên mật khẩu?
+                {t('auth.forgotPassword')}
               </button>
             </div>
 
@@ -154,11 +162,11 @@ export default function Login() {
               {loading ? (
                 <>
                   <div className="w-4 h-4 rounded-full border-2 border-obsidian/30 border-t-obsidian animate-spin" />
-                  Đang xử lý...
+                  {t('auth.processing')}
                 </>
               ) : (
                 <>
-                  Đăng nhập
+                  {t('auth.signIn')}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -168,7 +176,7 @@ export default function Login() {
           {/* Divider */}
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-white/10" />
-            <span className="text-neutral-500 text-xs">Hoặc</span>
+            <span className="text-neutral-500 text-xs">{t('auth.or')}</span>
             <div className="flex-1 h-px bg-white/10" />
           </div>
 
@@ -177,21 +185,21 @@ export default function Login() {
             onClick={() => { setEmail('demo@fitchallenge.com'); setPassword('123456'); }}
             className="w-full btn-ghost py-3 text-sm font-grotesk font-medium transition-all"
           >
-            Dùng demo account
+            {t('auth.demoAccount')}
           </button>
         </div>
 
         {/* Sign up link */}
         <div className="text-center">
-          <span className="text-neutral-400 text-sm">Chưa có tài khoản? </span>
+          <span className="text-neutral-400 text-sm">{t('auth.noAccount')} </span>
           <button onClick={onRegister} className="text-lime font-grotesk font-semibold hover:text-white transition-colors">
-            Đăng ký ngay
+            {t('auth.signUpNow')}
           </button>
         </div>
 
         {/* Security note */}
         <div className="mt-6 text-center text-neutral-500 text-xs">
-          Bằng cách đăng nhập, bạn đồng ý với Điều khoản dịch vụ & Chính sách bảo mật
+          {t('auth.termsNotice')}
         </div>
       </div>
     </div>

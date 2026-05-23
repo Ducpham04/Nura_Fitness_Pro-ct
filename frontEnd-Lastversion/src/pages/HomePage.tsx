@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Dumbbell, Utensils, Trophy, Zap, Brain, Camera,
-  ChevronRight, X, Check, TrendingUp, ShoppingCart,
-  Wallet, Moon, Droplets, Beef, Wheat, Apple, Activity,
-  Battery, AlertCircle, Star, Clock, Flame, Play, History
+  Dumbbell, Trophy, Brain,
+  ChevronRight, Check, ShoppingCart,
+  Wallet, Moon, Beef, Wheat, Apple,
+  AlertCircle, Star, Clock, Flame, Play, History
 } from 'lucide-react';
 import ProgressRing from '../components/ProgressRing';
 import { useDashboard } from '../hooks/useDashboard';
@@ -13,23 +13,6 @@ import SetupWizard from '../components/SetupWizard';
 import { nutritionService } from '../services/nutritionService';
 
 // ── Interfaces ─────────────────────────────────────────────────────────────
-import {
-  MOCK_MEALS_TODAY,
-  MOCK_UPCOMING,
-  MOCK_RECENT_PRS,
-} from './mockData';
-
-// ── Interfaces ─────────────────────────────────────────────────────────────
-interface DashboardStats {
-  dailyBudget: number;
-  spentToday: number;
-  caloriesConsumed: number;
-  caloriesBurned: number;
-  totalWorkouts: number;
-  currentStreak: number;
-  totalPoints: number;
-}
-
 // ── Helper functions ───────────────────────────────────────────────────────
 function pct(v: number, goal: number) { return goal ? Math.min(100, Math.round((v / goal) * 100)) : 0; }
 
@@ -79,20 +62,9 @@ function MacroBar({ label, consumed, goal, unit, color, icon: Icon }: {
   );
 }
 
-function EnergyDots({ level }: { level: number }) {
-  return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map(i => (
-        <div key={i} className={`w-2 h-2 rounded-full ${i <= level ? 'bg-lime' : 'bg-white/10'}`} />
-      ))}
-    </div>
-  );
-}
-
 // ── Main Component ─────────────────────────────────────────────────────────
 export default function HomePage() {
   const [goalReached, setGoalReached] = useState(false);
-  const [showAICoach, setShowAICoach] = useState(true);
   const [aiCaloriesIn, setAiCaloriesIn] = useState<number | null>(null);
   const [aiSpent, setAiSpent] = useState<number | null>(null);
   const [aiBudgetTotal, setAiBudgetTotal] = useState<number | null>(null);
@@ -117,6 +89,7 @@ export default function HomePage() {
     waterGoal: 2.5,
     budgetRemaining: 80000,
     budgetLimit: 80000,
+    caloriesBurned: 0,
   };
 
   const userSummary = data?.userSummary || {
@@ -151,7 +124,6 @@ export default function HomePage() {
   const userName = userSummary.fullName;
   const aiSuggestion = data?.aiSuggestion;
 
-  const lvlPct = pct(userSummary.currentExp, userSummary.nextLevelExp);
   const recoveryLabel = recovery.recommendation.toLowerCase() === 'rest' ? 'Nên nghỉ ngơi' : recovery.recommendation.toLowerCase() === 'light' ? 'Tập nhẹ thôi' : 'Sẵn sàng 100%';
   const recoveryColor = recovery.recommendation.toLowerCase() === 'rest' ? 'text-warning' : recovery.recommendation.toLowerCase() === 'light' ? 'text-electric' : 'text-lime';
 
@@ -492,7 +464,13 @@ export default function HomePage() {
             {todayWorkouts.map((ex) => (
               <div key={ex.id} className="group relative rounded-3xl overflow-hidden bg-surface border border-white/5">
                 <div className="relative h-32">
-                  <img src={ex.imageUrl} alt={ex.name} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all" />
+                  {ex.imageUrl ? (
+                    <img src={ex.imageUrl} alt={ex.name} className="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-surface via-charcoal to-obsidian flex items-center justify-center">
+                      <Dumbbell className="w-10 h-10 text-electric/60" />
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-surface to-transparent" />
                   {ex.done && (
                     <div className="absolute top-3 right-3 w-6 h-6 bg-lime rounded-full flex items-center justify-center">
@@ -518,28 +496,24 @@ export default function HomePage() {
         <div className="lg:col-span-4 glass rounded-[2.5rem] p-8 border border-white/5">
           <h3 className="text-white font-grotesk font-bold text-lg mb-6">Upcoming</h3>
           <div className="space-y-4">
-            {MOCK_UPCOMING.map((item, i) => (
-              <div key={i} className="flex items-center gap-4 group">
+            {todayWorkouts.filter(item => !item.done).slice(0, 3).map((item) => (
+              <div key={item.id} className="flex items-center gap-4 group">
                 <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-lime/10 transition-colors">
                   <Clock className="w-4 h-4 text-neutral-500 group-hover:text-lime" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-white font-grotesk font-bold text-sm">{item.label}</div>
-                  <div className="text-neutral-500 text-xs">{item.time}</div>
+                  <div className="text-white font-grotesk font-bold text-sm">{item.name}</div>
+                  <div className="text-neutral-500 text-xs">{item.sets}</div>
                 </div>
-                <span className="text-[10px] bg-white/5 text-neutral-400 px-2 py-1 rounded-lg font-bold">{item.tag}</span>
+                <span className="text-[10px] bg-white/5 text-neutral-400 px-2 py-1 rounded-lg font-bold">Workout</span>
               </div>
             ))}
-            
-            <div className="mt-8 pt-8 border-t border-white/5">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-neutral-500 text-xs font-bold uppercase tracking-widest">Step Counter</span>
-                <span className="text-white font-grotesk font-bold text-sm">8.2k / 10k</span>
+
+            {todayWorkouts.filter(item => !item.done).length === 0 && (
+              <div className="rounded-2xl bg-white/5 border border-white/5 p-4 text-sm text-neutral-400">
+                No upcoming workouts from API.
               </div>
-              <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                <div className="h-full rounded-full bg-electric" style={{ width: '82%' }} />
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

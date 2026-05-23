@@ -1,5 +1,5 @@
-import React, { memo } from 'react';
-import { TrendingUp, Flame, Target, Award, Calendar } from 'lucide-react';
+import { memo } from 'react';
+import { TrendingUp, Flame, Target, Award } from 'lucide-react';
 import ProgressRing from './ProgressRing';
 
 interface Props {
@@ -32,7 +32,7 @@ function AnalyticsView({ userName }: Props) {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h2 className="font-grotesk font-bold text-white text-xl">Progress Analytics</h2>
-        <p className="text-neutral-400 text-sm mt-1">Your fitness journey, visualized</p>
+        <p className="text-neutral-400 text-sm mt-1">{userName}'s fitness journey, visualized</p>
       </div>
 
       {/* Stat cards */}

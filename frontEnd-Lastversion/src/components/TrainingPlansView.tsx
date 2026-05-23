@@ -1,6 +1,7 @@
-import React, { useState, useEffect, memo } from 'react';
-import { Search, Filter, Star, Clock, TrendingUp, Play, CheckCircle, Lock, ChevronRight, Loader2, Zap } from 'lucide-react';
+import { useState, useEffect, memo } from 'react';
+import { Search, Star, Clock, TrendingUp, Play, CheckCircle, ChevronRight, Loader2, Zap } from 'lucide-react';
 import { trainingService, type TrainingPlan } from '../services/trainingService';
+import { userService } from '../services/userService';
 import CyberpunkWorkoutModal from './CyberpunkWorkoutModal';
 
 interface Plan {
@@ -12,9 +13,9 @@ interface Plan {
   weeksCount: number;
   workoutsPerWeek: number;
   daysPerWeek: number;
-  rating: number;
-  reviews: number;
-  image: string;
+  rating?: number;
+  reviews?: number;
+  image?: string;
   description: string;
   features: string[];
   started: boolean;
@@ -30,6 +31,7 @@ function TrainingPlansView() {
   const [filterDifficulty, setFilterDifficulty] = useState<string>('all');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [startingPlanId, setStartingPlanId] = useState<number | string | null>(null);
 
   const [backendGoals, setBackendGoals] = useState<any[]>([]);
 
@@ -84,58 +86,35 @@ function TrainingPlansView() {
     daysPerWeek: plan.workoutsPerWeek || 3,
     rating: plan.rating || 4.5,
     reviews: plan.reviews || 0,
-    image: plan.imageUrl || 'https://images.pexels.com/photos/4162590/pexels-photo-4162590.jpeg?auto=compress&cs=tinysrgb&w=400',
+    image: plan.imageUrl,
     description: plan.description,
-    features: plan.features || ['Full body workouts', 'Progressive overload'],
+    features: plan.features || [],
     started: plan.started || false,
     progress: plan.progress || 0,
   })) : [];
 
-  // Fallback data if API fails
-  const fallbackPlans: Plan[] = [
-    {
-      id: 1,
-      name: 'Beginner Strength Builder',
-      goal: 'muscle',
-      difficulty: 'beginner',
-      duration: '8 weeks',
-      weeksCount: 8,
-      workoutsPerWeek: 3,
-      daysPerWeek: 3,
-      rating: 4.8,
-      reviews: 342,
-      image: 'https://images.pexels.com/photos/4162590/pexels-photo-4162590.jpeg?auto=compress&cs=tinysrgb&w=400',
-      description: 'Perfect for beginners. Build foundational strength with 3 days per week.',
-      features: ['Full body workouts', 'Bodyweight & dumbbells', 'Progressive overload', 'Form coaching'],
-      started: true,
-      progress: 35,
-    },
-    {
-      id: 2,
-      name: 'Advanced Hypertrophy Split',
-      goal: 'muscle',
-      difficulty: 'advanced',
-      duration: '12 weeks',
-      weeksCount: 12,
-      workoutsPerWeek: 5,
-      daysPerWeek: 5,
-      rating: 4.9,
-      reviews: 521,
-      image: 'https://images.pexels.com/photos/4162590/pexels-photo-4162590.jpeg?auto=compress&cs=tinysrgb&w=400',
-      description: 'Advanced muscle building with 5-day split routine.',
-      features: ['Muscle group splits', 'Progressive overload', 'Advanced techniques', 'Recovery protocols'],
-      started: false,
-      progress: 0,
-    },
-  ];
-
-  const plansToShow = plans.length > 0 ? displayPlans : fallbackPlans;
+  const plansToShow = displayPlans;
 
   const filtered = plansToShow.filter(p =>
     (filterGoal === 'all' || p.goal === filterGoal) &&
     (filterDifficulty === 'all' || p.difficulty === filterDifficulty) &&
     p.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleStartPlan = async (plan: Plan) => {
+    setStartingPlanId(plan.id);
+    setError(null);
+    const response = await trainingService.startTrainingPlan(Number(plan.id));
+    setStartingPlanId(null);
+
+    if (!response.success) {
+      setError(response.error?.message || (response as any).message || 'Failed to start training plan');
+      return;
+    }
+
+    setSelectedPlan(null);
+    await loadTrainingPlans();
+  };
 
   if (loading) {
     return (
@@ -166,7 +145,13 @@ function TrainingPlansView() {
         <div className="grid lg:grid-cols-3 gap-6 pb-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="relative h-80 rounded-3xl overflow-hidden">
-              <img src={selectedPlan.image} alt={selectedPlan.name} className="w-full h-full object-cover" />
+              {selectedPlan.image ? (
+                <img src={selectedPlan.image} alt={selectedPlan.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-surface via-charcoal to-obsidian flex items-center justify-center">
+                  <Zap className="w-14 h-14 text-electric/70" />
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-charcoal to-transparent" />
               <div className="absolute bottom-6 left-6 right-6">
                 <h1 className="font-grotesk font-bold text-3xl text-white mb-2">{selectedPlan.name}</h1>
@@ -185,15 +170,19 @@ function TrainingPlansView() {
               <h2 className="font-grotesk font-bold text-xl text-white mb-4">About this plan</h2>
               <p className="text-neutral-200 leading-relaxed mb-6">{selectedPlan.description}</p>
               
-              <h3 className="font-grotesk font-semibold text-white mb-3">Features</h3>
-              <ul className="space-y-2">
-                {selectedPlan.features.map((feature, i) => (
-                  <li key={i} className="flex items-center gap-2 text-neutral-200 text-sm">
-                    <CheckCircle className="w-4 h-4 text-lime" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
+              {selectedPlan.features.length > 0 && (
+                <>
+                  <h3 className="font-grotesk font-semibold text-white mb-3">Features</h3>
+                  <ul className="space-y-2">
+                    {selectedPlan.features.map((feature, i) => (
+                      <li key={i} className="flex items-center gap-2 text-neutral-200 text-sm">
+                        <CheckCircle className="w-4 h-4 text-lime" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </div>
           </div>
 
@@ -238,8 +227,12 @@ function TrainingPlansView() {
               </div>
             )}
 
-            <button className="w-full btn-lime py-3 text-sm font-grotesk font-semibold active:scale-[0.98] transition-transform duration-150 ease-out">
-              {selectedPlan.started ? 'Continue Training' : 'Start This Plan'}
+            <button
+              onClick={() => handleStartPlan(selectedPlan)}
+              disabled={startingPlanId === selectedPlan.id}
+              className="w-full btn-lime py-3 text-sm font-grotesk font-semibold active:scale-[0.98] transition-transform duration-150 ease-out disabled:opacity-60"
+            >
+              {startingPlanId === selectedPlan.id ? 'Starting...' : selectedPlan.started ? 'Continue Training' : 'Start This Plan'}
             </button>
           </div>
         </div>
@@ -315,6 +308,19 @@ function TrainingPlansView() {
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {!loading && filtered.length === 0 && (
+          <div className="md:col-span-2 lg:col-span-3 glass rounded-3xl border border-white/5 p-8 text-center">
+            <Zap className="w-10 h-10 text-neutral-500 mx-auto mb-4" />
+            <h3 className="font-grotesk font-bold text-white text-lg mb-2">No training plans from API</h3>
+            <p className="text-neutral-400 text-sm mb-5">
+              Create template plans in Admin or generate an AI workout plan. No mock plans are shown here.
+            </p>
+            <button onClick={() => setAiModalOpen(true)} className="btn-lime px-5 py-3 text-xs font-grotesk font-bold">
+              Generate AI Plan
+            </button>
+          </div>
+        )}
+
         {filtered.map(plan => (
           <div
             key={plan.id}
@@ -326,7 +332,13 @@ function TrainingPlansView() {
             >
               <div className="glass rounded-3xl overflow-hidden border border-white/5 hover:border-lime/20 transition-all h-full">
                 <div className="relative h-48">
-                  <img src={plan.image} alt={plan.name} className="w-full h-full object-cover" loading="lazy" />
+                  {plan.image ? (
+                    <img src={plan.image} alt={plan.name} className="w-full h-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-surface via-charcoal to-obsidian flex items-center justify-center">
+                      <Zap className="w-12 h-12 text-electric/70" />
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-charcoal to-transparent" />
                   <div className="absolute top-4 right-4">
                     <span className={`glass rounded-full px-3 py-1 text-xs font-grotesk font-bold ${difficultyColors[plan.difficulty]}`}>
@@ -358,11 +370,13 @@ function TrainingPlansView() {
                       <TrendingUp className="w-3 h-3 text-neutral-500" />
                       <span className="text-neutral-400">{plan.workoutsPerWeek}/week</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-3 h-3 text-lime" />
-                      <span className="text-white font-medium">{plan.rating}</span>
-                      <span className="text-neutral-500">({plan.reviews})</span>
-                    </div>
+                    {plan.rating != null && (
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3 h-3 text-lime" />
+                        <span className="text-white font-medium">{plan.rating}</span>
+                        {plan.reviews != null && <span className="text-neutral-500">({plan.reviews})</span>}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2">

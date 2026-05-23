@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Settings, LogOut, User, Target, DollarSign, Award, ChevronRight, Shield, Zap, Loader2 } from 'lucide-react';
 import AnalyticsView from '../components/AnalyticsView';
 import { useAuthContext } from '../context/AuthContext';
@@ -42,6 +42,8 @@ export default function ProfilePage() {
   const userName = user?.fullName || 'User';
   const stats = profileData?.stats || {};
   const activity = profileData?.activity || {};
+  const userLevel = profileData?.profile?.level || 1;
+  const dailyBudget = profileData?.budgetPerDay || profileData?.profile?.budgetPerDay || 80000;
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-6 space-y-10 animate-fade-in">
@@ -63,7 +65,7 @@ export default function ProfilePage() {
                 <h2 className="font-grotesk font-bold text-4xl text-white tracking-tight">{userName}</h2>
                 <div className="bg-lime/10 px-3 py-1 rounded-full border border-lime/20 flex items-center gap-2 self-center md:self-auto">
                   <Zap className="w-3.5 h-3.5 text-lime" fill="currentColor" />
-                  <span className="text-lime text-[10px] font-bold uppercase tracking-[0.2em]">Level {user?.level || 1} Operator</span>
+                  <span className="text-lime text-[10px] font-bold uppercase tracking-[0.2em]">Level {userLevel} Operator</span>
                 </div>
               </div>
               <p className="text-neutral-500 font-medium text-lg">Bio-interface active since {new Date(user?.createdAt || Date.now()).getFullYear()}</p>
@@ -71,7 +73,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-3 gap-6">
               {[
                 { icon: Target, label: 'Goal', value: profileData?.goal?.title || 'Active' },
-                { icon: DollarSign, label: 'Credits', value: (user?.budgetPerDay ? `${user.budgetPerDay / 1000}k` : '80k') },
+                { icon: DollarSign, label: 'Credits', value: `${dailyBudget / 1000}k` },
                 { icon: Award, label: 'Score', value: stats.aiScore || '0' },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="text-center">
@@ -99,7 +101,7 @@ export default function ProfilePage() {
             {[
               { label: 'Identity', value: userName },
               { label: 'Neural Link', value: user?.email || 'unlinked' },
-              { label: 'Daily Credits', value: `${user?.budgetPerDay?.toLocaleString() || '80,000'} VND` },
+              { label: 'Daily Credits', value: `${dailyBudget.toLocaleString()} VND` },
               { label: 'Objective', value: profileData?.goal?.title || 'Building Protocol' },
               { label: 'Total Energy', value: `${activity.totalCaloriesBurned || 0} kcal` },
               { label: 'Missions', value: `${stats.challengesCompleted || 0} units` },

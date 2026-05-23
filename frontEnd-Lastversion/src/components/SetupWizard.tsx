@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   DollarSign, Package, ArrowRight, Check, Minus, Plus,
-  Brain, Sparkles, Loader2
+  Brain, Sparkles, Loader2, Activity, Calendar
 } from 'lucide-react';
 import { userService } from '../services/userService';
 import FoodInventoryPicker, { SelectedFoodInventoryItem } from './FoodInventoryPicker';
@@ -13,7 +13,7 @@ interface Props {
 }
 
 export default function SetupWizard({ userId, userName, onComplete }: Props) {
-  const [phase, setPhase] = useState<'intro' | 'budget' | 'inventory' | 'generating' | 'workout' | 'success'>('intro');
+  const [phase, setPhase] = useState<'intro' | 'budget' | 'inventory' | 'generating' | 'mealSuccess' | 'workout' | 'success'>('intro');
   const [budget, setBudget] = useState(80000);
   const [items, setItems] = useState<SelectedFoodInventoryItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -63,7 +63,7 @@ export default function SetupWizard({ userId, userName, onComplete }: Props) {
         throw new Error(mealPlanResponse.error?.message || mealPlanResponse.message || 'Failed to generate meal plan');
       }
 
-      onComplete('diet');
+      setPhase('mealSuccess');
     } catch (error) { 
       console.error('Failed to save nutrition setup:', error);
     } finally {
@@ -253,7 +253,7 @@ export default function SetupWizard({ userId, userName, onComplete }: Props) {
             <button onClick={handleSaveWorkout} disabled={isSaving} className="btn-lime flex-1 py-4 font-grotesk font-bold text-lg flex items-center justify-center gap-2">
               {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Bắt đầu Plan Workout <ArrowRight className="w-6 h-6" /></>}
             </button>
-            <button onClick={onComplete} className="glass px-8 py-4 rounded-2xl text-neutral-400 font-bold hover:text-white transition-all">Để sau</button>
+            <button onClick={() => onComplete()} className="glass px-8 py-4 rounded-2xl text-neutral-400 font-bold hover:text-white transition-all">Để sau</button>
           </div>
         </div>
       </div>
@@ -270,7 +270,7 @@ export default function SetupWizard({ userId, userName, onComplete }: Props) {
           </div>
           <h2 className="text-4xl font-grotesk font-bold text-white mb-4">Hệ thống đã sẵn sàng!</h2>
           <p className="text-neutral-400 text-xl mb-12">Tất cả kế hoạch đã được đồng bộ. Hãy bắt đầu hành trình chinh phục mục tiêu của bạn.</p>
-          <button onClick={onComplete} className="btn-lime w-full py-5 text-xl font-grotesk font-bold">Khám phá Dashboard</button>
+          <button onClick={() => onComplete()} className="btn-lime w-full py-5 text-xl font-grotesk font-bold">Khám phá Dashboard</button>
         </div>
       </div>
     );

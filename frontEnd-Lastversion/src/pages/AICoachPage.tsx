@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Brain, Send, Zap, MessageSquare, Sparkles, ChevronRight, History, Mic, Paperclip } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Brain, Send, Zap, Sparkles, ChevronRight, History, Mic } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { aiService } from '../services/aiService';
 
@@ -58,7 +58,7 @@ export default function AICoachPage() {
 
       if (response.success && response.data) {
         // Handle NotificationResponse wrapper from BE
-        const chatData = response.data.data || response.data;
+        const chatData = (response.data as any).data || response.data;
         console.log('[AI Coach] Chat Data:', chatData);
         const aiMsg: Message = {
           id: Date.now() + 1,

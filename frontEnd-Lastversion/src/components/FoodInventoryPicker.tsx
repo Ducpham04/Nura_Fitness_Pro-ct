@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Check, Loader2, Minus, Package, Plus, Search } from 'lucide-react';
 import { foodService, FoodCatalogItem } from '../services/foodService';
 

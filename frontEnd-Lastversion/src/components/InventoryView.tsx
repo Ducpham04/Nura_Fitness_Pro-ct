@@ -1,5 +1,5 @@
-import React, { useState, memo, useEffect, useCallback } from 'react';
-import { Plus, Search, Camera, AlertTriangle, Check, ShoppingCart, Loader2 } from 'lucide-react';
+import { useState, memo, useEffect, useCallback } from 'react';
+import { Plus, Search, Camera, AlertTriangle, ShoppingCart, Loader2 } from 'lucide-react';
 import { inventoryService, InventoryItem } from '../services/inventoryService';
 import { useAuthContext } from '../context/AuthContext';
 
@@ -28,14 +28,14 @@ function InventoryView() {
     try {
       const response = await inventoryService.getInventory(user.id);
       if (response.success && response.data) {
-        const data = response.data.data || response.data;
-        const itemList = data.content || (Array.isArray(data) ? data : []);
+        const data = response.data;
+        const itemList = Array.isArray(data) ? data : [];
         setItems(itemList);
       }
 
       const expiring = await inventoryService.getExpiringSoon(user.id, 3);
       if (expiring.success && expiring.data) {
-        const expData = expiring.data.data || expiring.data;
+        const expData = expiring.data;
         setExpiringSoon(Array.isArray(expData) ? expData : []);
       }
 

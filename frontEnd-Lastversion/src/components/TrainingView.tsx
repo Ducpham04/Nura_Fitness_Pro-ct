@@ -1,106 +1,181 @@
 import { useState, useEffect, memo } from 'react';
-import { Play, X, Check, AlertTriangle, Camera, Zap, Volume2, VolumeX } from 'lucide-react';
+import { Play, X, Check, AlertTriangle, Camera, Zap, Volume2, VolumeX, Loader2, Dumbbell } from 'lucide-react';
+import { useAuthContext } from '../context/AuthContext';
+import { trainingService, type DailyTrainingLog, type PersonalizedWorkoutExercise } from '../services/trainingService';
 
-const exercises = [
-  { id: 1, name: 'Push-ups', sets: '4x15', muscle: 'Chest / Triceps', img: 'https://images.pexels.com/photos/4162583/pexels-photo-4162583.jpeg?auto=compress&cs=tinysrgb&w=400', done: true, formChecks: ['Back straight', 'Full range of motion', 'No sagging'] },
-  { id: 2, name: 'Barbell Squat', sets: '3x12', muscle: 'Legs / Core', img: 'https://images.pexels.com/photos/1552252/pexels-photo-1552252.jpeg?auto=compress&cs=tinysrgb&w=400', done: true, formChecks: ['Knees tracked', 'Back upright', 'Depth good'] },
-  { id: 3, name: 'Deadlift', sets: '3x10', muscle: 'Back / Glutes', img: 'https://images.pexels.com/photos/4162590/pexels-photo-4162590.jpeg?auto=compress&cs=tinysrgb&w=400', done: false, formChecks: ['Neutral spine', 'Shoulders over bar', 'Full lockout'] },
-  { id: 4, name: 'Pull-ups', sets: '3x8', muscle: 'Back / Biceps', img: 'https://images.pexels.com/photos/4397840/pexels-photo-4397840.jpeg?auto=compress&cs=tinysrgb&w=400', done: false, formChecks: ['Full extension', 'Chin over bar', 'Controlled descent'] },
-  { id: 5, name: 'Plank', sets: '3x60s', muscle: 'Core', img: 'https://images.pexels.com/photos/6456301/pexels-photo-6456301.jpeg?auto=compress&cs=tinysrgb&w=400', done: false, formChecks: ['Hips level', 'Shoulders aligned', 'Core tight'] },
-  { id: 6, name: 'Overhead Press', sets: '3x10', muscle: 'Shoulders', img: 'https://images.pexels.com/photos/3837757/pexels-photo-3837757.jpeg?auto=compress&cs=tinysrgb&w=400', done: false, formChecks: ['Core engaged', 'Elbows under wrist', 'Full lock-out'] },
-];
+interface TrainingExercise {
+  id: number;
+  name: string;
+  sets: string;
+  muscle: string;
+  videoUrl?: string;
+  done: boolean;
+  trainingPlanId?: number;
+  dayNumber?: number;
+  exerciseId?: number;
+  targetSets?: number;
+  targetReps?: number;
+  estimatedCalories?: number;
+}
+
+const mapPersonalizedExercise = (
+  exercise: PersonalizedWorkoutExercise,
+  trainingPlanId?: number,
+  completedExerciseIds = new Set<number>()
+): TrainingExercise => {
+  const targetSets = exercise.sets;
+  const targetReps = exercise.reps;
+
+  return {
+    id: exercise.id,
+    name: exercise.exerciseName,
+    sets: `${targetSets}x${targetReps}`,
+    muscle: exercise.targetMuscle || exercise.difficulty || 'Training',
+    videoUrl: exercise.videoUrl,
+    done: completedExerciseIds.has(exercise.exerciseId),
+    trainingPlanId,
+    dayNumber: exercise.dayNumber,
+    exerciseId: exercise.exerciseId,
+    targetSets,
+    targetReps,
+    estimatedCalories: exercise.estimatedCalories,
+  };
+};
 
 interface SessionData {
   reps: number;
-  formScore: number;
   caloriesBurned: number;
   avgRepTime: number;
 }
 
 function TrainingView() {
+  const { user } = useAuthContext();
   const [cameraActive, setCameraActive] = useState(false);
-  const [sessionData, setSessionData] = useState<SessionData>({ reps: 0, formScore: 94, caloriesBurned: 0, avgRepTime: 0 });
+  const [sessionData, setSessionData] = useState<SessionData>({ reps: 0, caloriesBurned: 0, avgRepTime: 0 });
   const [formAlert, setFormAlert] = useState<string | null>(null);
-  const [activeExercise, setActiveExercise] = useState(exercises[2]);
+  const [exercisesToday, setExercisesToday] = useState<TrainingExercise[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [activeExercise, setActiveExercise] = useState<TrainingExercise | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [currentSet, setCurrentSet] = useState(1);
+  const [currentSet, setCurrentSet] = useState(0);
   const [sessionTime, setSessionTime] = useState(0);
 
-  const formAlerts = ["Lưng cong", "Hạ quá thấp", "Tốc độ quá nhanh", "Không tràn khớp"];
+  useEffect(() => {
+    const loadTodayExercises = async () => {
+      if (!user) return;
+      try {
+        setLoading(true);
+        const trainings = await trainingService.getUserTraining(user.id);
+        const list = Array.isArray(trainings) ? trainings : [];
+        const activeTraining = list.find((t: any) =>
+          t.status === 'ACTIVE' || t.status === 'active' || t.status === 'IN_PROGRESS'
+        ) || list[0];
+        const planId = activeTraining?.trainingPlanId;
+        const startDate = activeTraining?.startDate;
+        const dayNumber = startDate
+          ? Math.max(1, Math.floor((Date.now() - new Date(startDate).getTime()) / 86400000) + 1)
+          : 1;
+
+        if (!planId) {
+          setExercisesToday([]);
+          setActiveExercise(null);
+          return;
+        }
+
+        const [personalized, logs] = await Promise.all([
+          trainingService.getTodayPersonalizedWorkout(dayNumber),
+          trainingService.getDailyLogsByPlan(Number(planId)),
+        ]);
+        const completedExerciseIds = new Set(
+          logs
+            .filter((log: DailyTrainingLog) => log.status === 'COMPLETED' || log.status === 'completed')
+            .map((log: DailyTrainingLog) => log.exerciseId)
+        );
+
+        const mapped = personalized.map(exercise => mapPersonalizedExercise(exercise, Number(planId), completedExerciseIds));
+        setExercisesToday(mapped);
+        setActiveExercise(mapped.find(ex => !ex.done) || mapped[0] || null);
+      } catch (error) {
+        console.warn('[TrainingView] Failed to load daily training logs:', error);
+        setExercisesToday([]);
+        setActiveExercise(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTodayExercises();
+  }, [user]);
 
   useEffect(() => {
     if (!cameraActive) return;
 
-    // Mock WebSocket - update rep count every 2-3 seconds
-    const repInterval = setInterval(() => {
-      setSessionData(prev => ({
-        ...prev,
-        reps: prev.reps + 1,
-        caloriesBurned: Math.round(prev.caloriesBurned + Math.random() * 2 + 2),
-        avgRepTime: Math.floor((sessionTime + 5) / (prev.reps + 1)),
-      }));
-    }, 2200 + Math.random() * 1000);
-
-    // Random form alerts
-    const alertInterval = setInterval(() => {
-      if (Math.random() < 0.3) {
-        const randomAlert = formAlerts[Math.floor(Math.random() * formAlerts.length)];
-        setFormAlert(randomAlert);
-        if (soundEnabled) {
-          // Sound feedback would play here in production
-          // Mock: visual feedback only
-        }
-        setTimeout(() => setFormAlert(null), 3000);
-      }
-
-      // Form score fluctuation
-      setSessionData(prev => ({
-        ...prev,
-        formScore: Math.max(70, Math.min(99, prev.formScore + (Math.random() - 0.5) * 8)),
-      }));
-    }, 3500);
-
-    // Session timer
     const timerInterval = setInterval(() => {
       setSessionTime(t => t + 1);
     }, 1000);
 
     return () => {
-      clearInterval(repInterval);
-      clearInterval(alertInterval);
       clearInterval(timerInterval);
     };
-  }, [cameraActive, soundEnabled]);
+  }, [cameraActive]);
 
-  const startSession = (ex: typeof exercises[0]) => {
+  const startSession = (ex: TrainingExercise) => {
     setActiveExercise(ex);
     setCameraActive(true);
-    setSessionData({ reps: 0, formScore: 94, caloriesBurned: 0, avgRepTime: 0 });
+    setSessionData({ reps: 0, caloriesBurned: 0, avgRepTime: 0 });
     setFormAlert(null);
-    setCurrentSet(1);
+    setSaveError(null);
+    setCurrentSet(0);
     setSessionTime(0);
   };
 
-  const endSession = () => {
+  const endSession = async () => {
     setCameraActive(false);
-    // TODO: Save session data to backend API
-    // POST /api/training/sessions with sessionData
+    if (!user || !activeExercise?.trainingPlanId || !activeExercise.dayNumber || !activeExercise.exerciseId) return;
+
+    const response = await trainingService.saveTrainingLog(user.id, {
+      trainingPlanId: activeExercise.trainingPlanId,
+      dayNumber: activeExercise.dayNumber,
+      exerciseId: activeExercise.exerciseId,
+      status: 'COMPLETED',
+      analysisData: {
+        repsCompleted: sessionData.reps,
+        setsCompleted: currentSet,
+        actualDurationMinutes: Math.max(1, Math.round(sessionTime / 60)),
+      },
+    });
+
+    if (!response.success) {
+      setSaveError(response.error?.message || 'Could not save training log');
+      return;
+    }
+
+    setExercisesToday(prev => prev.map(ex => ex.id === activeExercise.id ? { ...ex, done: true } : ex));
   };
 
-  if (cameraActive) {
+  const completeSet = () => {
+    if (!activeExercise) return;
+    const targetSets = activeExercise.targetSets || 1;
+    const targetReps = activeExercise.targetReps || 0;
+    setCurrentSet(set => Math.min(targetSets, set + 1));
+    setSessionData(prev => ({
+      ...prev,
+      reps: Math.min(targetSets * targetReps, prev.reps + targetReps),
+      avgRepTime: prev.reps + targetReps > 0 ? Math.round(sessionTime / Math.max(1, prev.reps + targetReps)) : 0,
+    }));
+  };
+
+  if (cameraActive && activeExercise) {
     const formatTime = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
-    const targetReps = parseInt(activeExercise.sets.split('x')[1]);
+    const targetReps = activeExercise.targetReps || parseInt(activeExercise.sets.split('x')[1]);
     const repProgress = Math.min(100, (sessionData.reps / targetReps) * 100);
 
     return (
       <div className="fixed inset-0 bg-black z-40 flex flex-col animate-fade-in">
         {/* Camera feed placeholder */}
         <div className="relative flex-1 overflow-hidden">
-          <img
-            src={activeExercise.img}
-            alt="Camera feed"
-            className="w-full h-full object-cover opacity-50"
-          />
+          <div className="absolute inset-0 bg-gradient-to-br from-charcoal via-obsidian to-black" />
 
           {/* Scan beam */}
           <div className="absolute inset-x-0 h-0.5 scan-beam" style={{ background: 'rgba(0,122,255,0.6)' }} />
@@ -130,7 +205,9 @@ function TrainingView() {
           <div className="absolute top-0 left-0 right-0 p-4 flex items-start justify-between">
             <div className="glass rounded-2xl px-4 py-2 hud-border">
               <div className="text-lime text-xs font-grotesk font-bold uppercase tracking-widest">{activeExercise.name}</div>
-              <div className="text-white text-xs mt-0.5">Set {currentSet} / {activeExercise.sets.split('x')[0]}</div>
+                  <div className="text-white text-xs mt-0.5">
+                    Set {Math.min(currentSet + 1, activeExercise.targetSets || 1)} / {activeExercise.targetSets || activeExercise.sets.split('x')[0]}
+                  </div>
             </div>
             <div className="flex items-center gap-2">
               <div className="glass rounded-xl px-3 py-2 flex items-center gap-1.5">
@@ -157,11 +234,11 @@ function TrainingView() {
             </div>
           )}
 
-          {/* Form score */}
+          {/* Tracking status */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2">
             <div className={`glass rounded-2xl px-4 py-2 border ${formAlert ? 'border-danger/40' : 'border-lime/20'}`}>
               <div className={`font-grotesk font-bold text-sm ${formAlert ? 'text-danger' : 'text-lime'}`}>
-                FORM: {Math.round(sessionData.formScore)}%
+                MANUAL TRACKING
               </div>
             </div>
           </div>
@@ -181,8 +258,8 @@ function TrainingView() {
                   <div className="text-white font-grotesk font-bold text-lg">{formatTime(sessionTime)}</div>
                 </div>
                 <div className="glass rounded-2xl px-4 py-3">
-                  <div className="text-neutral-400 text-xs uppercase tracking-widest">Calories</div>
-                  <div className="text-white font-grotesk font-bold text-lg">{sessionData.caloriesBurned}</div>
+                  <div className="text-neutral-400 text-xs uppercase tracking-widest">Est. Calories</div>
+                  <div className="text-white font-grotesk font-bold text-lg">{activeExercise.estimatedCalories || 0}</div>
                 </div>
               </div>
             </div>
@@ -200,7 +277,7 @@ function TrainingView() {
 
             {/* Action buttons */}
             <div className="grid grid-cols-2 gap-3">
-              <button className="glass-lime rounded-2xl py-3 font-grotesk font-bold text-lime text-sm flex items-center justify-center gap-2">
+              <button onClick={completeSet} className="glass-lime rounded-2xl py-3 font-grotesk font-bold text-lime text-sm flex items-center justify-center gap-2">
                 <Check className="w-4 h-4" /> Completed Set
               </button>
               <button onClick={endSession} className="glass rounded-2xl py-3 font-grotesk font-medium text-neutral-300 text-sm">
@@ -218,11 +295,13 @@ function TrainingView() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-grotesk font-bold text-white text-xl">AI Training Hub</h2>
-          <p className="text-neutral-400 text-sm mt-1">2 of 6 exercises completed today</p>
+          <p className="text-neutral-400 text-sm mt-1">
+            {exercisesToday.filter(ex => ex.done).length} of {exercisesToday.length} exercises completed today
+          </p>
         </div>
         <div className="flex items-center gap-2 glass-lime rounded-full px-4 py-2">
           <Zap className="w-3 h-3 text-lime" />
-          <span className="text-lime text-xs font-grotesk font-bold">AI FORM CHECK ON</span>
+          <span className="text-lime text-xs font-grotesk font-bold">API PLAN ACTIVE</span>
         </div>
       </div>
 
@@ -230,20 +309,50 @@ function TrainingView() {
       <div className="glass rounded-2xl p-4 border border-white/5">
         <div className="flex items-center justify-between mb-2">
           <span className="text-neutral-400 text-sm">Today's progress</span>
-          <span className="text-lime text-sm font-grotesk font-bold">2 / 6</span>
+          <span className="text-lime text-sm font-grotesk font-bold">
+            {exercisesToday.filter(ex => ex.done).length} / {exercisesToday.length}
+          </span>
         </div>
         <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-          <div className="h-full bg-lime rounded-full transition-all duration-1000" style={{ width: '33%' }} />
+          <div
+            className="h-full bg-lime rounded-full transition-all duration-1000"
+            style={{ width: `${exercisesToday.length ? (exercisesToday.filter(ex => ex.done).length / exercisesToday.length) * 100 : 0}%` }}
+          />
         </div>
       </div>
 
+      {loading && (
+        <div className="flex items-center gap-2 text-neutral-400 text-sm">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Loading today's safe workout plan...
+        </div>
+      )}
+
+      {!loading && exercisesToday.length === 0 && (
+        <div className="glass rounded-3xl border border-white/5 p-8 text-center">
+          <Dumbbell className="w-10 h-10 text-neutral-500 mx-auto mb-4" />
+          <h3 className="font-grotesk font-bold text-white text-lg mb-2">No personalized workout yet</h3>
+          <p className="text-neutral-400 text-sm mb-5">
+            Start a training plan or generate an AI workout plan so the backend can create safe personalized exercises from your health profile.
+          </p>
+        </div>
+      )}
+
+      {saveError && (
+        <div className="glass rounded-2xl border border-danger/30 px-4 py-3 text-danger text-sm">
+          {saveError}
+        </div>
+      )}
+
       {/* Exercise grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {exercises.map(ex => (
+        {exercisesToday.map(ex => (
           <div key={ex.id} className={`glass rounded-3xl overflow-hidden border transition-all card-hover ${ex.done ? 'border-lime/20' : 'border-white/5'}`}>
             <div className="relative h-40">
-              <img src={ex.img} alt={ex.name} className={`w-full h-full object-cover transition-all ${ex.done ? 'opacity-50' : 'opacity-70'}`} />
-              <div className="absolute inset-0 bg-gradient-to-t from-charcoal to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-br from-surface via-charcoal to-obsidian" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Dumbbell className={`w-12 h-12 transition-all ${ex.done ? 'text-lime/60' : 'text-electric/70'}`} />
+              </div>
               {ex.done && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-12 h-12 rounded-full bg-lime/20 border-2 border-lime flex items-center justify-center">

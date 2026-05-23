@@ -13,6 +13,7 @@ class SessionType(str, Enum):
     REST = "rest"
 
 class Exercise(BaseModel):
+    exercise_id: Optional[int] = None
     name: str
     muscle_group: str
     sets: int

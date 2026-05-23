@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Lenis from 'lenis';
+import { Toaster } from 'sonner';
 import { AuthProvider, useAuthContext } from './context/AuthContext';
 import { authService } from './services/authService';
 import Landing from './pages/Landing';
@@ -20,6 +22,23 @@ import LogbookPage from './pages/LogbookPage';
 function AppContent() {
   const [isInitialized, setIsInitialized] = useState(false);
   const { user } = useAuthContext();
+
+  useEffect(() => {
+    const lenis = new Lenis();
+    let frameId = 0;
+
+    const raf = (time: number) => {
+      lenis.raf(time);
+      frameId = requestAnimationFrame(raf);
+    };
+
+    frameId = requestAnimationFrame(raf);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      lenis.destroy();
+    };
+  }, []);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -53,6 +72,12 @@ function AppContent() {
     );
   }
 
+  const adminRoute = !user
+    ? <Navigate to="/login" replace />
+    : user.role === 'ADMIN'
+      ? <AdminPanel />
+      : <Navigate to="/dashboard" replace />;
+
   return (
     <Router>
       <Routes>
@@ -64,7 +89,7 @@ function AppContent() {
         <Route path="/welcome" element={<WelCome />} />
         
         {/* Admin route */}
-        <Route path="/admin" element={user ? <AdminPanel /> : <Navigate to="/" replace />} />
+        <Route path="/admin" element={adminRoute} />
         
         {/* Dashboard routes */}
         <Route path="/dashboard" element={user ? <DashboardLayout /> : <Navigate to="/login" replace />}>
@@ -88,6 +113,18 @@ export default function App() {
   return (
     <AuthProvider>
       <AppContent />
+      <Toaster
+        richColors
+        closeButton
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: 'var(--color-bg-surface)',
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text-primary)',
+          },
+        }}
+      />
     </AuthProvider>
   );
 }

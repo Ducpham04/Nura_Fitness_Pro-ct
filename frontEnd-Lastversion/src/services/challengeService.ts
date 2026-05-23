@@ -7,21 +7,24 @@ export interface Challenge {
   id: number;
   title: string;
   description: string;
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-  exerciseType: string;
-  minReps: number;
-  maxReps: number;
+  difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+  durationDays: number;
+  rewardPoints: number;
+  aiRulesJson?: string;
+  exerciseIds: number[];
   reward: string;
-  status: 'ACTIVE' | 'INACTIVE';
-  linkVideos: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'DRAFT' | 'COMPLETED';
+  linkVideos?: string;
   // Additional fields for UI
   goal?: string;
   duration?: string;
   participants?: number;
-  rewardPoints?: number;
   prizeUsd?: number;
   imageUrl?: string;
   exercise?: string;
+  exerciseType?: string;
+  minReps?: number;
+  maxReps?: number;
   passingScore?: number;
   joined?: boolean;
   submitted?: boolean;
@@ -47,6 +50,41 @@ export interface ChallengeSubmitRequest {
 }
 
 class ChallengeService {
+  private mapChallenge(challenge: any): Challenge {
+    const durationDays = Number(challenge.durationDays ?? 7);
+    const rewardPoints = Number(challenge.rewardPoints ?? 0);
+    const exerciseIds = Array.isArray(challenge.exerciseIds) ? challenge.exerciseIds : [];
+
+    return {
+      id: challenge.id ?? challenge.challengeId,
+      title: challenge.title,
+      description: challenge.description,
+      difficulty: challenge.difficulty,
+      durationDays,
+      rewardPoints,
+      aiRulesJson: challenge.aiRulesJson,
+      exerciseIds,
+      reward: challenge.reward,
+      status: challenge.status,
+      linkVideos: challenge.linkVideos,
+      // UI fields
+      goal: challenge.goal || 'challenge',
+      duration: challenge.duration || `${durationDays} days`,
+      participants: challenge.participants || 0,
+      prizeUsd: challenge.prizeUsd,
+      imageUrl: challenge.imageUrl,
+      exercise: challenge.exercise || (exerciseIds.length ? `${exerciseIds.length} exercises` : 'Challenge event'),
+      exerciseType: challenge.exerciseType,
+      minReps: challenge.minReps,
+      maxReps: challenge.maxReps,
+      passingScore: challenge.passingScore || 85,
+      joined: false,
+      submitted: false,
+      userScore: 0,
+      endsAt: challenge.endsAt,
+    };
+  }
+
   // Get all challenges
   async getAll(): Promise<ApiResponse<Challenge[]>> {
     const response = await apiClient.get<any>('/challenges');
@@ -55,31 +93,7 @@ class ChallengeService {
       const challenges = response.data.data || response.data;
       return {
         success: true,
-        data: challenges.map((challenge: any) => ({
-          id: challenge.challengeId,
-          title: challenge.title,
-          description: challenge.description,
-          difficulty: challenge.difficulty,
-          exerciseType: challenge.exerciseType,
-          minReps: challenge.minReps,
-          maxReps: challenge.maxReps,
-          reward: challenge.reward,
-          status: challenge.status,
-          linkVideos: challenge.linkVideos,
-          // UI fields
-          goal: challenge.goal || 'muscle',
-          duration: challenge.duration || '1 week',
-          participants: challenge.participants || 0,
-          rewardPoints: challenge.rewardPoints || 0,
-          prizeUsd: challenge.prizeUsd,
-          imageUrl: challenge.imageUrl,
-          exercise: challenge.exercise || challenge.exerciseType,
-          passingScore: challenge.passingScore || 85,
-          joined: false,
-          submitted: false,
-          userScore: 0,
-          endsAt: challenge.endsAt,
-        }))
+        data: challenges.map((challenge: any) => this.mapChallenge(challenge))
       };
     }
     
@@ -97,30 +111,7 @@ class ChallengeService {
       const challenge = response.data.data || response.data;
       return {
         success: true,
-        data: {
-          id: challenge.challengeId,
-          title: challenge.title,
-          description: challenge.description,
-          difficulty: challenge.difficulty,
-          exerciseType: challenge.exerciseType,
-          minReps: challenge.minReps,
-          maxReps: challenge.maxReps,
-          reward: challenge.reward,
-          status: challenge.status,
-          linkVideos: challenge.linkVideos,
-          goal: challenge.goal || 'muscle',
-          duration: challenge.duration || '1 week',
-          participants: challenge.participants || 0,
-          rewardPoints: challenge.rewardPoints || 0,
-          prizeUsd: challenge.prizeUsd,
-          imageUrl: challenge.imageUrl,
-          exercise: challenge.exercise || challenge.exerciseType,
-          passingScore: challenge.passingScore || 85,
-          joined: false,
-          submitted: false,
-          userScore: 0,
-          endsAt: challenge.endsAt,
-        }
+        data: this.mapChallenge(challenge)
       };
     }
     

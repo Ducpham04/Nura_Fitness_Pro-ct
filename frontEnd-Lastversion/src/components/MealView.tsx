@@ -1,7 +1,6 @@
-import React, { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { ShoppingCart, Plus, Check, Brain, Zap, Loader2 } from 'lucide-react';
 import { nutritionService, type Meal } from '../services/nutritionService';
-import { useAuthContext } from '../context/AuthContext';
 
 interface Props {
   budget: number;
@@ -14,7 +13,6 @@ function MealView({ budget }: Props) {
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [shoppingOpen, setShoppingOpen] = useState(false);
   const [checkedItems, setCheckedItems] = useState<number[]>([]);
-  const { user } = useAuthContext();
 
   useEffect(() => {
     loadMeals();

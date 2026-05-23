@@ -6,7 +6,6 @@ import type {
   RegisterRequest, 
   AuthResponse, 
   User,
-  RefreshTokenRequest,
   ChangePasswordRequest,
   BEAuthResponse,
   BEUserInfo
@@ -90,11 +89,12 @@ class AuthService {
 
   // Map BE user to FE user
   private mapBEUserToFE(beUser: BEUserInfo): User {
+    const normalizedRole = String(beUser.role || 'USER').toUpperCase() as 'USER' | 'ADMIN';
     return {
       id: beUser.id,
       email: beUser.email,
       fullName: beUser.fullName,
-      role: beUser.role as 'USER' | 'ADMIN',
+      role: normalizedRole,
       isActive: true, // Default to true, BE doesn't provide this
       createdAt: new Date().toISOString(), // Default for now
       updatedAt: new Date().toISOString(), // Default for now
@@ -126,7 +126,15 @@ class AuthService {
     const data = localStorage.getItem(USER_KEY);
     if (data) {
       try {
-        return JSON.parse(data) as User;
+        const user = JSON.parse(data) as User;
+        const normalized = {
+          ...user,
+          role: String(user.role || 'USER').toUpperCase() as 'USER' | 'ADMIN',
+        };
+        if (normalized.role !== user.role) {
+          localStorage.setItem(USER_KEY, JSON.stringify(normalized));
+        }
+        return normalized;
       } catch {
         return null;
       }

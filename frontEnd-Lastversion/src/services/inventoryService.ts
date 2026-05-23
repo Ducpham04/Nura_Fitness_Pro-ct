@@ -97,7 +97,7 @@ class InventoryService {
     return response;
   }
 
-  async generateShoppingList(userId: number, daysAhead: number = 7): Promise<ApiResponse<any>> {
+  async generateShoppingList(userId: number, _daysAhead: number = 7): Promise<ApiResponse<any>> {
     // Fallback to stats or generic list since UserInventoryController lacks direct shopping-list endpoint
     const response = await apiClient.get<any>(`/inventory/${userId}/stats`);
     if (response.success && response.data) {

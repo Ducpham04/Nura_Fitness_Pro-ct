@@ -6,6 +6,7 @@
   :root {
     /* Brand Colors */
     --color-lime: #CCFF00;
+    --color-acid: #CCFF00;
     --color-lime-dark: #99CC00;
     --color-electric: #007AFF;
     --color-electric-dark: #0055CC;
@@ -58,6 +59,23 @@
 
   * {
     box-sizing: border-box;
+  }
+
+  :where(a, button) {
+    transition: all 0.2s ease;
+  }
+
+  :where(a, button):hover {
+    transform: translateY(-1px);
+  }
+
+  :where(a, button):focus {
+    outline: none;
+  }
+
+  :where(a, button):focus-visible {
+    outline: 2px solid var(--color-acid);
+    outline-offset: 3px;
   }
 
   html {

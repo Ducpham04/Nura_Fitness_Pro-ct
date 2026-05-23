@@ -434,7 +434,9 @@ async def generate_workout_plan(request: FullPlanRequest):
             available_equipment=request.available_equipment,
             workout_intensity=request.workout_intensity,
             duration_minutes=request.workout_duration_minutes,
-            preferences=request.preferences
+            preferences=request.preferences,
+            allowed_exercises=[item.model_dump() for item in request.allowed_exercises],
+            current_injuries=request.current_injuries or ""
         )
         return sessions
     except Exception as e:

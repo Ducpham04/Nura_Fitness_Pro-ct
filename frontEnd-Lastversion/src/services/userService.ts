@@ -1,7 +1,7 @@
 // User Service - Java Backend API
 import { apiClient } from './apiClient';
 import { API_ENDPOINTS } from '../config/api';
-import type { User, ApiResponse } from '../types';
+import type { ApiResponse } from '../types';
 
 export interface UserStats {
   totalWorkouts: number;
@@ -38,6 +38,7 @@ export interface DashboardData {
   stats: {
     caloriesConsumed: number;
     caloriesGoal: number;
+    caloriesBurned: number;
     proteinConsumed: number;
     proteinGoal: number;
     carbsConsumed: number;
@@ -71,7 +72,7 @@ export interface WorkoutItem {
   name: string;
   sets: string;
   done: boolean;
-  imageUrl: string;
+  imageUrl?: string;
 }
 
 // BE response shapes
@@ -117,12 +118,20 @@ interface TrainingLogItem {
   trainingDate: string;
   dayNumber: number;
   status: string;
+  exerciseId?: number;
+  exerciseName?: string;
+  exerciseType?: string;
+  challengeName?: string;
+  challengeTitle?: string;
+  videoUrl?: string;
+  targetSets?: number;
+  targetReps?: number;
   actualDurationMinutes: number;
   caloriesBurned: number;
   setsCompleted: number;
   repsCompleted: number;
   score: number;
-  challenge: {
+  challenge?: {
     id: number;
     title: string;
     exerciseType: string;
@@ -130,18 +139,6 @@ interface TrainingLogItem {
     maxReps: number;
   };
 }
-
-// Exercise image bank
-const EXERCISE_IMAGES: Record<string, string> = {
-  'push-up': 'https://images.pexels.com/photos/4162583/pexels-photo-4162583.jpeg?auto=compress&cs=tinysrgb&w=400',
-  'squat': 'https://images.pexels.com/photos/1552252/pexels-photo-1552252.jpeg?auto=compress&cs=tinysrgb&w=400',
-  'deadlift': 'https://images.pexels.com/photos/4162590/pexels-photo-4162590.jpeg?auto=compress&cs=tinysrgb&w=400',
-  'plank': 'https://images.pexels.com/photos/4162438/pexels-photo-4162438.jpeg?auto=compress&cs=tinysrgb&w=400',
-  'pull-up': 'https://images.pexels.com/photos/4164761/pexels-photo-4164761.jpeg?auto=compress&cs=tinysrgb&w=400',
-  'burpee': 'https://images.pexels.com/photos/4162491/pexels-photo-4162491.jpeg?auto=compress&cs=tinysrgb&w=400',
-  'lunges': 'https://images.pexels.com/photos/4162500/pexels-photo-4162500.jpeg?auto=compress&cs=tinysrgb&w=400',
-  'default': 'https://images.pexels.com/photos/841130/pexels-photo-841130.jpeg?auto=compress&cs=tinysrgb&w=400',
-};
 
 interface NotificationResponse<T> {
   success: boolean;
@@ -182,14 +179,6 @@ function unwrapNotificationResponse<T>(response: ApiResponse<NotificationRespons
   };
 }
 
-function getExerciseImage(name: string): string {
-  const lower = name.toLowerCase();
-  for (const [key, url] of Object.entries(EXERCISE_IMAGES)) {
-    if (lower.includes(key)) return url;
-  }
-  return EXERCISE_IMAGES['default'];
-}
-
 class UserService {
   // Get full profile from BE
   async getFullProfile(userId: number): Promise<FullProfileResponse | null> {
@@ -228,7 +217,7 @@ class UserService {
     return response.success ? response.data || null : null;
   };
 
-  updateBudgetLimit = async (userId: number, limit: number): Promise<boolean> => {
+  updateBudgetLimit = async (_userId: number, limit: number): Promise<boolean> => {
     // Persist budget limit in the user's body profile
     const response = await apiClient.post<any>(API_ENDPOINTS.USER.BODY_PROFILE, { targetBudgetPerDay: limit });
     return response.success;
@@ -314,18 +303,20 @@ class UserService {
               // Filter for today or upcoming exercises
               const today = new Date().toISOString().split('T')[0];
               const todayLogs = logs.filter((l: TrainingLogItem) =>
-                l.trainingDate === today || l.status === 'NOT_STARTED' || l.status === 'IN_PROGRESS'
+                l.trainingDate === today || l.status === 'NOT_STARTED' || l.status === 'not_started' || l.status === 'IN_PROGRESS' || l.status === 'in_progress'
               ).slice(0, 6);
 
               if (todayLogs.length > 0) {
                 return todayLogs.map((log: TrainingLogItem) => ({
                   id: log.dtlId,
-                  name: log.challenge?.title || `Day ${log.dayNumber} Exercise`,
+                  name: log.exerciseName || log.challengeTitle || log.challengeName || log.challenge?.title || `Day ${log.dayNumber} Exercise`,
                   sets: log.setsCompleted
                     ? `${log.setsCompleted}x${log.repsCompleted || 0}`
-                    : `${log.challenge?.minReps || 10}-${log.challenge?.maxReps || 15} reps`,
-                  done: log.status === 'COMPLETED',
-                  imageUrl: getExerciseImage(log.challenge?.title || log.challenge?.exerciseType || ''),
+                    : log.targetSets && log.targetReps
+                      ? `${log.targetSets}x${log.targetReps}`
+                      : `${log.challenge?.minReps || 10}-${log.challenge?.maxReps || 15} reps`,
+                  done: log.status === 'COMPLETED' || log.status === 'completed',
+                  imageUrl: log.videoUrl,
                 }));
               }
             }
@@ -351,9 +342,8 @@ class UserService {
           data: {
             userSummary: data.user,
             stats: data.stats,
-            todayWorkouts: data.todayWorkouts.map((w: any) => ({
-              ...w,
-              imageUrl: getExerciseImage(w.title)
+            todayWorkouts: (Array.isArray(data.todayWorkouts) ? data.todayWorkouts : []).map((w: any) => ({
+              ...w
             })),
             recovery: data.recovery,
             budgetBreakdown: data.budgetBreakdown,

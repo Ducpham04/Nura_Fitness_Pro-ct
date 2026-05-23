@@ -147,7 +147,8 @@ Nhóm endpoint admin nằm rải ở các prefix:
 - `/api/admin/*` (dashboard, challenges, submissions, training plans, data seeder…)
 - `/api/admin/users/*`
 - `/api/admin/goals/*`
-- `/api/admin/meals/*`
+- `/api/admin/foods/*`
+- `/api/admin/dishes/*`
 - `/api/admin/rewards*`
 
 Các controller chính:
@@ -162,8 +163,10 @@ Các controller chính:
 - `RewardController`, `RewardRedemptionController`
 - `TransactionController`
 - `GoalsController`
-- `MealController`, `MealFoodController`
-- `NutritionPlanController`, `UserNutritionController`
+- `FoodController`
+- `DishAdminController`
+
+Ghi chú: các controller legacy `MealController`, `MealFoodController`, `NutritionPlanController`, `UserNutritionController` đã được loại khỏi flow hiện tại. Admin meal plan mới quản lý catalog qua `Food`, `Dish`, `DishIngredient` và xem plan user qua `PersonalizedNutritionPlan`.
 
 ### 4.2 AI Service API (FastAPI)
 
@@ -187,4 +190,3 @@ chmod +x ./dev.sh
 ## 6) Tài liệu liên quan
 
 - Báo cáo **entity / database mapping (JPA)**: [entity-report.md](./entity-report.md)
-

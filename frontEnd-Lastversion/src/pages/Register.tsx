@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react';
+import type { FormEvent } from 'react';
 import { Zap, Mail, Lock, Check, ArrowRight, Eye, EyeOff, AlertCircle, User } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
+import LanguageSelector from '../components/LanguageSelector';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -23,13 +26,13 @@ function ParticleField() {
 }
 
 const PasswordStrength = ({ password }: { password: string }) => {
+  const { t } = useTranslation();
   const checks = [
-    { label: 'Ít nhất 8 ký tự', pass: password.length >= 8 },
-    { label: 'Chứa chữ hoa', pass: /[A-Z]/.test(password) },
-    { label: 'Chứa chữ thường', pass: /[a-z]/.test(password) },
-    { label: 'Chứa số', pass: /[0-9]/.test(password) },
+    { label: t('auth.passwordChecks.minLength'), pass: password.length >= 8 },
+    { label: t('auth.passwordChecks.uppercase'), pass: /[A-Z]/.test(password) },
+    { label: t('auth.passwordChecks.lowercase'), pass: /[a-z]/.test(password) },
+    { label: t('auth.passwordChecks.number'), pass: /[0-9]/.test(password) },
   ];
-  const strength = checks.filter(c => c.pass).length;
   return (
     <div className="space-y-2 mt-2">
       {checks.map(({ label, pass }) => (
@@ -45,6 +48,7 @@ const PasswordStrength = ({ password }: { password: string }) => {
 };
 
 export default function Register() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const onRegister = () => navigate('/onboarding');
   const onBackToLogin = () => navigate('/login');
@@ -62,22 +66,22 @@ export default function Register() {
   const passwordMatch = password === confirmPassword && password.length > 0;
   const canSubmit = email && password && passwordMatch && agreed && !loading;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (password.length < 8) {
-      setError('Mật khẩu phải có ít nhất 8 ký tự');
+      setError(t('auth.passwordMin'));
       return;
     }
 
     if (!passwordMatch) {
-      setError('Mật khẩu không khớp');
+      setError(t('auth.passwordMismatch'));
       return;
     }
 
     if (!agreed) {
-      setError('Bạn phải đồng ý với điều khoản dịch vụ');
+      setError(t('auth.mustAgree'));
       return;
     }
 
@@ -88,13 +92,16 @@ export default function Register() {
     if (success) {
       onRegister();
     } else {
-      setError(authError || 'Đăng ký thất bại. Vui lòng thử lại.');
+      setError(authError || t('auth.registerFailed'));
     }
   };
 
   return (
     <div className="min-h-screen bg-obsidian flex items-center justify-center relative overflow-hidden font-inter px-6 py-8">
       <ParticleField />
+      <div className="absolute right-6 top-6 z-20">
+        <LanguageSelector />
+      </div>
 
       {/* BG glows */}
       <div className="absolute top-1/4 right-1/3 w-96 h-96 rounded-full pointer-events-none"
@@ -113,15 +120,15 @@ export default function Register() {
 
         {/* Card */}
         <div className="glass rounded-3xl p-8 border border-white/5 mb-6">
-          <h1 className="font-grotesk font-bold text-2xl text-white mb-2">Tạo tài khoản</h1>
-          <p className="text-neutral-400 text-sm mb-6">Bắt đầu hành trình fitness của bạn</p>
+          <h1 className="font-grotesk font-bold text-2xl text-white mb-2">{t('auth.registerTitle')}</h1>
+          <p className="text-neutral-400 text-sm mb-6">{t('auth.registerSubtitle')}</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Name */}
             
             
             <div>
-              <label htmlFor="name" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">Name</label>
+              <label htmlFor="name" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.name')}</label>
               <div className="relative">
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                 <input
@@ -129,7 +136,7 @@ export default function Register() {
                   type="text"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  placeholder="Your name"
+                  placeholder={t('auth.namePlaceholder')}
                   required
                   autoComplete="name"
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/8 transition-all"
@@ -140,7 +147,7 @@ export default function Register() {
             
             {/* Email */}
             <div>
-              <label htmlFor="email" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">Email</label>
+              <label htmlFor="email" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.email')}</label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                 <input
@@ -159,7 +166,7 @@ export default function Register() {
 
             {/* Password */}
             <div>
-              <label htmlFor="password" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">Mật khẩu</label>
+              <label htmlFor="password" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.password')}</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                 <input
@@ -178,7 +185,7 @@ export default function Register() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -188,7 +195,7 @@ export default function Register() {
 
             {/* Confirm Password */}
             <div>
-              <label htmlFor="confirmPassword" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">Xác nhận mật khẩu</label>
+              <label htmlFor="confirmPassword" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.confirmPassword')}</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                 <input
@@ -209,7 +216,7 @@ export default function Register() {
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors"
-                  aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                  aria-label={showConfirm ? t('auth.hidePassword') : t('auth.showPassword')}
                 >
                   {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -244,13 +251,13 @@ export default function Register() {
                 className="w-4 h-4 rounded border border-white/20 checked:bg-lime checked:border-lime mt-0.5 cursor-pointer"
               />
               <label htmlFor="terms" className="text-neutral-400 text-xs leading-relaxed cursor-pointer">
-                Tôi đồng ý với{' '}
+                {t('auth.agreePrefix')}{' '}
                 <button type="button" className="text-lime hover:text-white transition-colors underline">
-                  Điều khoản dịch vụ
+                  {t('auth.terms')}
                 </button>
-                {' '}và{' '}
+                {' '}{t('auth.and')}{' '}
                 <button type="button" className="text-lime hover:text-white transition-colors underline">
-                  Chính sách bảo mật
+                  {t('auth.privacy')}
                 </button>
               </label>
             </div>
@@ -264,11 +271,11 @@ export default function Register() {
               {loading ? (
                 <>
                   <div className="w-4 h-4 rounded-full border-2 border-obsidian/30 border-t-obsidian animate-spin" />
-                  Đang tạo tài khoản...
+                  {t('auth.creatingAccount')}
                 </>
               ) : (
                 <>
-                  Đăng ký
+                  {t('auth.register')}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -278,9 +285,9 @@ export default function Register() {
 
         {/* Login link */}
         <div className="text-center">
-          <span className="text-neutral-400 text-sm">Đã có tài khoản? </span>
+          <span className="text-neutral-400 text-sm">{t('auth.alreadyHaveAccount')} </span>
           <button onClick={onBackToLogin} className="text-lime font-grotesk font-semibold hover:text-white transition-colors">
-            Đăng nhập
+            {t('auth.signIn')}
           </button>
         </div>
       </div>
