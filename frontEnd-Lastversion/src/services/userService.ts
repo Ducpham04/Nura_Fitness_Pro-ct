@@ -49,8 +49,20 @@ export interface DashboardData {
     waterGoal: number;
     budgetRemaining: number;
     budgetLimit: number;
+    // ── Mới ──
+    completedWorkoutsToday: number;
+    scheduledWorkoutsToday: number;
+    workoutsThisWeek: number;
+    workoutsWeeklyGoal: number;
+    activePlanProgress: number;
   };
   todayWorkouts: WorkoutItem[];
+  recentActivities: {
+    type: string;
+    title: string;
+    value: string;
+    date: string;
+  }[];
   recovery: {
     sleepHours: number;
     sleepGoal: number;
@@ -73,6 +85,9 @@ export interface WorkoutItem {
   sets: string;
   done: boolean;
   imageUrl?: string;
+  muscle?: string;
+  equipment?: string;
+  estimatedCalories?: number;
 }
 
 // BE response shapes
@@ -198,8 +213,11 @@ class UserService {
   };
 
   getBodyProfile = async (): Promise<UserBodyProfile | null> => {
-    const response = await apiClient.get<UserBodyProfile>(API_ENDPOINTS.USER.BODY_PROFILE);
-    return response.success ? response.data || null : null;
+    const response = await apiClient.get<any>(API_ENDPOINTS.USER.BODY_PROFILE);
+    if (!response.success) return null;
+    const body = response.data as any;
+    // Backend bọc trong NotificationResponse { success, message, data } → lấy inner data
+    return (body?.data ?? body) || null;
   };
 
   postHealthProfile = async (healthProfile: any): Promise<any | null> => {
@@ -341,13 +359,47 @@ class UserService {
           success: true,
           data: {
             userSummary: data.user,
-            stats: data.stats,
+            stats: {
+              caloriesConsumed: Number(data.stats?.caloriesConsumed ?? 0),
+              caloriesGoal: Number(data.stats?.caloriesGoal ?? 2000),
+              caloriesBurned: Number(data.stats?.caloriesBurned ?? 0),
+              proteinConsumed: Number(data.stats?.proteinConsumed ?? 0),
+              proteinGoal: Number(data.stats?.proteinGoal ?? 150),
+              carbsConsumed: Number(data.stats?.carbsConsumed ?? 0),
+              carbsGoal: Number(data.stats?.carbsGoal ?? 250),
+              fatConsumed: Number(data.stats?.fatConsumed ?? 0),
+              fatGoal: Number(data.stats?.fatGoal ?? 70),
+              waterConsumed: Number(data.stats?.waterConsumed ?? 0),
+              waterGoal: Number(data.stats?.waterGoal ?? 2.5),
+              budgetRemaining: Number(data.stats?.budgetRemaining ?? 80000),
+              budgetLimit: Number(data.stats?.budgetLimit ?? 80000),
+              completedWorkoutsToday: Number(data.stats?.completedWorkoutsToday ?? 0),
+              scheduledWorkoutsToday: Number(data.stats?.scheduledWorkoutsToday ?? 0),
+              workoutsThisWeek: Number(data.stats?.workoutsThisWeek ?? 0),
+              workoutsWeeklyGoal: Number(data.stats?.workoutsWeeklyGoal ?? 5),
+              activePlanProgress: Number(data.stats?.activePlanProgress ?? 0),
+            },
             todayWorkouts: (Array.isArray(data.todayWorkouts) ? data.todayWorkouts : []).map((w: any) => ({
-              ...w
+              id: w.id,
+              name: w.title || w.name || 'Bài tập',
+              sets: w.sets || '—',
+              done: w.isCompleted || w.done || false,
+              imageUrl: w.imageUrl,
+              muscle: w.muscle,
+              equipment: w.equipment,
+              estimatedCalories: w.estimatedCalories,
             })),
-            recovery: data.recovery,
-            budgetBreakdown: data.budgetBreakdown,
-            aiSuggestion: data.aiSuggestion
+            recentActivities: Array.isArray(data.recentActivities) ? data.recentActivities : [],
+            recovery: {
+              sleepHours: Number(data.recovery?.sleepHours ?? 7.5),
+              sleepGoal: Number(data.recovery?.sleepGoal ?? 8),
+              hrv: data.recovery?.hrv ?? 0,
+              restingHR: data.recovery?.restingHR ?? 0,
+              energyLevel: data.recovery?.energyLevel ?? 3,
+              recommendation: data.recovery?.recommendation ?? 'Intense',
+            },
+            budgetBreakdown: data.budgetBreakdown || [],
+            aiSuggestion: data.aiSuggestion || null,
           }
         };
       }

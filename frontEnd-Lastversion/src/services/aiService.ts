@@ -43,6 +43,22 @@ class AIService {
       { headers: { 'userId': userId.toString() } }
     );
   }
+
+  async logFoodNatural(userId: number, text: string, mealTime = 'OTHER'): Promise<ApiResponse<any>> {
+    return await apiClient.post<any>(
+      '/ai-plans/log-food-natural',
+      { text, meal_time: mealTime },
+      { headers: { 'userId': userId.toString() } }
+    );
+  }
+
+  async autoRegulateWorkout(userId: number, utId: number): Promise<ApiResponse<any>> {
+    return await apiClient.post<any>(
+      '/ai-plans/auto-regulate',
+      { utId },
+      { headers: { 'userId': userId.toString() } }
+    );
+  }
 }
 
 export const aiService = new AIService();

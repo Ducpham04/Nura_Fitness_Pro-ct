@@ -58,16 +58,31 @@ class IntegratedPlanner:
         daily_plans = []
         for day_num in range(1, request.days + 1):
             day_workout = workout_sessions[day_num - 1] if day_num <= len(workout_sessions) else None
-            
+
             # Get adjusted targets for this day
-            target_calories = adjusted_targets.get(day_num, {}).get("calories")
-            target_protein = adjusted_targets.get(day_num, {}).get("protein")
-            
-            # Generate single day meal plan with adjusted targets
+            day_targets   = adjusted_targets.get(day_num, {})
+            target_calories = day_targets.get("calories")
+            target_protein  = day_targets.get("protein")
+            carb_modifier   = day_targets.get("carb_modifier", 1.0)
+
+            # Generate context and apply carb cycling — ACTUALLY modify the macro split
             context = self.meal_planner._prepare_user_context(meal_plan_request)
             context["target_calories"] = target_calories
             context["macro_targets"]["protein"] = target_protein
-            
+
+            # Carb cycling: shift carbs ↑ on training days, ↓ on rest days
+            # Compensate with fat to keep total calories constant (ISSN 2023)
+            base_carb = context["macro_targets"].get("carb", 0)
+            base_fat  = context["macro_targets"].get("fat", 0)
+            adjusted_carb = round(base_carb * carb_modifier, 1)
+            # Fat absorbs the calorie difference to maintain total
+            carb_kcal_delta = (adjusted_carb - base_carb) * 4
+            adjusted_fat = round(base_fat - carb_kcal_delta / 9, 1)
+            adjusted_fat = max(adjusted_fat, round(target_calories * 0.20 / 9, 1))  # floor 20% of kcal
+            context["macro_targets"]["carb"] = adjusted_carb
+            context["macro_targets"]["fat"]  = adjusted_fat
+            context["carb_cycling_note"] = day_targets.get("reason", "")
+
             day_meal_plan = self.meal_planner._generate_single_day(
                 day_num=day_num,
                 context=context,
@@ -107,139 +122,163 @@ class IntegratedPlanner:
     
     def _generate_workout_plan(self, request: FullPlanRequest) -> List[WorkoutSession]:
         """
-        Generate workout plan sessions using AI WorkoutPlanner
+        Generate workout sessions from the template-only WorkoutPlanner.
+        Main production workout expansion lives in Spring Boot; this adapter keeps
+        the legacy integrated meal+workout endpoint functional.
         """
-        return self.workout_planner.generate_plan(
+        template = self.workout_planner.generate_template(
             user_profile=request.user_profile,
             days=request.days,
             available_equipment=request.available_equipment,
             workout_intensity=request.workout_intensity,
             duration_minutes=request.workout_duration_minutes,
-            preferences=request.preferences
+            progression_phase=request.progression_phase,
+            preferences=request.preferences,
+            allowed_exercises=[item.model_dump() for item in request.allowed_exercises],
+            current_injuries=request.current_injuries or ""
         )
+
+        catalog = {item.exercise_id: item for item in request.allowed_exercises}
+        sessions = []
+        for day in range(1, request.days + 1):
+            week_day = (day - 1) % 7
+            session_type = template.weekly_pattern[week_day]
+            if session_type in {"rest", "rest_day"}:
+                sessions.append(WorkoutSession(
+                    day=f"Day {day}",
+                    day_number=day,
+                    session_type=SessionType.REST_DAY,
+                    is_rest_day=True,
+                    duration_minutes=0,
+                    muscle_groups_targeted=[],
+                    estimated_calories_burned=0,
+                    warmup=[],
+                    exercises=[],
+                    cardio=None,
+                    cooldown=["Mobility work", "Light stretching"],
+                    notes=["Recovery day"]
+                ))
+                continue
+
+            exercise_ids = template.exercise_pool.get(session_type, [])
+            exercises = []
+            for exercise_id in exercise_ids:
+                item = catalog.get(exercise_id)
+                if item is None:
+                    continue
+                exercises.append(Exercise(
+                    exercise_id=item.exercise_id,
+                    name=item.exercise_name,
+                    muscle_group=item.primary_muscle or "Full Body",
+                    sets=template.base_sets,
+                    reps=str(template.base_reps),
+                    rest_seconds=template.base_rest_seconds,
+                    equipment=item.required_equipment,
+                    tempo="3-0-1",
+                    notes="Generated from ProgramTemplate for integrated planning."
+                ))
+
+            workout_session_type = SessionType.FULL_BODY
+            if session_type in {"upper_push", "upper_pull"}:
+                workout_session_type = SessionType.UPPER_BODY
+            elif session_type == "lower":
+                workout_session_type = SessionType.LOWER_BODY
+            elif session_type == "cardio_core":
+                workout_session_type = SessionType.CARDIO
+
+            calories_burned = self._estimate_calories_burned(
+                workout_session_type,
+                request.workout_duration_minutes,
+                request.workout_intensity,
+            )
+
+            sessions.append(WorkoutSession(
+                day=f"Day {day}",
+                day_number=day,
+                session_type=workout_session_type,
+                is_rest_day=False,
+                duration_minutes=request.workout_duration_minutes,
+                muscle_groups_targeted=[session_type],
+                estimated_calories_burned=calories_burned,
+                warmup=["Shoulder circles", "Hip circles", "Bodyweight squat"],
+                exercises=exercises,
+                cardio=None,
+                cooldown=["Full body stretching"],
+                notes=["Generated from ProgramTemplate"]
+            ))
+
+        return sessions
     
     def _calculate_adjusted_targets(
-        self, 
+        self,
         user_profile: UserProfile,
         workout_sessions: List[WorkoutSession]
     ) -> Dict[int, Dict]:
         """
-        Calculate adjusted calorie and protein targets based on workout calories burned
+        Calculate adjusted calorie and macro targets per day.
+
+        Science basis (NSCA/ISSN):
+        - Workout days: calories = TDEE + exercise_kcal_burned
+        - Rest days:    calories = TDEE (no addition, no subtraction)
+        - Protein:      CONSTANT across all days — Muscle Protein Synthesis (MPS)
+                        peaks 24-48h AFTER exercise (i.e. during rest days).
+                        Cutting protein on rest days reduces recovery quality.
+        - Carbs:        Higher on workout days (fuel), lower on rest days.
+                        Carbs are the primary energy lever, not protein.
         """
-        # Get base targets
         analysis = BodyAnalyzer.analyze_user(user_profile)
         base_calories = analysis["user_summary"]["target_calories"]
         base_protein = analysis["macro_targets"]["protein"]
-        
+
         adjusted = {}
-        
+
         for day_num, session in enumerate(workout_sessions, 1):
             calories_burned = session.estimated_calories_burned
-            
-            # On workout days, add calories burned to target
-            # On rest days, reduce slightly
+
             if session.is_rest_day:
-                adjusted_calories = int(base_calories * 0.9)  # 10% less on rest
-                adjusted_protein = base_protein * 0.9
-                reason = "Rest day - reduced intake"
+                # Rest day: TDEE only — no exercise calories added
+                # Carbs reduced ~15% (less fuel needed), protein unchanged
+                adjusted_calories = base_calories
+                adjusted_protein = base_protein          # protein UNCHANGED
+                carb_modifier = 0.85                     # 15% fewer carbs
+                reason = "Rest day — TDEE only, protein maintained for MPS, carbs reduced"
             else:
+                # Workout day: TDEE + exercise burn
+                # Carbs increased ~15% to fuel performance and replenish glycogen
                 adjusted_calories = int(base_calories + calories_burned)
-                # Extra protein on workout days for recovery
-                adjusted_protein = base_protein * 1.15
-                reason = f"Workout day +{calories_burned}kcal burned"
-            
+                adjusted_protein = base_protein          # protein UNCHANGED
+                carb_modifier = 1.15                     # 15% more carbs
+                reason = f"Workout day — +{calories_burned} kcal from exercise, carbs increased for fuel"
+
             adjusted[day_num] = {
                 "calories": adjusted_calories,
                 "protein": round(adjusted_protein, 1),
-                "reason": reason
+                "carb_modifier": carb_modifier,
+                "reason": reason,
             }
-        
+
         return adjusted
     
     def _get_adjustment_reason(self, workout: WorkoutSession) -> str:
-        """Get explanation for macro adjustment"""
         if workout.is_rest_day:
-            return "Rest day - reduced 10% calories"
-        else:
-            return f"Workout day +{workout.estimated_calories_burned}kcal, +15% protein"
-    
-    def _get_workout_split(self, fitness_level: str) -> List[SessionType]:
-        """Get workout split based on fitness level"""
-        splits = {
-            "beginner":     [SessionType.FULL_BODY, SessionType.REST, SessionType.FULL_BODY, SessionType.REST, SessionType.FULL_BODY, SessionType.REST, SessionType.REST],
-            "intermediate": [SessionType.PUSH, SessionType.PULL, SessionType.LEGS, SessionType.REST, SessionType.PUSH, SessionType.PULL, SessionType.REST],
-            "advanced":     [SessionType.PUSH, SessionType.PULL, SessionType.LEGS, SessionType.REST, SessionType.PUSH, SessionType.PULL, SessionType.LEGS],
-        }
-        return splits.get(fitness_level, splits["intermediate"])
-    
-    def _get_muscle_groups(self, session_type: SessionType) -> List[str]:
-        """Get muscle groups targeted by session type"""
-        groups = {
-            SessionType.PUSH: ["Ngực", "Vai trước", "Tay sau"],
-            SessionType.PULL: ["Lưng", "Vai sau", "Tay sau"],
-            SessionType.LEGS: ["Đùi trước", "Đùi sau", "Mông", "Bắp chân"],
-            SessionType.FULL_BODY: ["Ngực", "Lưng", "Chân", "Vai"],
-            SessionType.UPPER: ["Ngực", "Lưng", "Vai", "Tay"],
-            SessionType.LOWER: ["Đùi", "Mông", "Bắp chân"],
-            SessionType.CARDIO: ["Toàn thân"],
-        }
-        return groups.get(session_type, [])
+            return "Rest day — TDEE only, protein maintained, carbs -15%"
+        return f"Workout day — +{workout.estimated_calories_burned} kcal exercise, carbs +15%, protein unchanged"
     
     def _estimate_calories_burned(self, session_type: SessionType, duration: int, intensity: str) -> int:
-        """Estimate calories burned based on workout"""
-        base_cal_per_minute = {
-            SessionType.PUSH: 8,
-            SessionType.PULL: 9,
-            SessionType.LEGS: 10,
-            SessionType.FULL_BODY: 9,
-            SessionType.CARDIO: 12,
-        }.get(session_type, 8)
-        
-        intensity_multiplier = {
-            "low": 0.8,
-            "moderate": 1.0,
-            "high": 1.3
-        }.get(intensity, 1.0)
-        
-        return int(base_cal_per_minute * duration * intensity_multiplier)
-    
-    def _get_warmup_routine(self) -> List[str]:
-        return ["Chạy bộ nhẹ 5 phút", "Xoay khớp vai 30 giây", "Xoay khớp hông 30 giây"]
-    
-    def _get_warmup_routine(self) -> List[str]:
-        return ["Chạy bộ nhẹ 5 phút", "Xoay khớp vai 30 giây", "Xoay khớp hông 30 giây"]
-    
-    def _get_cooldown_routine(self) -> List[str]:
-        return ["Giãn cơ toàn thân 5 phút", "Hít thở sâu 1 phút"]
-    
-    def _get_exercises_template(self, session_type: SessionType) -> List:
-        """Get template exercises - in real implementation, this would come from AI"""
-        from ..schemas.workout import Exercise, CardioBlock
-        
-        exercises = {
-            SessionType.PUSH: [
-                Exercise(name="Bench Press", muscle_group="Ngực", sets=3, reps="8-12", rest_seconds=90, equipment="Tạ đôi", notes="Hạ chậm 2 giây"),
-                Exercise(name="Overhead Press", muscle_group="Vai", sets=3, reps="8-12", rest_seconds=90, equipment="Tạ đôi", notes="Giữ lõi"),
-                Exercise(name="Triceps Pushdown", muscle_group="Tay sau", sets=3, reps="12-15", rest_seconds=60, equipment="Máy cáp", notes="Căng cơ ở vị trí dưới cùng"),
-            ],
-            SessionType.PULL: [
-                Exercise(name="Pull-ups", muscle_group="Lưng", sets=3, reps="AMRAP", rest_seconds=120, equipment="Xà đơn", notes="Full range of motion"),
-                Exercise(name="Barbell Row", muscle_group="Lưng", sets=3, reps="8-12", rest_seconds=90, equipment="Tạ đòn", notes="Giữ lưng thẳng"),
-                Exercise(name="Bicep Curls", muscle_group="Tay trước", sets=3, reps="12-15", rest_seconds=60, equipment="Tạ đơn", notes="Không đung người"),
-            ],
-            SessionType.LEGS: [
-                Exercise(name="Squats", muscle_group="Đùi", sets=3, reps="8-12", rest_seconds=120, equipment="Tạ đòn", notes="Parallel hoặc sâu hơn"),
-                Exercise(name="Romanian Deadlift", muscle_group="Đùi sau", sets=3, reps="8-12", rest_seconds=90, equipment="Tạ đòn", notes="Giữ lưng thẳng"),
-                Exercise(name="Calf Raises", muscle_group="Bắp chân", sets=4, reps="15-20", rest_seconds=45, equipment="Tạ đơn", notes="Full range"),
-            ],
-            SessionType.FULL_BODY: [
-                Exercise(name="Squats", muscle_group="Đùi", sets=3, reps="10-12", rest_seconds=90, equipment="Tạ đòn", notes=""),
-                Exercise(name="Bench Press", muscle_group="Ngực", sets=3, reps="10-12", rest_seconds=90, equipment="Tạ đôi", notes=""),
-                Exercise(name="Bent-over Row", muscle_group="Lưng", sets=3, reps="10-12", rest_seconds=90, equipment="Tạ đòn", notes=""),
-            ],
-        }
-        
-        return exercises.get(session_type, [])
+        """
+        Estimate calories burned per workout session.
+        Uses kcal/min approximations derived from MET values (Compendium of Physical Activities 2024).
+        The Java backend uses GoalMapper.calcCaloriesPerSession() with the same MET approach.
+        """
+        base_kcal_per_min = {
+            SessionType.UPPER_BODY: 4.5,
+            SessionType.LOWER_BODY: 5.5,
+            SessionType.FULL_BODY:  5.0,
+            SessionType.CARDIO:     7.0,
+        }.get(session_type, 5.0)
+
+        intensity_multiplier = {"low": 0.8, "moderate": 1.0, "high": 1.3}.get(intensity, 1.0)
+        return int(base_kcal_per_min * duration * intensity_multiplier)
     
     def _generate_weekly_summary(self, daily_plans: List[IntegratedDailyPlan], user_profile: UserProfile) -> Dict:
         """Generate weekly summary of meal + workout plan"""
@@ -270,10 +309,10 @@ class IntegratedPlanner:
     def _generate_recommendations(self, daily_plans: List[IntegratedDailyPlan], request: FullPlanRequest) -> List[str]:
         """Generate recommendations based on integrated plan"""
         recommendations = [
-            "💪 Tăng protein 15% vào ngày tập để phục hồi cơ bắp",
-            "🥗 Giảm 10% calories vào ngày nghỉ để tránh dư thừa",
-            "⏰ Ăn bữa chính 2-3 tiếng trước khi tập",
-            "💧 Uống đủ nước trong và sau buổi tập"
+            "💪 Protein giữ nguyên mỗi ngày — MPS đạt đỉnh 24-48h sau tập (tức ngày nghỉ)",
+            "🍚 Tăng carbs ngày tập để cung cấp năng lượng, giảm carbs ngày nghỉ",
+            "⏰ Ăn bữa chính 2-3 tiếng trước khi tập, bổ sung protein 30 phút sau tập",
+            "💧 Uống 500ml nước trước tập, 200ml mỗi 15-20 phút trong khi tập",
         ]
         
         # Add goal-specific recommendations

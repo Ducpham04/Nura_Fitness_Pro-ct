@@ -56,15 +56,34 @@ class AuthService {
   }
 
   // Get current user
-  async getCurrentUser(): Promise<User | null> {
+  async getCurrentUser(forceRefresh = false): Promise<User | null> {
     const cached = this.getStoredUser();
-    if (cached) return cached;
+    if (cached && !forceRefresh) return cached;
 
-    const response = await apiClient.get<User>(API_ENDPOINTS.AUTH.ME);
-    if (response.success && response.data) {
-      localStorage.setItem(USER_KEY, JSON.stringify(response.data));
-      return response.data;
+    if (!this.getAccessToken()) {
+      this.clearAuthData();
+      return null;
     }
+
+    const response = await apiClient.get<BEUserInfo>(API_ENDPOINTS.AUTH.ME);
+    if (response.success && response.data) {
+      const user = this.mapBEUserToFE(response.data);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      return user;
+    }
+
+    // Any auth failure (401 from server or SESSION_EXPIRED from interceptor)
+    // means the token is invalid — clear everything and return null.
+    // Do NOT fall back to `cached`: cached was captured before the request and
+    // may still hold an object even after localStorage was cleared, causing a
+    // ghost session where the user appears logged-in but every API call fails.
+    if (response.error?.code === 'HTTP_401' || response.error?.code === 'SESSION_EXPIRED') {
+      this.clearAuthData();
+      return null;
+    }
+
+    // Non-auth error (e.g. network blip, 500) — use cached as best-effort
+    if (cached) return cached;
     return null;
   }
 

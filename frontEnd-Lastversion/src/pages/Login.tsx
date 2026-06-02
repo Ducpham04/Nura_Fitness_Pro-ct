@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Zap, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Zap, Mail, Lock, ArrowRight, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
@@ -27,6 +27,8 @@ function ParticleField() {
 export default function Login() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
+  const sessionExpired = (location.state as { sessionExpired?: boolean })?.sessionExpired === true;
   const onLogin = (path: string) => navigate(path);
   const onRegister = () => navigate('/register');
   const [email, setEmail] = useState('');
@@ -52,11 +54,6 @@ export default function Login() {
     setLoading(false);
 
     if (success) {
-      const currentUser = authService.getStoredUser();
-      if (currentUser?.role === 'ADMIN') {
-        onLogin('/admin');
-        return;
-      }
       onLogin('/dashboard');
     } else {
       setError(authError || t('auth.loginFailed'));
@@ -77,13 +74,21 @@ export default function Login() {
       <div className="w-full max-w-md relative z-10 animate-fade-in">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-lime flex items-center justify-center">
               <Zap className="w-4 h-4 text-obsidian" fill="currentColor" />
             </div>
             <span className="font-grotesk font-bold text-white text-lg">FitChallenge</span>
-          </div>
+          </Link>
         </div>
+
+        {/* Session-expired banner */}
+        {sessionExpired && (
+          <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3 mb-4 text-amber-400 text-sm">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span>Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.</span>
+          </div>
+        )}
 
         {/* Card */}
         <div className="glass rounded-3xl p-8 border border-white/5 mb-6">
@@ -104,7 +109,7 @@ export default function Login() {
                   placeholder="your@email.com"
                   required
                   autoComplete="email"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/8 transition-all"
+                  className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/[0.09] transition-all"
                   disabled={loading}
                 />
               </div>
@@ -124,7 +129,7 @@ export default function Login() {
                   required
                   minLength={6}
                   autoComplete="current-password"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/8 transition-all pr-10"
+                  className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/[0.09] transition-all pr-10"
                   disabled={loading}
                 />
                 <button
@@ -175,9 +180,9 @@ export default function Login() {
 
           {/* Divider */}
           <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px bg-white/[0.08]" />
             <span className="text-neutral-500 text-xs">{t('auth.or')}</span>
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px bg-white/[0.08]" />
           </div>
 
           {/* Quick login demo */}

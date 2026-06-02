@@ -316,7 +316,7 @@ export default function AIFoodScanner({ onAnalysisComplete }: Props) {
             </button>
             <button
               onClick={reset}
-              className="flex-1 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-grotesk font-medium transition-all"
+              className="flex-1 bg-white/[0.06] hover:bg-white/[0.06] text-white py-3 rounded-xl font-grotesk font-medium transition-all"
             >
               Retake
             </button>
@@ -343,7 +343,7 @@ export default function AIFoodScanner({ onAnalysisComplete }: Props) {
               </div>
               <button
                 onClick={reset}
-                className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all"
+                className="w-10 h-10 rounded-full bg-white/[0.06] hover:bg-white/[0.06] flex items-center justify-center transition-all"
               >
                 <X className="w-5 h-5 text-neutral-400" />
               </button>
@@ -357,7 +357,7 @@ export default function AIFoodScanner({ onAnalysisComplete }: Props) {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
               {macroNutrients.map(({ name, value, unit, icon: Icon, color }) => (
                 <div key={name} className="text-center">
-                  <div className={`w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center mx-auto mb-2`}>
+                  <div className={`w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center mx-auto mb-2`}>
                     <Icon className={`w-4 h-4 ${color}`} />
                   </div>
                   <div className="font-grotesk font-bold text-white text-lg">{value}</div>
@@ -428,7 +428,7 @@ export default function AIFoodScanner({ onAnalysisComplete }: Props) {
             </button>
             <button
               onClick={reset}
-              className="flex-1 bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-grotesk font-medium transition-all"
+              className="flex-1 bg-white/[0.06] hover:bg-white/[0.06] text-white py-3 rounded-xl font-grotesk font-medium transition-all"
             >
               Scan Another
             </button>

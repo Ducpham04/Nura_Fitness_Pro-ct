@@ -74,7 +74,7 @@ export default function CyberpunkMealModal({ onClose, onSuccess, defaultBudget }
               <p className="text-xs text-neutral-500 font-medium uppercase tracking-widest">Groq chỉ chọn food_id — calo/chi phí do BE tính</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors text-neutral-500 hover:text-white">
+          <button type="button" onClick={onClose} className="p-2 hover:bg-white/[0.06] rounded-full transition-colors text-neutral-500 hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -107,7 +107,7 @@ export default function CyberpunkMealModal({ onClose, onSuccess, defaultBudget }
                       type="number"
                       value={budget}
                       onChange={(e) => setBudget(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white font-grotesk font-bold text-lg focus:outline-none focus:border-lime/40 focus:bg-white/10 transition-all"
+                      className="w-full bg-white/[0.06] border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white font-grotesk font-bold text-lg focus:outline-none focus:border-lime/40 focus:bg-white/[0.09] transition-all"
                       placeholder="80000"
                     />
                   </div>

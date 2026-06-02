@@ -50,7 +50,7 @@ export default function Navigation() {
                 className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl transition-all ${
                   isActive(path) 
                     ? 'bg-lime/10 text-lime border border-lime/20' 
-                    : 'text-neutral-500 hover:text-white hover:bg-white/5'
+                    : 'text-neutral-500 hover:text-white hover:bg-white/[0.06]'
                 }`}
               >
                 <Icon className={`w-4 h-4 ${id === 'coach' ? 'text-electric' : ''}`} />

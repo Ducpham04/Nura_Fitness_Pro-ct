@@ -8,11 +8,71 @@ from enum import Enum
 
 
 class GoalType(str, Enum):
-    """Fitness goals supported by the system"""
-    WEIGHT_LOSS = "weight_loss"
-    MUSCLE_GAIN = "muscle_gain"
-    MAINTENANCE = "maintenance"
-    ENDURANCE = "endurance"
+    """Fitness goals supported by the system.
+
+    Canonical values (stored internally):
+      muscle_gain | weight_loss | endurance | maintenance | strength
+
+    Accepted incoming aliases (from Java / FE):
+      GAIN_MUSCLE, gain_muscle, "build muscle", tang_co  -> muscle_gain
+      LOSE_WEIGHT, lose_weight, "weight loss", giam_can  -> weight_loss
+      ENDURANCE, cardio, stamina                         -> endurance
+      MAINTENANCE, maintain, duy_tri                     -> maintenance
+      STRENGTH, suc_manh, nang_ta                        -> strength
+    """
+    WEIGHT_LOSS  = "weight_loss"
+    MUSCLE_GAIN  = "muscle_gain"
+    MAINTENANCE  = "maintenance"
+    ENDURANCE    = "endurance"
+    STRENGTH     = "strength"
+
+    @classmethod
+    def _normalize(cls, raw: str) -> str:
+        """Map any raw string to a canonical GoalType value."""
+        import unicodedata
+        # Strip Vietnamese diacritics so "giảm cân" → "giam can"
+        stripped = unicodedata.normalize("NFD", raw)
+        stripped = "".join(c for c in stripped if unicodedata.category(c) != "Mn")
+        v = stripped.strip().lower().replace("-", "_").replace(" ", "_")
+
+        # strength checked FIRST — otherwise "strength" would fall into muscle_kw
+        strength_kw = {"strength", "suc_manh", "nang_ta", "powerlifting", "nang_nang"}
+        muscle_kw   = {"muscle_gain", "gain_muscle", "muscle", "build", "tang_co",
+                       "hypertrophy", "bulk", "gainmuscle"}
+        loss_kw     = {"weight_loss", "lose_weight", "fat_loss", "giam_can",
+                       "giam_mo", "giam_beo", "cut", "weightloss"}
+        end_kw      = {"endurance", "cardio", "stamina", "suc_ben", "marathon"}
+        maint_kw    = {"maintenance", "maintain", "general", "fitness",
+                       "duy_tri", "suc_khoe"}
+        for kw in strength_kw:
+            if kw in v:
+                return "strength"
+        for kw in muscle_kw:
+            if kw in v:
+                return "muscle_gain"
+        for kw in loss_kw:
+            if kw in v:
+                return "weight_loss"
+        for kw in end_kw:
+            if kw in v:
+                return "endurance"
+        for kw in maint_kw:
+            if kw in v:
+                return "maintenance"
+        return "maintenance"
+
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls._validate
+
+    @classmethod
+    def _validate(cls, v, *args, **kwargs):
+        if isinstance(v, cls):
+            return v
+        normalized = cls._normalize(str(v))
+        return cls(normalized)
+
 
 
 class FitnessLevel(str, Enum):
@@ -118,7 +178,7 @@ class UserProfile(BaseModel):
     body_fat_percentage: Optional[float] = Field(None, ge=0, le=50, description="Body fat percentage")
     activity_level: ActivityLevel = Field(default=ActivityLevel.MODERATE)
     goal: GoalType = Field(default=GoalType.MAINTENANCE)
-    budget_per_day: int = Field(default=80000, ge=30000, le=500000, description="Daily budget in VND")
+    budget_per_day: int = Field(default=80000, ge=50000, le=500000, description="Daily budget in VND (min 50,000 VND)")
     fitness_level: FitnessLevel = Field(default=FitnessLevel.BEGINNER)
     dietary_restrictions: List[str] = Field(default_factory=list)
     
@@ -139,7 +199,7 @@ class UserProfile(BaseModel):
 class NutritionPlanRequest(BaseModel):
     """Request body for generating nutrition plan"""
     user_profile: UserProfile
-    days: int = Field(default=7, ge=1, le=14, description="Number of days to plan")
+    days: int = Field(default=7, ge=1, le=28, description="Number of days to plan (max 4 weeks)")
     preferences: Optional[List[str]] = Field(default_factory=list)
     inventory: Optional[List[str]] = Field(default_factory=list, description="List of items currently in user's kitchen")
 

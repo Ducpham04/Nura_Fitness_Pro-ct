@@ -167,7 +167,7 @@ function ChallengesView() {
 
   if (selectedChallenge) {
     return (
-      <div className="space-y-6 animate-fade-in max-h-[calc(100vh-200px)] overflow-y-auto">
+      <div className="space-y-6 animate-fade-in">
         <button onClick={() => setSelectedChallenge(null)} className="sticky top-0 text-lime font-grotesk font-semibold text-sm flex items-center gap-1 hover:gap-2 transition-all bg-charcoal/50 backdrop-blur py-2 z-10">
           ← Back to challenges
         </button>
@@ -413,7 +413,7 @@ function ChallengesView() {
                   <span className="text-neutral-500 text-xs">{challenge.duration}</span>
                 </div>
 
-                <button className="w-full mt-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-grotesk font-semibold transition-all flex items-center justify-center gap-1">
+                <button className="w-full mt-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.06] text-white text-xs font-grotesk font-semibold transition-all flex items-center justify-center gap-1">
                   View Details <ChevronRight className="w-3 h-3" />
                 </button>
               </div>

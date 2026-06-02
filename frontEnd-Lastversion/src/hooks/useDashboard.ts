@@ -59,6 +59,26 @@ export function useDashboard(): UseDashboardReturn {
     }
   }, [fetchData, isAuthenticated, user]);
 
+  // Refresh khi user hoàn thành bài tập
+  useEffect(() => {
+    const onWorkoutCompleted = () => {
+      fetchData();
+    };
+    window.addEventListener('workout-completed', onWorkoutCompleted);
+    return () => window.removeEventListener('workout-completed', onWorkoutCompleted);
+  }, [fetchData]);
+
+  // Refresh khi user quay lại tab (chuyển từ WorkoutTab → Dashboard)
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && isAuthenticated && user) {
+        fetchData();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [fetchData, isAuthenticated, user]);
+
   const updateStats = useCallback((updates: Partial<DashboardData['stats']>) => {
     setData(prev => {
       if (!prev) return null;

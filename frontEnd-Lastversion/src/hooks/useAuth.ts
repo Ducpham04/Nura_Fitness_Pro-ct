@@ -1,6 +1,8 @@
 // React Hook for Authentication
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { setUnauthorizedHandler } from '../services/apiClient';
 import type { User, LoginRequest, RegisterRequest } from '../types';
 
 interface UseAuthReturn {
@@ -18,35 +20,44 @@ export function useAuth(): UseAuthReturn {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  // Register a global 401 handler once so any expired-token response
+  // immediately clears auth state and sends the user to /login.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setUser(null);
+      navigate('/login', { replace: true, state: { sessionExpired: true } });
+    });
+  }, [navigate]);
 
   useEffect(() => {
-    // Check if user is already logged in
+    // Verify stored session on every page load.
+    // If a token exists but the server rejects it (expired / rotated secret),
+    // redirect to /login with the sessionExpired flag so the banner shows.
     const initAuth = async () => {
       try {
-        // First check if we have a token
         if (authService.isAuthenticated()) {
-          // Try to get stored user first (faster)
-          const storedUser = authService.getStoredUser();
-          if (storedUser) {
-            setUser(storedUser);
-            setIsLoading(false);
-            return;
-          }
-          
-          // If no stored user, try to fetch current user
-          const currentUser = await authService.getCurrentUser();
+          const currentUser = await authService.getCurrentUser(true);
           if (currentUser) {
             setUser(currentUser);
+          } else {
+            // Token existed but server said no — make sure localStorage is clean
+            // and land on login with the "session expired" banner.
+            authService.clearAuthData();
+            navigate('/login', { replace: true, state: { sessionExpired: true } });
           }
         }
       } catch (err) {
         console.error('Auth initialization error:', err);
-        setError('Failed to restore session');
+        authService.clearAuthData();
       } finally {
         setIsLoading(false);
       }
     };
     initAuth();
+    // navigate is stable; omit from deps to avoid re-running on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = useCallback(async (credentials: LoginRequest): Promise<boolean> => {
@@ -55,7 +66,7 @@ export function useAuth(): UseAuthReturn {
     try {
       const success = await authService.login(credentials);
       if (success) {
-        const user = await authService.getCurrentUser();
+        const user = await authService.getCurrentUser(true);
         setUser(user);
         return true;
       }
@@ -75,7 +86,7 @@ export function useAuth(): UseAuthReturn {
     try {
       const success = await authService.register(data);
       if (success) {
-        const user = await authService.getCurrentUser();
+        const user = await authService.getCurrentUser(true);
         setUser(user);
         return true;
       }
@@ -103,7 +114,7 @@ export function useAuth(): UseAuthReturn {
     try {
       const success = await authService.refreshToken();
       if (success) {
-        const user = await authService.getCurrentUser();
+        const user = await authService.getCurrentUser(true);
         setUser(user);
       }
       return success;

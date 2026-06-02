@@ -93,7 +93,7 @@ export default function FoodInventoryPicker({ items, onChange }: Props) {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-white text-sm focus:outline-none focus:border-lime/40"
+            className="w-full bg-white/[0.06] border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-white text-sm focus:outline-none focus:border-lime/40"
             placeholder="Nhập tên thực phẩm, ví dụ: gà, trứng, gạo..."
           />
         </div>
@@ -132,7 +132,7 @@ export default function FoodInventoryPicker({ items, onChange }: Props) {
         </div>
       )}
 
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] max-h-72 overflow-y-auto">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] max-h-72 overflow-y-auto">
         {loading ? (
           <div className="h-36 flex items-center justify-center">
             <Loader2 className="w-6 h-6 text-lime animate-spin" />
@@ -149,10 +149,10 @@ export default function FoodInventoryPicker({ items, onChange }: Props) {
                 type="button"
                 key={food.id}
                 onClick={() => (selected ? removeFood(food.id) : addFood(food))}
-                className={`w-full p-3 flex items-center justify-between gap-3 text-left border-b border-white/5 last:border-b-0 transition-colors ${selected ? 'bg-lime/10' : 'hover:bg-white/5'}`}
+                className={`w-full p-3 flex items-center justify-between gap-3 text-left border-b border-white/5 last:border-b-0 transition-colors ${selected ? 'bg-lime/10' : 'hover:bg-white/[0.06]'}`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${selected ? 'bg-lime text-obsidian' : 'bg-white/5 text-neutral-400'}`}>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${selected ? 'bg-lime text-obsidian' : 'bg-white/[0.06] text-neutral-400'}`}>
                     {selected ? <Check className="w-4 h-4" /> : <Package className="w-4 h-4" />}
                   </div>
                   <div className="min-w-0">

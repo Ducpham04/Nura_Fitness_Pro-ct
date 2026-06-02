@@ -801,7 +801,7 @@ IMPORTANT:
             return self._parse_json_response(response.choices[0].message.content)
         except Exception as e:
             raise ValueError(f"Failed to generate meal from context: {str(e)}")
-    def chat(self, message: str, history: List[Dict] = [], preferences: Dict = {}) -> str:
+    def chat(self, message: str, history: List[Dict] = [], preferences: Dict = {}, user_context: Dict = None) -> str:
         """
         General fitness coach chat
         """
@@ -812,6 +812,12 @@ IMPORTANT:
         
         if preferences:
             system_prompt += f"\nUser Preferences: {json.dumps(preferences, ensure_ascii=False)}"
+
+        if user_context:
+            system_prompt += (
+                "\nUser Context from app logs. Use it when relevant, but do not reveal raw JSON unless asked:\n"
+                + json.dumps(user_context, ensure_ascii=False)
+            )
             
         messages = [{"role": "system", "content": system_prompt}]
         

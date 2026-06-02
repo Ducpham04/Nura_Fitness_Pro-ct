@@ -228,7 +228,7 @@ export default function Onboarding() {
 
         <div className="flex items-center gap-1 mb-8">
           {steps.map((_, i) => (
-            <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-500 ${i <= step ? 'bg-lime' : 'bg-white/10'}`} />
+            <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-500 ${i <= step ? 'bg-lime' : 'bg-white/[0.06]'}`} />
           ))}
         </div>
 
@@ -263,7 +263,7 @@ export default function Onboarding() {
                       type="number"
                       value={form[field]}
                       onChange={e => update(field, e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-lime/40 transition-all pr-16"
+                      className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-lime/40 transition-all pr-16"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 text-sm">{unit}</span>
                   </div>
@@ -283,7 +283,7 @@ export default function Onboarding() {
                     className={`p-4 rounded-2xl border transition-all duration-200 flex flex-col items-center gap-2 ${
                       form.gender === 'male'
                         ? 'bg-lime/10 border-lime/40 text-lime shadow-lg shadow-lime/5'
-                        : 'bg-white/5 border-white/10 text-neutral-300 hover:border-white/20 hover:bg-white/8'
+                        : 'bg-white/[0.06] border-white/10 text-neutral-300 hover:border-white/20 hover:bg-white/[0.06]'
                     }`}
                   >
                     <span className="text-3xl select-none">👨</span>
@@ -299,7 +299,7 @@ export default function Onboarding() {
                     className={`p-4 rounded-2xl border transition-all duration-200 flex flex-col items-center gap-2 ${
                       form.gender === 'female'
                         ? 'bg-pink-500/10 border-pink-400/50 text-pink-300 shadow-lg shadow-pink-500/5'
-                        : 'bg-white/5 border-white/10 text-neutral-300 hover:border-white/20 hover:bg-white/8'
+                        : 'bg-white/[0.06] border-white/10 text-neutral-300 hover:border-white/20 hover:bg-white/[0.06]'
                     }`}
                   >
                     <span className="text-3xl select-none">👩</span>
@@ -324,7 +324,7 @@ export default function Onboarding() {
             <div className="grid grid-cols-2 gap-3">
               {backendGoals.map(g => (
                 <button key={g.id} onClick={() => update('goal', g.name)}
-                  className={`p-4 rounded-2xl text-left transition-all border ${form.goal === g.name ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/5 border-white/5 text-white'}`}>
+                  className={`p-4 rounded-2xl text-left transition-all border ${form.goal === g.name ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'}`}>
                   <div className="text-2xl mb-2">
                     {g.imageLink ? <img src={g.imageLink} alt="" className="w-8 h-8 object-contain" /> : '🎯'}
                   </div>
@@ -340,7 +340,7 @@ export default function Onboarding() {
             <div className="space-y-2">
               {activityLevels.map(level => (
                 <button key={level.id} onClick={() => update('activityLevel', level.id)}
-                  className={`w-full p-4 rounded-2xl text-left border transition-all ${form.activityLevel === level.id ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/5 border-white/5 text-white'}`}>
+                  className={`w-full p-4 rounded-2xl text-left border transition-all ${form.activityLevel === level.id ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'}`}>
                   <div className="font-grotesk font-semibold">{level.label}</div>
                   <div className="text-neutral-400 text-xs">{level.desc}</div>
                 </button>
@@ -353,7 +353,7 @@ export default function Onboarding() {
             <div className="space-y-2">
               {injuriesList.map(inj => (
                 <button key={inj.id} onClick={() => toggleArrayItem('injuries', inj.id)}
-                  className={`w-full p-3 rounded-2xl text-left border transition-all flex items-center gap-3 ${form.injuries.includes(inj.id) ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/5 border-white/5 text-white'}`}>
+                  className={`w-full p-3 rounded-2xl text-left border transition-all flex items-center gap-3 ${form.injuries.includes(inj.id) ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'}`}>
                   <div className={`w-4 h-4 rounded border flex items-center justify-center ${form.injuries.includes(inj.id) ? 'bg-lime border-lime' : 'border-neutral-500'}`}>
                     {form.injuries.includes(inj.id) && <div className="w-2 h-2 bg-obsidian rounded-full" />}
                   </div>
@@ -368,7 +368,7 @@ export default function Onboarding() {
             <div className="grid grid-cols-2 gap-3">
               {equipmentList.map(eq => (
                 <button key={eq.id} onClick={() => toggleArrayItem('equipment', eq.id)}
-                  className={`p-4 rounded-2xl text-left border transition-all ${form.equipment.includes(eq.id) ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/5 border-white/5 text-white'}`}>
+                  className={`p-4 rounded-2xl text-left border transition-all ${form.equipment.includes(eq.id) ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'}`}>
                   <div className="font-grotesk font-semibold text-sm flex justify-between items-center">
                     {eq.label}
                     {form.equipment.includes(eq.id) && <div className="w-2 h-2 rounded-full bg-lime" />}
@@ -383,7 +383,7 @@ export default function Onboarding() {
             <div className="grid grid-cols-2 gap-3">
               {dietTypes.map(d => (
                 <button key={d.id} onClick={() => update('dietType', d.id)}
-                  className={`p-4 rounded-2xl text-left border transition-all ${form.dietType === d.id ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/5 border-white/5 text-white'}`}>
+                  className={`p-4 rounded-2xl text-left border transition-all ${form.dietType === d.id ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'}`}>
                   <div className="text-2xl mb-2">{d.icon}</div>
                   <div className="font-grotesk font-semibold text-sm">{d.label}</div>
                 </button>
@@ -394,11 +394,11 @@ export default function Onboarding() {
 
         <div className="flex items-center justify-between">
           <button onClick={() => setStep(s => s - 1)} disabled={step === 0 || isSubmitting}
-            className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-grotesk font-medium text-sm transition-all ${step === 0 ? 'opacity-30 cursor-not-allowed' : 'text-white hover:bg-white/5'}`}>
+            className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-grotesk font-medium text-sm transition-all ${step === 0 ? 'opacity-30 cursor-not-allowed' : 'text-white hover:bg-white/[0.06]'}`}>
             <ArrowLeft className="w-4 h-4" /> Back
           </button>
           <button onClick={handleNext} disabled={!canAdvance() || isSubmitting}
-            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-grotesk font-semibold text-sm transition-all ${canAdvance() && !isSubmitting ? 'bg-lime text-obsidian' : 'bg-white/10 text-neutral-500'}`}>
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-grotesk font-semibold text-sm transition-all ${canAdvance() && !isSubmitting ? 'bg-lime text-obsidian' : 'bg-white/[0.06] text-neutral-500'}`}>
             {isSubmitting ? 'Processing...' : step === steps.length - 1 ? 'Launch My Plan' : 'Continue'}
             <ArrowRight className="w-4 h-4" />
           </button>

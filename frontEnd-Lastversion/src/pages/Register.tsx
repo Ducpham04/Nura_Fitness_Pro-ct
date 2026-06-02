@@ -5,7 +5,7 @@ import { useAuthContext } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 function ParticleField() {
   const particles = useMemo(() => Array.from({ length: 6 }, (_, i) => ({
@@ -37,7 +37,7 @@ const PasswordStrength = ({ password }: { password: string }) => {
     <div className="space-y-2 mt-2">
       {checks.map(({ label, pass }) => (
         <div key={label} className="flex items-center gap-2">
-          <div className={`w-4 h-4 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${pass ? 'bg-success/20 text-success' : 'bg-white/5 text-neutral-500'}`}>
+          <div className={`w-4 h-4 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${pass ? 'bg-success/20 text-success' : 'bg-white/[0.08] text-neutral-500'}`}>
             {pass && <Check className="w-3 h-3" />}
           </div>
           <span className={`text-xs ${pass ? 'text-success' : 'text-neutral-400'}`}>{label}</span>
@@ -110,12 +110,12 @@ export default function Register() {
       <div className="w-full max-w-md relative z-10 animate-fade-in">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <button onClick={onBackToLogin} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <div className="w-8 h-8 rounded-lg bg-lime flex items-center justify-center">
               <Zap className="w-4 h-4 text-obsidian" fill="currentColor" />
             </div>
             <span className="font-grotesk font-bold text-white text-lg">FitChallenge</span>
-          </button>
+          </Link>
         </div>
 
         {/* Card */}
@@ -139,7 +139,7 @@ export default function Register() {
                   placeholder={t('auth.namePlaceholder')}
                   required
                   autoComplete="name"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/8 transition-all"
+                  className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/[0.09] transition-all"
                   disabled={loading}
                 />
               </div>
@@ -158,7 +158,7 @@ export default function Register() {
                   placeholder="your@email.com"
                   required
                   autoComplete="email"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/8 transition-all"
+                  className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/[0.09] transition-all"
                   disabled={loading}
                 />
               </div>
@@ -178,7 +178,7 @@ export default function Register() {
                   required
                   minLength={8}
                   autoComplete="new-password"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/8 transition-all pr-10"
+                  className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/[0.09] transition-all pr-10"
                   disabled={loading}
                 />
                 <button
@@ -207,7 +207,7 @@ export default function Register() {
                   required
                   minLength={8}
                   autoComplete="new-password"
-                  className={`w-full bg-white/5 border rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:bg-white/8 transition-all pr-10 ${
+                  className={`w-full bg-white/[0.06] border rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:bg-white/[0.09] transition-all pr-10 ${
                     confirmPassword && passwordMatch ? 'border-success/40 focus:border-success/60' : confirmPassword && !passwordMatch ? 'border-danger/40 focus:border-danger/60' : 'border-white/10 focus:border-lime/40'
                   }`}
                   disabled={loading}

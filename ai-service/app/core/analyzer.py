@@ -13,20 +13,23 @@ class BodyAnalyzer:
     """
     
     # Activity multipliers for TDEE calculation
+    # Keys must match ActivityLevel enum values exactly (nutrition.py)
+    # Source: Mifflin-St Jeor PAL multipliers (WHO/FAO 2001)
     ACTIVITY_MULTIPLIERS = {
-        "sedentary": 1.2,      # Little to no exercise
-        "light": 1.375,        # Light exercise 1-3 days/week
-        "moderate": 1.55,      # Moderate exercise 3-5 days/week
-        "active": 1.725,       # Heavy exercise 6-7 days/week
-        "very_active": 1.9     # Very heavy exercise, physical job
+        "sedentary":      1.2,    # desk job, no exercise
+        "lightly_active": 1.375,  # light exercise 1-3 days/week
+        "moderate":       1.55,   # moderate exercise 3-5 days/week
+        "very_active":    1.725,  # hard exercise 6-7 days/week
+        "extra_active":   1.9,    # very hard exercise + physical job
     }
     
-    # Goal-based calorie adjustments
+    # Goal-based calorie adjustments (NSCA/ACSM/ISSN 2024)
     GOAL_ADJUSTMENTS = {
-        GoalType.WEIGHT_LOSS: -500,      # 500 kcal deficit for ~0.5kg/week loss
-        GoalType.MUSCLE_GAIN: 300,     # 300 kcal surplus for lean muscle gain
-        GoalType.MAINTENANCE: 0,        # No adjustment
-        GoalType.ENDURANCE: 200         # Slight surplus for performance
+        GoalType.WEIGHT_LOSS: -500,   # 500 kcal/day deficit ≈ 0.45 kg/week fat loss (safe max)
+        GoalType.MUSCLE_GAIN:  300,   # 250–500 kcal surplus → lean bulk, minimise fat gain
+        GoalType.MAINTENANCE:    0,   # Eucaloric — no adjustment
+        GoalType.ENDURANCE:    200,   # Small surplus to support training volume & glycogen stores
+        GoalType.STRENGTH:     250,   # Modest surplus — strength is neural; excess surplus → fat
     }
     
     # Budget tiers in VND
@@ -107,43 +110,73 @@ class BodyAnalyzer:
     
     @classmethod
     def calculate_macros(
-        cls, 
-        target_calories: int, 
-        weight: float, 
+        cls,
+        target_calories: int,
+        weight: float,
         goal: GoalType
     ) -> Dict[str, float]:
         """
-        Calculate macronutrient targets based on goal
-        
-        Returns dict with protein, carb, fat in grams
+        Calculate macronutrient targets based on goal.
+
+        Sources: ISSN Position Stand (Stout et al. 2023), ACSM/AND/DC Joint Position Paper (2016),
+                 Helms et al. (2014) — protein for natural bodybuilders.
+
+        Protein targets by goal:
+          weight_loss : 2.3–3.1 g/kg LBM (Helms 2014); use 2.4 g/kg BW (conservative)
+          muscle_gain : 1.6–2.2 g/kg (ISSN 2023 upper bound for hypertrophy); use 2.0 g/kg
+          strength    : 1.6–2.2 g/kg; slightly higher helps connective tissue & MPS; use 2.2 g/kg
+          endurance   : 1.4–1.7 g/kg (ACSM 2016); use 1.6 g/kg
+          maintenance : 1.2–1.6 g/kg (general active adult); use 1.6 g/kg
+
+        Fat: minimum 20 % of calories to support hormonal health (testosterone, cortisol regulation)
+             strength/muscle: 25 % | weight_loss: 30 % (higher satiety) | others: 25 %
+
+        Carbs: fill remaining calories — primary fuel for performance.
         """
-        # Protein: 1.6-2.2g per kg bodyweight depending on goal
-        if goal == GoalType.MUSCLE_GAIN:
-            protein_per_kg = 2.0
-        elif goal == GoalType.WEIGHT_LOSS:
-            protein_per_kg = 2.2  # Higher protein for satiety and muscle preservation
-        else:
-            protein_per_kg = 1.6
-        
+        # ── Protein ────────────────────────────────────────────────────────────
+        protein_per_kg = {
+            GoalType.WEIGHT_LOSS:  2.4,   # Muscle preservation during deficit + satiety
+            GoalType.MUSCLE_GAIN:  2.0,   # Hypertrophy sweet spot (ISSN)
+            GoalType.STRENGTH:     2.2,   # Supports MPS + connective tissue adaptation
+            GoalType.ENDURANCE:    1.6,   # Lower need; aerobic athletes oxidise less protein
+            GoalType.MAINTENANCE:  1.6,   # General active adult minimum
+        }.get(goal, 1.6)
+
         protein = weight * protein_per_kg
         protein_calories = protein * 4
-        
-        # Fat: 20-30% of total calories
-        fat_percentage = 0.25
-        fat_calories = target_calories * fat_percentage
+
+        # ── Fat ─────────────────────────────────────────────────────────────────
+        fat_pct = {
+            GoalType.WEIGHT_LOSS:  0.30,  # Higher fat → satiety; lower carb is fine on deficit
+            GoalType.MUSCLE_GAIN:  0.25,
+            GoalType.STRENGTH:     0.25,
+            GoalType.ENDURANCE:    0.20,  # Carbs are king for endurance; minimise fat %
+            GoalType.MAINTENANCE:  0.25,
+        }.get(goal, 0.25)
+
+        fat_calories = target_calories * fat_pct
         fat = fat_calories / 9
-        
-        # Carbs: remaining calories
-        remaining_calories = target_calories - protein_calories - fat_calories
-        carb = remaining_calories / 4
-        
+
+        # ── Carbohydrates (residual) ─────────────────────────────────────────────
+        carb_calories = max(0, target_calories - protein_calories - fat_calories)
+        carb = carb_calories / 4
+
+        # Guard: if protein alone exceeds target_calories (extreme deficit), clip fat to 20 %
+        if carb < 0:
+            fat_calories = target_calories * 0.20
+            fat = fat_calories / 9
+            carb_calories = max(0, target_calories - protein_calories - fat_calories)
+            carb = carb_calories / 4
+
+        actual_fat_pct = fat_calories / target_calories if target_calories > 0 else fat_pct
+
         return {
             "protein": round(protein, 1),
-            "carb": round(carb, 1),
-            "fat": round(fat, 1),
-            "protein_pct": round(protein_calories / target_calories * 100, 1),
-            "carb_pct": round(remaining_calories / target_calories * 100, 1),
-            "fat_pct": round(fat_percentage * 100, 1)
+            "carb":    round(carb, 1),
+            "fat":     round(fat, 1),
+            "protein_pct": round(protein_calories / target_calories * 100, 1) if target_calories > 0 else 0,
+            "carb_pct":    round(carb_calories    / target_calories * 100, 1) if target_calories > 0 else 0,
+            "fat_pct":     round(actual_fat_pct   * 100, 1)
         }
     
     @classmethod

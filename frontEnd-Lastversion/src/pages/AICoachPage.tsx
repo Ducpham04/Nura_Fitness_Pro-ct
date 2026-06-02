@@ -122,7 +122,7 @@ export default function AICoachPage() {
                 <div className={`max-w-[80%] rounded-3xl p-6 ${
                   msg.role === 'user' 
                     ? 'bg-lime text-obsidian font-medium' 
-                    : 'bg-white/5 border border-white/10 text-neutral-200'
+                    : 'bg-white/[0.06] border border-white/10 text-neutral-200'
                 }`}>
                   {msg.type === 'analysis' && (
                     <div className="flex items-center gap-2 mb-3 text-electric">
@@ -139,7 +139,7 @@ export default function AICoachPage() {
             ))}
             {isTyping && (
               <div className="flex justify-start">
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex gap-1.5">
+                <div className="bg-white/[0.06] border border-white/10 rounded-2xl p-4 flex gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-electric animate-bounce" style={{ animationDelay: '0ms' }}></div>
                   <div className="w-1.5 h-1.5 rounded-full bg-electric animate-bounce" style={{ animationDelay: '150ms' }}></div>
                   <div className="w-1.5 h-1.5 rounded-full bg-electric animate-bounce" style={{ animationDelay: '300ms' }}></div>
@@ -148,7 +148,7 @@ export default function AICoachPage() {
             )}
           </div>
 
-          <div className="p-6 bg-white/[0.02] border-t border-white/5">
+          <div className="p-6 bg-white/[0.04] border-t border-white/5">
             <div className="flex items-center gap-4 mb-4 overflow-x-auto pb-2 scrollbar-hide">
               {suggestions.map(s => (
                 <button 
@@ -169,7 +169,7 @@ export default function AICoachPage() {
                 className="w-full bg-obsidian border border-white/10 rounded-[2rem] pl-6 pr-24 py-5 text-white placeholder-neutral-600 focus:outline-none focus:border-lime/30 transition-all shadow-2xl"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                <button className="p-2.5 rounded-xl text-neutral-500 hover:text-white hover:bg-white/5 transition-all">
+                <button className="p-2.5 rounded-xl text-neutral-500 hover:text-white hover:bg-white/[0.06] transition-all">
                   <Mic className="w-5 h-5" />
                 </button>
                 <button 

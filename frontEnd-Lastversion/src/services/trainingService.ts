@@ -20,12 +20,29 @@ export interface TrainingPlan {
   progress?: number;
 }
 
+export interface AlternativeExercise {
+  id: number;
+  name: string;
+  nameVi?: string;
+  primaryMuscle?: string;
+  exerciseType?: string;
+  difficultyLevel?: string;
+  requiredEquipment?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  defaultSets?: number;
+  defaultReps?: number;
+  defaultRestSeconds?: number;
+}
+
 export interface PersonalizedWorkoutExercise {
   id: number;
   userId: number;
   dayNumber: number;
   exerciseId: number;
   exerciseName: string;
+  /** Tên tiếng Việt (nếu có) */
+  exerciseNameVi?: string;
   sets: number;
   reps: number;
   restTime?: number;
@@ -33,6 +50,19 @@ export interface PersonalizedWorkoutExercise {
   targetMuscle?: string;
   videoUrl?: string;
   estimatedCalories?: number;
+  /** Ghi chú hướng dẫn: nhóm cơ, phase, mục tiêu, tempo. */
+  notes?: string;
+  /** Số tạ gợi ý (null = bodyweight). Ví dụ: "~15kg dumbbell" */
+  recommendedWeight?: string;
+  exercise?: {
+    imageUrl?: string;
+    videoUrl?: string;
+    exerciseType?: string;
+    difficultyLevel?: string;
+    primaryMuscle?: string;
+    requiredEquipment?: string;
+    secondaryMuscles?: string;   // comma-separated, e.g. "Triceps,Front Deltoid"
+  };
 }
 
 export interface UserTraining {
@@ -43,6 +73,10 @@ export interface UserTraining {
   endDate?: string;
   completionPercentage?: number;
   status?: string;
+  currentDay?: number;
+  weekNumber?: number;
+  totalWeeks?: number;
+  programId?: string;
 }
 
 export interface TrainingPlanDetail {
@@ -153,6 +187,10 @@ class TrainingService {
       endDate: item.endDate,
       completionPercentage: item.completionPercentage,
       status: item.status ?? item.Status,
+      currentDay: item.currentDay,
+      weekNumber: item.weekNumber,
+      totalWeeks: item.totalWeeks,
+      programId: item.programId,
     }));
   }
 
@@ -162,17 +200,33 @@ class TrainingService {
     return response.success ? response.data || [] : [];
   }
 
-  async getDailyLogsByPlan(planId: number): Promise<DailyTrainingLog[]> {
-    const response = await apiClient.get<any>(API_ENDPOINTS.TRAINING.DAILY_LOGS_BY_PLAN(planId));
+  async getDailyLogsByPlan(planId: number, userId?: number): Promise<DailyTrainingLog[]> {
+    const response = await apiClient.get<any>(
+      API_ENDPOINTS.TRAINING.DAILY_LOGS_BY_PLAN(planId),
+      userId ? { headers: { userId: userId.toString() } } : undefined
+    );
     if (!response.success || !response.data) return [];
     const data = (response.data as any).data || response.data;
     return Array.isArray(data) ? data : [];
   }
 
-  async getTodayPersonalizedWorkout(dayNumber: number): Promise<PersonalizedWorkoutExercise[]> {
+  async getTodayPersonalizedWorkout(dayNumber: number, userId?: number): Promise<PersonalizedWorkoutExercise[]> {
     const params = new URLSearchParams();
     params.append('dayNumber', dayNumber.toString());
-    const response = await apiClient.get<any>(`${API_ENDPOINTS.TRAINING.PERSONALIZED_TODAY}?${params.toString()}`);
+    const response = await apiClient.get<any>(
+      `${API_ENDPOINTS.TRAINING.PERSONALIZED_TODAY}?${params.toString()}`,
+      userId ? { headers: { userId: userId.toString() } } : undefined
+    );
+    if (!response.success || !response.data) return [];
+    const data = (response.data as any).data || response.data;
+    return Array.isArray(data) ? data : [];
+  }
+
+  async getPersonalizedSchedule(userId?: number): Promise<PersonalizedWorkoutExercise[]> {
+    const response = await apiClient.get<any>(
+      API_ENDPOINTS.TRAINING.PERSONALIZED_SCHEDULE,
+      userId ? { headers: { userId: userId.toString() } } : undefined
+    );
     if (!response.success || !response.data) return [];
     const data = (response.data as any).data || response.data;
     return Array.isArray(data) ? data : [];
@@ -230,18 +284,55 @@ class TrainingService {
   }
 
   // Generate AI Workout Plan
-  async generateAIWorkoutPlan(userId: number, options: { 
-    days: number; 
-    equipment: string[]; 
+  async generateAIWorkoutPlan(userId: number, options: {
+    program?: string;
+    days: number;
+    totalWeeks?: number;
+    week_number?: number;
+    progressionPhase?: string;
+    equipment: string[];
     intensity: string;
     duration: number;
     preferences: string[];
+    goal?: string;
   }): Promise<ApiResponse<any>> {
     return await apiClient.post<any>(
       `${API_ENDPOINTS.AI.GENERATE_WORKOUT}`,
       options,
       { headers: { 'userId': userId.toString() } }
     );
+  }
+
+  async generateNextWorkoutWeek(utId: number): Promise<ApiResponse<any>> {
+    return await apiClient.post<any>(
+      API_ENDPOINTS.AI.GENERATE_NEXT_WORKOUT_WEEK(utId),
+      {}
+    );
+  }
+
+  async autoRegulateNextWorkoutWeek(userId: number, utId: number): Promise<ApiResponse<any>> {
+    return await apiClient.post<any>(
+      API_ENDPOINTS.AI.AUTO_REGULATE_WORKOUT,
+      { utId },
+      { headers: { userId: userId.toString() } }
+    );
+  }
+
+  /** Lấy danh sách bài tập thay thế cho một bài trong kế hoạch */
+  async getAlternativeExercises(ppdId: number, muscle?: string): Promise<AlternativeExercise[]> {
+    const url = `/user/personalized/${ppdId}/alternatives${muscle ? `?muscle=${encodeURIComponent(muscle)}` : ''}`;
+    const res = await apiClient.get<any>(url);
+    const data = (res as any)?.data ?? res;
+    if (data?.success && Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data)) return data;
+    return [];
+  }
+
+  /** Đổi bài tập trong kế hoạch sang bài mới */
+  async swapExercise(ppdId: number, newExerciseId: number): Promise<any> {
+    const res = await apiClient.put<any>(`/user/personalized/${ppdId}/swap/${newExerciseId}`, {});
+    const data = (res as any)?.data ?? res;
+    return data;
   }
 }
 

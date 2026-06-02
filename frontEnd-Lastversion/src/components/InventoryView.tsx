@@ -1,15 +1,19 @@
 import { useState, memo, useEffect, useCallback } from 'react';
-import { Plus, Search, Camera, AlertTriangle, ShoppingCart, Loader2 } from 'lucide-react';
+import { Plus, Search, AlertTriangle, ShoppingCart, Loader2, Package } from 'lucide-react';
 import { inventoryService, InventoryItem } from '../services/inventoryService';
 import { useAuthContext } from '../context/AuthContext';
 
 const statusConfig = {
-  keep: { label: 'Keep', color: 'text-success', bg: 'bg-success/10 border-success/20', dot: 'bg-success' },
-  avoid: { label: 'Avoid', color: 'text-danger', bg: 'bg-danger/10 border-danger/20', dot: 'bg-danger' },
-  limit: { label: 'Limit', color: 'text-warning', bg: 'bg-warning/10 border-warning/20', dot: 'bg-warning' },
-  reserved: { label: 'Reserved', color: 'text-electric', bg: 'bg-electric/10 border-electric/20', dot: 'bg-electric' },
-  consumed: { label: 'Consumed', color: 'text-neutral-400', bg: 'bg-white/5 border-white/10', dot: 'bg-neutral-500' },
-  expired: { label: 'Expired', color: 'text-danger', bg: 'bg-danger/10 border-danger/20', dot: 'bg-danger' },
+  keep:     { label: 'Còn tốt',    color: 'text-lime',        bg: 'bg-lime/10 border-lime/20' },
+  avoid:    { label: 'Tránh dùng', color: 'text-red-400',     bg: 'bg-red-400/10 border-red-400/20' },
+  limit:    { label: 'Hạn chế',   color: 'text-orange-400',  bg: 'bg-orange-400/10 border-orange-400/20' },
+  reserved: { label: 'Đã đặt',    color: 'text-blue-400',    bg: 'bg-blue-400/10 border-blue-400/20' },
+  consumed: { label: 'Đã dùng',   color: 'text-neutral-400', bg: 'bg-white/[0.04] border-white/[0.08]' },
+  expired:  { label: 'Hết hạn',   color: 'text-red-400',     bg: 'bg-red-400/10 border-red-400/20' },
+};
+
+const filterLabels: Record<string, string> = {
+  all: 'Tất cả', keep: 'Còn tốt', reserved: 'Đã đặt', consumed: 'Đã dùng', expired: 'Hết hạn',
 };
 
 function InventoryView() {
@@ -18,7 +22,6 @@ function InventoryView() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | InventoryItem['status']>('all');
-  const [scanActive, setScanActive] = useState(false);
   const [expiringSoon, setExpiringSoon] = useState<InventoryItem[]>([]);
   const [shoppingAdvice, setShoppingAdvice] = useState<string>('');
 
@@ -28,15 +31,12 @@ function InventoryView() {
     try {
       const response = await inventoryService.getInventory(user.id);
       if (response.success && response.data) {
-        const data = response.data;
-        const itemList = Array.isArray(data) ? data : [];
-        setItems(itemList);
+        setItems(Array.isArray(response.data) ? response.data : []);
       }
 
       const expiring = await inventoryService.getExpiringSoon(user.id, 3);
       if (expiring.success && expiring.data) {
-        const expData = expiring.data;
-        setExpiringSoon(Array.isArray(expData) ? expData : []);
+        setExpiringSoon(Array.isArray(expiring.data) ? expiring.data : []);
       }
 
       const shopping = await inventoryService.generateShoppingList(user.id, 7);
@@ -55,99 +55,77 @@ function InventoryView() {
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    fetchInventory();
-  }, [fetchInventory]);
+  useEffect(() => { fetchInventory(); }, [fetchInventory]);
 
   const filtered = (Array.isArray(items) ? items : []).filter(i =>
     (filter === 'all' || i.status === filter) &&
     (i.name || '').toLowerCase().includes(search.toLowerCase())
   );
 
-  if (loading && items.length === 0) {
-    return (
-      <div className="h-64 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-electric animate-spin" />
-      </div>
-    );
-  }
+  if (loading && items.length === 0) return (
+    <div className="h-64 flex items-center justify-center">
+      <Loader2 className="w-7 h-7 text-lime animate-spin" />
+    </div>
+  );
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+    <div className="max-w-3xl mx-auto space-y-5 py-4 animate-fade-in">
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="font-grotesk font-bold text-white text-xl">Kitchen Inventory</h2>
-          <p className="text-neutral-400 text-sm mt-1">
-            {(Array.isArray(items) ? items : []).length} items tracked · {(Array.isArray(expiringSoon) ? expiringSoon : []).length} expiring soon
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-lime mb-1.5">
+            <Package className="w-3.5 h-3.5" />
+            Kho thực phẩm
+          </div>
+          <h2 className="font-grotesk font-bold text-xl text-white">Tủ lạnh thông minh</h2>
+          <p className="text-neutral-500 text-sm mt-0.5">
+            {(Array.isArray(items) ? items : []).length} mặt hàng
+            {expiringSoon.length > 0 && ` · ${expiringSoon.length} sắp hết hạn`}
           </p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => setScanActive(!scanActive)}
-            className="flex items-center gap-2 glass-electric rounded-2xl px-4 py-2.5 border border-electric/20 hover:border-electric/40 transition-all">
-            <Camera className="w-4 h-4 text-electric" />
-            <span className="text-electric text-sm font-grotesk font-bold">Scan Food</span>
-          </button>
-          <button className="flex items-center gap-2 glass-lime rounded-2xl px-4 py-2.5 border border-lime/20 hover:border-lime/40 transition-all">
-            <Plus className="w-4 h-4 text-lime" />
-            <span className="text-lime text-sm font-grotesk font-bold">Add Item</span>
-          </button>
-        </div>
+        <button className="flex items-center gap-1.5 rounded-xl border border-lime/20 bg-lime/[0.06] px-4 py-2.5 text-lime text-sm font-semibold hover:bg-lime/10 transition-colors">
+          <Plus className="w-4 h-4" />
+          Thêm món
+        </button>
       </div>
 
-      {/* Scan interface */}
-      {scanActive && (
-        <div className="glass rounded-3xl overflow-hidden border border-electric/20 relative animate-fade-in">
-          <div className="relative h-48">
-            <img
-              src="https://images.pexels.com/photos/3962294/pexels-photo-3962294.jpeg?auto=compress&cs=tinysrgb&w=600"
-              alt="Food scan"
-              className="w-full h-full object-cover opacity-40"
-            />
-            {/* Scan beam */}
-            <div className="absolute inset-x-0 h-0.5 scan-beam" style={{ background: 'rgba(0,122,255,0.8)' }} />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="glass rounded-2xl px-5 py-3 border border-electric/30 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-electric animate-pulse" />
-                <span className="text-electric font-grotesk font-bold text-sm">Scanning for food items...</span>
-              </div>
-            </div>
-          </div>
-          <div className="p-4 flex items-center justify-between">
-            <span className="text-neutral-400 text-sm">Point camera at food labels or ingredients</span>
-            <button onClick={() => setScanActive(false)} className="text-danger text-sm font-grotesk">Cancel</button>
-          </div>
-        </div>
-      )}
-
       {/* Expiry alert */}
-      {Array.isArray(expiringSoon) && expiringSoon.length > 0 && (
-        <div className="glass rounded-2xl p-4 border border-warning/20 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+      {expiringSoon.length > 0 && (
+        <div className="rounded-2xl border border-orange-400/20 bg-orange-400/[0.05] p-4 flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
           <div>
-            <div className="font-grotesk font-semibold text-warning text-sm mb-1">Items Expiring Soon</div>
-            <div className="text-neutral-300 text-sm">
-              {expiringSoon.map(i => `${i.name} (${i.daysToExpiry}d)`).join(', ')} — Use these in tonight's meal to avoid waste.
-            </div>
+            <p className="text-orange-400 font-semibold text-sm mb-0.5">Sắp hết hạn</p>
+            <p className="text-neutral-300 text-sm leading-relaxed">
+              {expiringSoon.map(i => `${i.name} (còn ${i.daysToExpiry} ngày)`).join(' · ')} — Nên dùng sớm để tránh lãng phí.
+            </p>
           </div>
         </div>
       )}
 
-      {/* Search & filter */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      {/* Search + filter */}
+      <div className="flex flex-col sm:flex-row gap-2.5">
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search inventory..."
-            className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-4 py-2.5 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/30 transition-all text-sm"
+            placeholder="Tìm trong tủ lạnh..."
+            className="w-full rounded-xl border border-white/[0.07] bg-white/[0.06] pl-10 pr-4 py-2.5 text-white text-sm placeholder-neutral-600 focus:outline-none focus:border-lime/30 transition-colors"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           {(['all', 'keep', 'reserved', 'consumed', 'expired'] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`px-4 py-2.5 rounded-xl text-sm font-grotesk font-semibold transition-all capitalize ${filter === f ? 'bg-lime text-obsidian' : 'glass text-neutral-400 hover:text-white border border-white/5'}`}>
-              {f}
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                filter === f
+                  ? 'bg-lime text-black'
+                  : 'border border-white/[0.07] bg-white/[0.04] text-neutral-500 hover:text-white'
+              }`}
+            >
+              {filterLabels[f]}
             </button>
           ))}
         </div>
@@ -160,22 +138,29 @@ function InventoryView() {
             const status = item.status || 'keep';
             const cfg = statusConfig[status as keyof typeof statusConfig] || statusConfig.keep;
             return (
-              <div key={item.id} className="glass rounded-2xl p-4 border border-white/5 hover:border-white/10 transition-all flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-                  <div>
-                    <div className="font-grotesk font-semibold text-white">{item.name}</div>
-                    <div className="text-neutral-400 text-xs mt-0.5">{item.category} · {item.caloriesPer100g} kcal/100g · {item.quantity}{item.unit}</div>
+              <div
+                key={item.id}
+                className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4 hover:border-white/[0.12] transition-colors flex items-center justify-between gap-4"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${cfg.color.replace('text-', 'bg-')}`} />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-white text-sm truncate">{item.name}</p>
+                    <p className="text-neutral-500 text-xs mt-0.5">
+                      {item.category} · {item.caloriesPer100g} kcal/100g · {item.quantity}{item.unit}
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <div className="text-neutral-400 text-xs">Expires</div>
-                    <div className={`text-xs font-grotesk font-bold ${item.daysToExpiry !== undefined && item.daysToExpiry <= 3 ? 'text-warning' : 'text-neutral-300'}`}>
-                      {item.daysToExpiry !== undefined ? `${item.daysToExpiry}d` : item.expiryDate}
-                    </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-neutral-600 text-[10px]">Hết hạn</p>
+                    <p className={`text-xs font-semibold ${
+                      item.daysToExpiry !== undefined && item.daysToExpiry <= 3 ? 'text-orange-400' : 'text-neutral-400'
+                    }`}>
+                      {item.daysToExpiry !== undefined ? `${item.daysToExpiry} ngày` : item.expiryDate}
+                    </p>
                   </div>
-                  <span className={`text-xs font-grotesk font-bold px-3 py-1 rounded-full border ${cfg.bg} ${cfg.color}`}>
+                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${cfg.bg} ${cfg.color}`}>
                     {cfg.label}
                   </span>
                 </div>
@@ -183,24 +168,24 @@ function InventoryView() {
             );
           })
         ) : (
-          <div className="text-center py-12 glass rounded-3xl border border-white/5">
-            <p className="text-neutral-500 font-grotesk">No items found in your inventory.</p>
+          <div className="rounded-2xl border border-white/[0.07] bg-white/[0.04] py-14 text-center">
+            <Package className="w-8 h-8 text-neutral-700 mx-auto mb-3" />
+            <p className="text-neutral-500 text-sm">
+              {search ? 'Không tìm thấy món nào.' : 'Tủ lạnh đang trống. Thêm nguyên liệu để AI lên thực đơn chính xác hơn.'}
+            </p>
           </div>
         )}
       </div>
 
-      {/* AI Suggestion */}
+      {/* AI shopping suggestion */}
       {shoppingAdvice && (
-        <div className="glass-electric rounded-3xl p-5 border-glow-electric flex gap-4">
-          <div className="w-10 h-10 rounded-xl bg-electric flex items-center justify-center flex-shrink-0">
-            <ShoppingCart className="w-5 h-5 text-white" />
+        <div className="rounded-2xl border border-blue-400/20 bg-blue-400/[0.05] p-4 flex gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-400/10 border border-blue-400/20 flex items-center justify-center shrink-0">
+            <ShoppingCart className="w-4 h-4 text-blue-400" />
           </div>
           <div>
-            <div className="font-grotesk font-bold text-white mb-1">AI Shopping Suggestion</div>
-            <p className="text-neutral-300 text-sm leading-relaxed">{shoppingAdvice}</p>
-            <button className="mt-2 text-electric text-sm font-grotesk font-semibold flex items-center gap-1 hover:text-white transition-colors">
-              <Plus className="w-3.5 h-3.5" /> Add to shopping list
-            </button>
+            <p className="font-semibold text-white text-sm mb-1">Gợi ý mua sắm từ AI</p>
+            <p className="text-neutral-400 text-sm leading-relaxed">{shoppingAdvice}</p>
           </div>
         </div>
       )}

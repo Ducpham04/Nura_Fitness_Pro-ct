@@ -49,9 +49,9 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="flex h-screen bg-obsidian font-inter overflow-hidden flex-col">
+    <div className="min-h-screen bg-obsidian font-inter">
       <Navigation />
-      <main className="flex-1 overflow-y-auto px-6 pb-32 pt-16 md:py-8">
+      <main className="px-6 pb-32 pt-16 md:py-8">
         <Outlet />
       </main>
     </div>

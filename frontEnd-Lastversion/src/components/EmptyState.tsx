@@ -17,7 +17,7 @@ export default function EmptyState({
 }: Props) {
   return (
     <div className="glass rounded-3xl p-8 text-center border border-white/5">
-      <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+      <div className="w-16 h-16 rounded-2xl bg-white/[0.06] flex items-center justify-center mx-auto mb-4">
         {icon || <PackageOpen className="w-8 h-8 text-neutral-400" />}
       </div>
       <h3 className="font-grotesk font-bold text-white text-lg mb-2">{title}</h3>

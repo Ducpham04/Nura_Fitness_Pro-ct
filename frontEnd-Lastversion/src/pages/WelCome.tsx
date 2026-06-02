@@ -105,7 +105,7 @@ function BudgetModal({ onClose, onSave }: { onClose: () => void; onSave: (budget
                 </button>
                 <div className="flex-1 relative">
                   <input type="number" value={budget} onChange={e => setBudget(Number(e.target.value))}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-center font-grotesk font-bold text-xl focus:outline-none focus:border-lime/40 transition-all" />
+                    className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 py-3 text-white text-center font-grotesk font-bold text-xl focus:outline-none focus:border-lime/40 transition-all" />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 text-sm">VND</span>
                 </div>
                 <button onClick={() => setBudget(b => b + 10000)} className="w-10 h-10 rounded-xl glass border border-white/10 flex items-center justify-center text-white hover:border-lime/30 transition-all">
@@ -356,7 +356,7 @@ export default function Welcome() {
         <div className="glass rounded-3xl p-6 border border-white/5 mb-8">
           <h3 className="font-grotesk font-bold text-white mb-4">Còn 2 bước nữa để hoàn tất</h3>
           <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/3">
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.06]">
               <div className="w-8 h-8 rounded-lg bg-lime/10 flex items-center justify-center flex-shrink-0">
                 <DollarSign className="w-4 h-4 text-lime" />
               </div>
@@ -366,7 +366,7 @@ export default function Welcome() {
               </div>
               <ArrowRight className="w-4 h-4 text-neutral-500" />
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/3">
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.06]">
               <div className="w-8 h-8 rounded-lg bg-electric/10 flex items-center justify-center flex-shrink-0">
                 <Package className="w-4 h-4 text-electric" />
               </div>

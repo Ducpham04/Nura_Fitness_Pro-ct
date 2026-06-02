@@ -84,7 +84,7 @@ function MealView({ budget }: Props) {
         <span className="text-neutral-400 text-xs">{label}</span>
         <span className="text-white text-xs font-medium">{value}g</span>
       </div>
-      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+      <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
         <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(value / max) * 100}%`, background: color }} />
       </div>
     </div>
@@ -115,7 +115,7 @@ function MealView({ budget }: Props) {
             <span className="text-neutral-400 text-sm">Today's Budget</span>
             <span className={`font-grotesk font-bold ${budget < 50000 ? 'text-warning' : 'text-lime'}`}>{budget / 1000}k VND left</span>
           </div>
-          <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
             <div className="h-full rounded-full transition-all" style={{ width: `${(budget / 80000) * 100}%`, background: budget < 50000 ? '#FF9500' : '#CCFF00' }} />
           </div>
         </div>
@@ -203,7 +203,7 @@ function MealView({ budget }: Props) {
             <div className="space-y-2">
               {shoppingList.map(item => (
                 <button key={item.id} onClick={() => toggleCheck(item.id)}
-                  className={`w-full flex items-center justify-between py-3 px-4 rounded-2xl transition-all ${checkedItems.includes(item.id) ? 'bg-lime/10 border border-lime/20' : 'bg-white/3 border border-white/5'}`}>
+                  className={`w-full flex items-center justify-between py-3 px-4 rounded-2xl transition-all ${checkedItems.includes(item.id) ? 'bg-lime/10 border border-lime/20' : 'bg-white/[0.06] border border-white/5'}`}>
                   <div className="flex items-center gap-3">
                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${checkedItems.includes(item.id) ? 'bg-lime border-lime' : 'border-neutral-500'}`}>
                       {checkedItems.includes(item.id) && <Check className="w-3 h-3 text-obsidian" />}

@@ -98,6 +98,10 @@ class NutritionService {
       feedback: payload.feedback || '',
     });
   }
+
+  async swapMealDish(mealDetailId: number): Promise<ApiResponse<any>> {
+    return unwrap(await apiClient.post<any>(`/personalized-plans/meals/${mealDetailId}/swap-dish`, {}));
+  }
 }
 
 export const nutritionService = new NutritionService();

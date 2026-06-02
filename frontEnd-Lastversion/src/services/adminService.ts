@@ -8,13 +8,18 @@ export type AdminModuleKey =
   | 'users'
   | 'goals'
   | 'challenges'
+  | 'exercises'
   | 'trainingPlans'
   | 'trainingDetails'
   | 'foods'
   | 'dishes'
   | 'rewards'
   | 'transactions'
-  | 'informationBody';
+  | 'informationBody'
+  | 'challengeSubmissions'
+  | 'rewardRedemptions'
+  | 'userChallenges'
+  | 'leaderboard';
 
 export interface AdminModuleConfig {
   key: AdminModuleKey;
@@ -23,14 +28,18 @@ export interface AdminModuleConfig {
   idField: string;
   createMode: 'json' | 'goalMultipart' | 'challengeMultipart' | 'rewardMultipart';
   fields: AdminFieldConfig[];
+  /** Cột hiển thị cố định trên table (nếu không khai báo sẽ auto-pick) */
+  tableColumns?: string[];
 }
 
 export interface AdminFieldConfig {
   name: string;
   label: string;
-  type?: 'text' | 'number' | 'password' | 'select' | 'textarea' | 'boolean';
+  type?: 'text' | 'number' | 'password' | 'select' | 'textarea' | 'boolean' | 'image-upload';
   options?: string[];
   required?: boolean;
+  /** Load options từ API: endpoint + field lấy label + field lấy value */
+  remoteOptions?: { endpoint: string; labelField: string; valueField: string };
 }
 
 export interface AdminDashboardStats {
@@ -39,6 +48,73 @@ export interface AdminDashboardStats {
   trainingStats?: unknown;
   nutritionStats?: unknown;
   rewardStats?: unknown;
+}
+
+export interface SeederResult {
+  usersCreated?: number;
+  challengesCreated?: number;
+  trainingPlansCreated?: number;
+  healthProfilesCreated?: number;
+  dailyLogsCreated?: number;
+  userChallengesCreated?: number;
+  rewardsCreated?: number;
+  exercisesCreated?: number;
+  foodsCreated?: number;
+  totalRecords?: number;
+  count?: number;
+  [key: string]: unknown;
+}
+
+export interface ExerciseMetadataIssue {
+  exerciseId: number;
+  exerciseName?: string;
+  status?: string;
+  severity: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE' | string;
+  qualityScore: number;
+  missingFields: string[];
+  invalidFields: string[];
+  warnings: string[];
+  impact: string;
+}
+
+export interface ExerciseSessionReadiness {
+  push: number;
+  pull: number;
+  legs: number;
+  core: number;
+  cardio: number;
+  mobility: number;
+  minUpperPush: number;
+  minUpperPull: number;
+  minLower: number;
+  minCore: number;
+  minCardio: number;
+  fullBodyReady: boolean;
+  upperPushReady: boolean;
+  upperPullReady: boolean;
+  lowerReady: boolean;
+  cardioCoreReady: boolean;
+  generationReady: boolean;
+}
+
+export interface ExerciseMetadataAuditReport {
+  totalExercises: number;
+  activeExercises: number;
+  validExercises: number;
+  invalidExercises: number;
+  qualityScore: number;
+  generationReady: boolean;
+  generationReadiness: Record<string, number>;
+  forceTypeCoverage: Record<string, number>;
+  equipmentCoverage: Record<string, number>;
+  primaryMuscleCoverage: Record<string, number>;
+  severityCounts: Record<string, number>;
+  missingFieldCounts: Record<string, number>;
+  invalidFieldCounts: Record<string, number>;
+  warningCounts: Record<string, number>;
+  sessionReadiness: ExerciseSessionReadiness;
+  recommendations: string[];
+  issues: ExerciseMetadataIssue[];
 }
 
 const API_ROOT = `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}`;
@@ -96,12 +172,48 @@ function unwrapObject(payload: any): any {
   return payload?.data ?? payload;
 }
 
-function toFormData(mode: AdminModuleConfig['createMode'], payload: Record<string, any>): FormData {
+/**
+ * Backend trả NotificationResponse `{ success, message, data }` với HTTP 200 ngay cả khi
+ * thao tác thất bại về mặt nghiệp vụ. apiClient chỉ check HTTP status nên cần kiểm tra
+ * thêm field `success` trong body để phát hiện lỗi thực sự.
+ */
+function normalizeResponse(response: any): { success: boolean; data?: any; error?: { message: string } } {
+  // Lỗi tầng HTTP/network
+  if (!response.success) {
+    return { success: false, error: { message: response.error?.message || 'Thao tác thất bại' } };
+  }
+  const body = response.data;
+  // NotificationResponse body có field success === false → lỗi nghiệp vụ
+  if (body && typeof body === 'object' && body.success === false) {
+    return { success: false, error: { message: body.message || 'Thao tác thất bại' } };
+  }
+  return { success: true, data: body };
+}
+
+function toFormData(
+  mode: AdminModuleConfig['createMode'],
+  payload: Record<string, any>,
+  files?: Record<string, File>,
+): FormData {
+  // Loại bỏ blob: URL khỏi payload — đó chỉ là preview tạm, ảnh thật đi qua file part
+  const clean = { ...payload };
+  for (const k of Object.keys(clean)) {
+    if (typeof clean[k] === 'string' && clean[k].startsWith('blob:')) {
+      delete clean[k];
+    }
+  }
+
   const formData = new FormData();
   if (mode === 'goalMultipart' || mode === 'challengeMultipart') {
-    formData.append('data', JSON.stringify(payload));
+    formData.append('data', JSON.stringify(clean));
+    // Goals: file field name is 'image'
+    if (files?.imageLink) formData.append('image', files.imageLink);
+    // Challenges: file field name is 'video'
+    if (files?.videoUrl) formData.append('video', files.videoUrl);
   } else if (mode === 'rewardMultipart') {
-    formData.append('reward', JSON.stringify(payload));
+    formData.append('reward', JSON.stringify(clean));
+    // Reward: backend dùng field name 'file' cho ảnh
+    if (files?.linkImage) formData.append('file', files.linkImage);
   }
   return formData;
 }
@@ -125,153 +237,269 @@ function normalizeAdminPayload(module: AdminModuleConfig, payload: Record<string
 export const adminModules: AdminModuleConfig[] = [
   {
     key: 'users',
-    label: 'User Accounts',
+    label: 'Tài khoản',
     endpoint: '/admin/users',
     idField: 'id',
     createMode: 'json',
+    tableColumns: ['id', 'fullName', 'email', 'role', 'status', 'createdAt'],
     fields: [
-      { name: 'fullName', label: 'Full name', required: true },
-      { name: 'email', label: 'Email', required: true },
-      { name: 'password', label: 'Password', type: 'password' },
-      { name: 'roleId', label: 'Role ID', type: 'number' },
+      { name: 'fullName',  label: 'Họ và tên',  required: true },
+      { name: 'email',     label: 'Email',       required: true },
+      { name: 'password',  label: 'Mật khẩu',   type: 'password', required: true },
+      { name: 'roleId',    label: 'Vai trò', type: 'select',
+        remoteOptions: { endpoint: '/auth/roles', labelField: 'roleName', valueField: 'id' } },
     ],
   },
   {
     key: 'goals',
-    label: 'Goal Taxonomy',
+    label: 'Mục tiêu',
     endpoint: '/admin/goals',
     idField: 'id',
     createMode: 'goalMultipart',
+    tableColumns: ['id', 'name', 'imageLink'],
     fields: [
-      { name: 'name', label: 'Name', required: true },
-      { name: 'description', label: 'Description', type: 'textarea' },
-      { name: 'imageLink', label: 'Image URL' },
+      { name: 'name',        label: 'Tên mục tiêu',  required: true },
+      { name: 'description', label: 'Mô tả',         type: 'textarea' },
+      { name: 'imageLink',   label: 'Ảnh đại diện',  type: 'image-upload' },
     ],
   },
   {
     key: 'challenges',
-    label: 'Challenge Library',
+    label: 'Thử thách',
     endpoint: '/admin/challenges',
     idField: 'id',
     createMode: 'challengeMultipart',
+    tableColumns: ['id', 'title', 'status', 'durationDays', 'rewardPoints', 'participants'],
     fields: [
-      { name: 'goalId', label: 'Goal ID', type: 'number' },
-      { name: 'title', label: 'Title', required: true },
-      { name: 'description', label: 'Description', type: 'textarea' },
-      { name: 'durationDays', label: 'Duration days', type: 'number', required: true },
-      { name: 'rewardPoints', label: 'Reward points', type: 'number', required: true },
-      { name: 'reward', label: 'Reward label' },
-      { name: 'aiRulesJson', label: 'AI rules JSON', type: 'textarea' },
-      { name: 'exerciseIds', label: 'Exercise IDs CSV' },
-      { name: 'status', label: 'Status', type: 'select', options: ['ACTIVE', 'INACTIVE', 'DRAFT', 'COMPLETED'] },
+      { name: 'goalId',       label: 'Mục tiêu', type: 'select',
+        remoteOptions: { endpoint: '/admin/goals', labelField: 'name', valueField: 'id' } },
+      { name: 'title',        label: 'Tiêu đề',  required: true },
+      { name: 'description',  label: 'Mô tả',    type: 'textarea' },
+      { name: 'durationDays', label: 'Số ngày',  type: 'number', required: true },
+      { name: 'rewardPoints', label: 'Điểm thưởng', type: 'number', required: true },
+      { name: 'reward',       label: 'Nhãn thưởng' },
+      { name: 'aiRulesJson',  label: 'Quy tắc AI (JSON)', type: 'textarea' },
+      { name: 'exerciseIds',  label: 'Danh sách bài tập (ID, phân cách bằng dấu phẩy)' },
+      { name: 'status',       label: 'Trạng thái', type: 'select',
+        options: ['ACTIVE', 'INACTIVE', 'DRAFT', 'COMPLETED'] },
+    ],
+  },
+  {
+    key: 'exercises',
+    label: 'Bài tập',
+    endpoint: '/admin/exercises',
+    idField: 'id',
+    createMode: 'json',
+    tableColumns: ['id', 'exerciseName', 'forceType', 'exerciseCategory', 'primaryMuscle', 'metValue', 'status', 'videoUrl', 'imageUrl'],
+    fields: [
+      { name: 'exerciseName',          label: 'Tên bài tập (EN)',       required: true },
+      { name: 'exerciseNameVi',         label: 'Tên bài tập (VI)' },
+      { name: 'description',            label: 'Mô tả',                  type: 'textarea' },
+      { name: 'difficultyLevel',        label: 'Độ khó',                 type: 'select', options: ['EASY', 'MEDIUM', 'HARD'] },
+      { name: 'exerciseType',           label: 'Loại bài tập' },
+      { name: 'exerciseCategory',       label: 'Nhóm bài tập',           type: 'select', options: ['COMPOUND', 'ISOLATION', 'MOBILITY'] },
+      { name: 'primaryMuscle',          label: 'Nhóm cơ chính' },
+      { name: 'secondaryMuscles',       label: 'Nhóm cơ phụ' },
+      { name: 'requiredEquipment',      label: 'Dụng cụ cần thiết',      type: 'select', options: ['BODYWEIGHT', 'DUMBBELL', 'BARBELL', 'RESISTANCE_BAND', 'MACHINE', 'CABLE'] },
+      { name: 'equipmentAlternatives',  label: 'Dụng cụ thay thế',       type: 'textarea' },
+      { name: 'contraindicatedInjuries', label: 'Chấn thương chống chỉ định', type: 'textarea' },
+      { name: 'movementPattern',        label: 'Kiểu chuyển động' },
+      { name: 'forceType',              label: 'Hướng lực',              type: 'select', options: ['PUSH', 'PULL', 'LEGS', 'CORE', 'CARDIO', 'MOBILITY'] },
+      { name: 'defaultSets',            label: 'Số hiệp mặc định',       type: 'number' },
+      { name: 'defaultReps',            label: 'Số lần mặc định',        type: 'number' },
+      { name: 'defaultRestSeconds',     label: 'Thời gian nghỉ (giây)',  type: 'number' },
+      { name: 'metValue',               label: 'MET chuẩn',              type: 'number' },
+      { name: 'estimatedMet',           label: 'MET ước tính',           type: 'number' },
+      { name: 'tempo',                  label: 'Tempo' },
+      { name: 'rpeMin',                 label: 'RPE thấp nhất',          type: 'number' },
+      { name: 'rpeMax',                 label: 'RPE cao nhất',           type: 'number' },
+      { name: 'videoUrl',               label: 'Đường dẫn video' },
+      { name: 'imageUrl',               label: 'Ảnh minh hoạ' },
+      { name: 'status',                 label: 'Trạng thái',             type: 'select', options: ['ACTIVE', 'INACTIVE'] },
+      { name: 'spinalLoading',          label: 'Tải trọng cột sống',     type: 'boolean' },
+      { name: 'kneeDominant',           label: 'Bài tập đầu gối',        type: 'boolean' },
+      { name: 'shoulderOverhead',       label: 'Tay qua đầu',            type: 'boolean' },
+      { name: 'highImpact',             label: 'Va đập cao',             type: 'boolean' },
+      { name: 'wristLoading',           label: 'Tải cổ tay',             type: 'boolean' },
+      { name: 'suitableForSenior',      label: 'Phù hợp người cao tuổi', type: 'boolean' },
+      { name: 'suitableForOverweight',  label: 'Phù hợp thừa cân',       type: 'boolean' },
+      { name: 'isBilateral',            label: 'Song phương',            type: 'boolean' },
     ],
   },
   {
     key: 'trainingPlans',
-    label: 'Training Programs',
+    label: 'Kế hoạch tập luyện',
     endpoint: '/admin/training-plans',
     idField: 'tpId',
     createMode: 'json',
+    tableColumns: ['tpId', 'title', 'difficultyLevel', 'goalName', 'durationWeeks'],
     fields: [
-      { name: 'goalId', label: 'Goal ID', type: 'number' },
-      { name: 'title', label: 'Title', required: true },
-      { name: 'description', label: 'Description', type: 'textarea' },
-      { name: 'difficultyLevel', label: 'Difficulty' },
-      { name: 'durationWeeks', label: 'Duration weeks', type: 'number' },
+      { name: 'goalId',          label: 'Mục tiêu', type: 'select',
+        remoteOptions: { endpoint: '/admin/goals', labelField: 'name', valueField: 'id' } },
+      { name: 'title',           label: 'Tiêu đề kế hoạch', required: true },
+      { name: 'description',     label: 'Mô tả',             type: 'textarea' },
+      { name: 'difficultyLevel', label: 'Độ khó' },
+      { name: 'durationWeeks',   label: 'Số tuần',           type: 'number' },
     ],
   },
   {
     key: 'trainingDetails',
-    label: 'Program Schedule',
+    label: 'Lịch tập chi tiết',
     endpoint: '/admin/training-plan-details',
     idField: 'tpdId',
     createMode: 'json',
+    tableColumns: ['tpdId', 'trainingPlanTitle', 'dayNumber', 'exerciseName', 'exerciseType', 'sets', 'reps', 'restTime', 'videoUrl'],
     fields: [
-      { name: 'trainingPlanId', label: 'Training plan ID', type: 'number', required: true },
-      { name: 'dayNumber', label: 'Day', type: 'number', required: true },
-      { name: 'exerciseId', label: 'Exercise ID', type: 'number', required: true },
-      { name: 'sets', label: 'Sets', type: 'number' },
-      { name: 'reps', label: 'Reps', type: 'number' },
-      { name: 'duration', label: 'Duration seconds', type: 'number' },
-      { name: 'restTime', label: 'Rest seconds', type: 'number' },
-      { name: 'instructions', label: 'Instructions', type: 'textarea' },
+      { name: 'trainingPlanId', label: 'Kế hoạch tập', type: 'select', required: true,
+        remoteOptions: { endpoint: '/admin/training-plans', labelField: 'title', valueField: 'tpId' } },
+      { name: 'dayNumber',      label: 'Ngày thứ',        type: 'number', required: true },
+      { name: 'exerciseId',     label: 'Bài tập',         type: 'select', required: true,
+        remoteOptions: { endpoint: '/admin/exercises', labelField: 'exerciseName', valueField: 'id' } },
+      { name: 'sets',           label: 'Số hiệp',         type: 'number' },
+      { name: 'reps',           label: 'Số lần',          type: 'number' },
+      { name: 'duration',       label: 'Thời gian (giây)', type: 'number' },
+      { name: 'restTime',       label: 'Nghỉ (giây)',     type: 'number' },
+      { name: 'instructions',   label: 'Hướng dẫn',       type: 'textarea' },
     ],
   },
   {
     key: 'foods',
-    label: 'Ingredient Catalog',
+    label: 'Thực phẩm',
     endpoint: '/admin/foods',
     idField: 'id',
     createMode: 'json',
+    tableColumns: ['id', 'name', 'calories', 'protein', 'carbs', 'fat'],
     fields: [
-      { name: 'name', label: 'Name', required: true },
-      { name: 'calories', label: 'Calories / 100g', type: 'number' },
-      { name: 'protein', label: 'Protein / 100g', type: 'number' },
-      { name: 'carbs', label: 'Carbs / 100g', type: 'number' },
-      { name: 'fat', label: 'Fat / 100g', type: 'number' },
-      { name: 'notes', label: 'Notes', type: 'textarea' },
+      { name: 'name',     label: 'Tên thực phẩm',       required: true },
+      { name: 'calories', label: 'Calo / 100g',          type: 'number' },
+      { name: 'protein',  label: 'Đạm (g) / 100g',      type: 'number' },
+      { name: 'carbs',    label: 'Tinh bột (g) / 100g',  type: 'number' },
+      { name: 'fat',      label: 'Chất béo (g) / 100g',  type: 'number' },
+      { name: 'notes',    label: 'Ghi chú',              type: 'textarea' },
     ],
   },
   {
     key: 'dishes',
-    label: 'Meal Catalog',
+    label: 'Món ăn',
     endpoint: '/admin/dishes',
     idField: 'dishId',
     createMode: 'json',
+    tableColumns: ['dishId', 'dishName', 'dishRole', 'suitableMealTypes', 'isActive', 'imageUrl'],
     fields: [
-      { name: 'dishName', label: 'Dish name', required: true },
-      { name: 'imageUrl', label: 'Image URL' },
-      { name: 'dishRole', label: 'Role', type: 'select', options: ['MAIN_PROTEIN', 'SOUP', 'VEGETABLE', 'CARB_BASE', 'ONE_POT'], required: true },
-      { name: 'suitableMealTypes', label: 'Meal types CSV' },
-      { name: 'isActive', label: 'Active', type: 'boolean' },
+      { name: 'dishName',         label: 'Tên món ăn',   required: true },
+      { name: 'imageUrl',         label: 'Ảnh món ăn' },
+      { name: 'dishRole',         label: 'Vai trò món',  type: 'select', required: true,
+        options: ['MAIN_PROTEIN', 'SOUP', 'VEGETABLE', 'CARB_BASE', 'ONE_POT'] },
+      { name: 'suitableMealTypes', label: 'Bữa phù hợp (phân cách bằng dấu phẩy)' },
+      { name: 'isActive',         label: 'Đang hoạt động', type: 'boolean' },
     ],
   },
   {
     key: 'rewards',
-    label: 'Reward Catalog',
+    label: 'Phần thưởng',
     endpoint: '/admin/rewards',
     idField: 'id',
     createMode: 'rewardMultipart',
+    tableColumns: ['id', 'name', 'points', 'total', 'status', 'externalPartner', 'linkImage'],
     fields: [
-      { name: 'name', label: 'Name', required: true },
-      { name: 'description', label: 'Description', type: 'textarea' },
-      { name: 'points', label: 'Points', type: 'number' },
-      { name: 'total', label: 'Stock', type: 'number' },
-      { name: 'status', label: 'Status' },
-      { name: 'linkImage', label: 'Image URL' },
-      { name: 'externalPartner', label: 'Partner' },
+      { name: 'name',            label: 'Tên phần thưởng', required: true },
+      { name: 'description',     label: 'Mô tả',           type: 'textarea' },
+      { name: 'points',          label: 'Điểm cần đổi',    type: 'number' },
+      { name: 'total',           label: 'Số lượng tồn kho', type: 'number' },
+      { name: 'status',          label: 'Trạng thái' },
+      { name: 'linkImage',       label: 'Ảnh phần thưởng' },
+      { name: 'externalPartner', label: 'Đối tác' },
     ],
   },
   {
     key: 'transactions',
-    label: 'Point Ledger',
+    label: 'Giao dịch điểm',
     endpoint: '/transactions',
     idField: 'id',
     createMode: 'json',
+    tableColumns: ['id', 'userId', 'type', 'points', 'amount', 'status', 'createdAt'],
     fields: [
-      { name: 'userId', label: 'User ID', type: 'number', required: true },
-      { name: 'type', label: 'Type', required: true },
-      { name: 'amount', label: 'Amount', type: 'number' },
-      { name: 'points', label: 'Points', type: 'number' },
-      { name: 'reference', label: 'Reference' },
-      { name: 'status', label: 'Status' },
-      { name: 'description', label: 'Description', type: 'textarea' },
+      { name: 'userId',      label: 'Người dùng', type: 'select', required: true,
+        remoteOptions: { endpoint: '/admin/users?page=0&limit=500', labelField: 'fullName', valueField: 'id' } },
+      { name: 'type',        label: 'Loại giao dịch', type: 'select', required: true,
+        options: ['EARN', 'SPEND', 'REDEEM', 'REFUND', 'ADJUST'] },
+      { name: 'amount',      label: 'Số tiền',         type: 'number' },
+      { name: 'points',      label: 'Điểm',            type: 'number' },
+      { name: 'reference',   label: 'Mã tham chiếu' },
+      { name: 'status',      label: 'Trạng thái',      type: 'select',
+        options: ['PENDING', 'COMPLETED', 'FAILED', 'CANCELLED'] },
+      { name: 'description', label: 'Ghi chú',         type: 'textarea' },
+    ],
+  },
+  {
+    key: 'challengeSubmissions',
+    label: 'Bài nộp thử thách',
+    endpoint: '/admin/challenges/submissions',
+    idField: 'ucId',
+    createMode: 'json',
+    tableColumns: ['ucId', 'userFullName', 'userEmail', 'challengeTitle', 'status', 'score', 'submittedAt'],
+    fields: [
+      { name: 'userId',      label: 'Người dùng (ID)', type: 'number', required: true },
+      { name: 'challengeId', label: 'Thử thách (ID)',  type: 'number', required: true },
+      { name: 'status',      label: 'Trạng thái',      type: 'select',
+        options: ['PENDING', 'SUCCESS', 'FAILED', 'DISPUTED'] },
+    ],
+  },
+  {
+    key: 'rewardRedemptions',
+    label: 'Đổi thưởng',
+    endpoint: '/reward-redemptions',
+    idField: 'redemptionId',
+    createMode: 'json',
+    tableColumns: ['redemptionId', 'userId', 'rewardId', 'status', 'createdAt'],
+    fields: [
+      { name: 'userId',   label: 'Người dùng (ID)',  type: 'number', required: true },
+      { name: 'rewardId', label: 'Phần thưởng (ID)', type: 'number', required: true },
     ],
   },
   {
     key: 'informationBody',
-    label: 'Body Profiles',
+    label: 'Hồ sơ thể chất',
     endpoint: '/admin/information-body',
     idField: 'infoId',
     createMode: 'json',
+    tableColumns: ['infoId', 'userId', 'userName', 'heightCm', 'weightKg', 'age', 'gender', 'bmi'],
     fields: [
-      { name: 'userId', label: 'User ID', type: 'number', required: true },
-      { name: 'heightCm', label: 'Height cm', type: 'number' },
-      { name: 'weightKg', label: 'Weight kg', type: 'number' },
-      { name: 'age', label: 'Age', type: 'number' },
-      { name: 'gender', label: 'Gender' },
-      { name: 'activityLevel', label: 'Activity level' },
+      { name: 'userId',     label: 'Người dùng', type: 'select', required: true,
+        remoteOptions: { endpoint: '/admin/users?page=0&limit=500', labelField: 'fullName', valueField: 'id' } },
+      { name: 'heightCm',   label: 'Chiều cao (cm)', type: 'number', required: true },
+      { name: 'weightKg',   label: 'Cân nặng (kg)',  type: 'number', required: true },
+      { name: 'age',        label: 'Tuổi',           type: 'number', required: true },
+      { name: 'gender',     label: 'Giới tính',      type: 'select', required: true,
+        options: ['Nam', 'Nữ', 'Khác'] },
+      { name: 'bodyFatPct', label: 'Tỷ lệ mỡ (%)',  type: 'number' },
+      { name: 'bmi',        label: 'Chỉ số BMI',     type: 'number' },
+      { name: 'goalId',     label: 'Mục tiêu (tuỳ chọn)', type: 'select',
+        remoteOptions: { endpoint: '/admin/goals', labelField: 'name', valueField: 'id' } },
     ],
+  },
+  {
+    key: 'userChallenges',
+    label: 'Tham gia thử thách',
+    endpoint: '/admin/user-challenges',
+    idField: 'ucId',
+    createMode: 'json',
+    tableColumns: ['ucId', 'userId', 'challengeId', 'status', 'submittedAt'],
+    fields: [
+      { name: 'userId',      label: 'Người dùng (ID)', type: 'number', required: true },
+      { name: 'challengeId', label: 'Thử thách (ID)',  type: 'number', required: true },
+      { name: 'status',      label: 'Trạng thái',      type: 'select',
+        options: ['PENDING', 'SUCCESS', 'FAILED', 'DISPUTED'] },
+    ],
+  },
+  {
+    key: 'leaderboard',
+    label: 'Leaderboard',
+    endpoint: '/leaderboard',
+    idField: 'userId',
+    createMode: 'json',
+    tableColumns: ['rank', 'userId', 'userName', 'fullName', 'points', 'completedChallenges'],
+    fields: [],
   },
 ];
 
@@ -295,30 +523,44 @@ export const adminService = {
   },
 
   async list(module: AdminModuleConfig): Promise<any[]> {
-    const endpoint = module.key === 'foods' ? '/foods' : module.endpoint;
+    let endpoint = module.endpoint;
+    if (module.key === 'foods') endpoint = '/foods';
+    if (module.key === 'leaderboard') endpoint = '/leaderboard?limit=100';
+    if (module.key === 'users') endpoint = '/admin/users?page=0&limit=500';
     const response = await apiClient.get(endpoint);
     if (!response.success) throw new Error(response.error?.message || `Failed to load ${module.label}`);
     return unwrapList(response.data);
   },
 
-  async create(module: AdminModuleConfig, payload: Record<string, any>) {
+  async create(module: AdminModuleConfig, payload: Record<string, any>, files?: Record<string, File>) {
     const normalizedPayload = normalizeAdminPayload(module, payload);
     if (module.createMode === 'json') {
-      return apiClient.post(module.endpoint, normalizedPayload);
+      return normalizeResponse(await apiClient.post(module.endpoint, normalizedPayload));
     }
-    return requestRaw(module.endpoint, 'POST', toFormData(module.createMode, normalizedPayload));
+    return normalizeResponse(await requestRaw(module.endpoint, 'POST', toFormData(module.createMode, normalizedPayload, files)));
   },
 
-  async update(module: AdminModuleConfig, id: string | number, payload: Record<string, any>) {
+  async update(module: AdminModuleConfig, id: string | number, payload: Record<string, any>, files?: Record<string, File>) {
     const normalizedPayload = normalizeAdminPayload(module, payload);
     if (module.createMode === 'json') {
-      return apiClient.put(`${module.endpoint}/${id}`, normalizedPayload);
+      return normalizeResponse(await apiClient.put(`${module.endpoint}/${id}`, normalizedPayload));
     }
-    return requestRaw(`${module.endpoint}/${id}`, 'PUT', toFormData(module.createMode, normalizedPayload));
+    return normalizeResponse(await requestRaw(`${module.endpoint}/${id}`, 'PUT', toFormData(module.createMode, normalizedPayload, files)));
   },
 
   async remove(module: AdminModuleConfig, id: string | number) {
-    return apiClient.delete(`${module.endpoint}/${id}`);
+    return normalizeResponse(await apiClient.delete(`${module.endpoint}/${id}`));
+  },
+
+  async auditExerciseMetadata(): Promise<ExerciseMetadataAuditReport> {
+    const response = await apiClient.get('/admin/exercises/audit');
+    if (!response.success) throw new Error(response.error?.message || 'Failed to audit exercise metadata');
+
+    const body: any = response.data;
+    if (body?.success === false) {
+      throw new Error(body.message || 'Exercise metadata audit failed');
+    }
+    return unwrapObject(body) as ExerciseMetadataAuditReport;
   },
 
   async listDishIngredients(dishId: string | number) {
@@ -328,14 +570,29 @@ export const adminService = {
   },
 
   async addDishIngredient(dishId: string | number, payload: { foodId: number; isCoreIngredient: boolean }) {
-    return apiClient.post(`/admin/dishes/${dishId}/ingredients`, payload);
+    return normalizeResponse(await apiClient.post(`/admin/dishes/${dishId}/ingredients`, payload));
   },
 
   async updateDishIngredient(ingredientId: string | number, payload: { foodId?: number; isCoreIngredient?: boolean }) {
-    return apiClient.put(`/admin/dishes/ingredients/${ingredientId}`, payload);
+    return normalizeResponse(await apiClient.put(`/admin/dishes/ingredients/${ingredientId}`, payload));
   },
 
   async deleteDishIngredient(ingredientId: string | number) {
-    return apiClient.delete(`/admin/dishes/ingredients/${ingredientId}`);
+    return normalizeResponse(await apiClient.delete(`/admin/dishes/ingredients/${ingredientId}`));
+  },
+
+  async updateRedemptionStatus(redemptionId: string | number, status: string) {
+    return requestRaw(`/reward-redemptions/${redemptionId}/status?status=${encodeURIComponent(status)}`, 'PUT');
+  },
+
+  async updateUserChallengeStatus(ucId: string | number, status: string) {
+    return requestRaw(`/admin/user-challenges/${ucId}/feedback?status=${encodeURIComponent(status)}`, 'PUT');
+  },
+
+  async seedData(action: string): Promise<{ success: boolean; data?: SeederResult; message?: string }> {
+    const response = await requestRaw<{ data: SeederResult; message: string }>(`/admin/data-seeder/${action}`, 'POST');
+    if (!response.success) return { success: false, message: response.error?.message };
+    const payload = response.data as any;
+    return { success: true, data: payload?.data ?? payload, message: payload?.message };
   },
 };

@@ -143,7 +143,7 @@ export default function SetupWizard({ userId, userName, onComplete }: Props) {
               </button>
               <div className="flex-1 relative">
                 <input type="number" value={budget} onChange={e => setBudget(Number(e.target.value))}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-white text-center font-grotesk font-bold text-2xl focus:outline-none focus:border-lime/40 transition-all" />
+                  className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 py-4 text-white text-center font-grotesk font-bold text-2xl focus:outline-none focus:border-lime/40 transition-all" />
               </div>
               <button onClick={() => setBudget(b => b + 10000)} className="w-12 h-12 rounded-xl glass border border-white/10 flex items-center justify-center text-white hover:border-lime/30 transition-all">
                 <Plus className="w-5 h-5" />
@@ -224,7 +224,7 @@ export default function SetupWizard({ userId, userName, onComplete }: Props) {
                 </button>
                 <button
                   onClick={() => onComplete('diet')}
-                  className="w-full py-4 rounded-2xl border border-white/10 text-white font-bold text-sm uppercase tracking-widest hover:bg-white/5 transition-all flex items-center justify-center gap-3"
+                  className="w-full py-4 rounded-2xl border border-white/10 text-white font-bold text-sm uppercase tracking-widest hover:bg-white/[0.06] transition-all flex items-center justify-center gap-3"
                 >
                   <Calendar className="w-5 h-5" />
                   Go to Diet Tab

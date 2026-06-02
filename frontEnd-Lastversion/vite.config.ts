@@ -1,10 +1,55 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  optimizeDeps: {
-    exclude: ['lucide-react'],
-  },
+export default defineConfig(({ mode }) => {
+  // Load env vars for the current mode so we can reference them in config
+  const env = loadEnv(mode, process.cwd(), '');
+  const apiTarget = env.VITE_API_URL || 'http://localhost:8080';
+
+  return {
+    plugins: [react()],
+
+    // ── Dev server ──────────────────────────────────────────────────
+    server: {
+      port: 5173,
+      // Proxy /api requests to the backend during local development.
+      // This eliminates CORS preflight errors in dev without changing
+      // the production API_BASE_URL logic in api.ts.
+      proxy: {
+        '/api': {
+          target: apiTarget,
+          changeOrigin: true,
+          secure: false,
+        },
+      },
+    },
+
+    // ── Preview server (after `vite build`) ─────────────────────────
+    preview: {
+      port: 5173,
+    },
+
+    // ── Build ────────────────────────────────────────────────────────
+    build: {
+      // No source maps in production builds — don't ship internal code paths
+      sourcemap: false,
+      // Raise the chunk-size warning threshold a little (default 500 kB)
+      chunkSizeWarningLimit: 800,
+      rollupOptions: {
+        output: {
+          // Split vendor dependencies into a separate chunk for better
+          // long-term cache hits when only app code changes.
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom'],
+          },
+        },
+      },
+    },
+
+    // ── Dep optimisation ────────────────────────────────────────────
+    optimizeDeps: {
+      exclude: ['lucide-react'],
+    },
+  };
 });

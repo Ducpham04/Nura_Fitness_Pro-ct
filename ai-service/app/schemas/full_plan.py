@@ -1,11 +1,22 @@
 """
 Integrated schema for combined meal + workout plan
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import List, Optional
 from datetime import datetime
 from .nutrition import DailyPlan, UserProfile
 from .workout import WorkoutSession, SessionType
+
+# Minimum exercise count rules (must stay in sync with AI system prompt)
+_MIN_EXERCISE_COUNT = {
+    "full_body":   4,
+    "upper_body":  3,
+    "upper":       3,
+    "lower_body":  3,
+    "lower":       3,
+    "legs":        3,
+    "cardio":      2,
+}
 
 
 class AllowedWorkoutExercise(BaseModel):
@@ -42,13 +53,17 @@ class FullPlanRequest(BaseModel):
     """Request for generating integrated meal + workout plan"""
     user_id: str = Field(..., description="Unique identifier for the user")
     user_profile: UserProfile
-    days: int = Field(default=7, ge=1, le=14)
+    days: int = Field(default=7, ge=1, le=84)  # up to 12 weeks × 7 days
     preferences: Optional[List[str]] = Field(default_factory=list)
     
     # Workout preferences
     workout_intensity: str = Field(default="moderate", description="low, moderate, high")
     available_equipment: List[str] = Field(default_factory=list, description="List of available equipment: Tạ đôi, Máy cáp, Không cần")
     workout_duration_minutes: int = Field(default=45, ge=15, le=120)
+    progression_phase: str = Field(default="foundation", description="foundation, volume, intensity, deload, build, overload")
+    # Periodization: week_number drives auto phase detection (W1=foundation, W2=volume, W3=intensity, W4=deload)
+    week_number: int = Field(default=1, ge=1, le=52, description="Current week in the program (drives periodization phase)")
+    total_weeks: int = Field(default=4, ge=1, le=12, description="Total program duration in weeks")
     inventory: Optional[List[str]] = Field(default_factory=list, description="List of items currently in user's kitchen")
     current_injuries: Optional[str] = ""
     allowed_exercises: List[AllowedWorkoutExercise] = Field(default_factory=list)

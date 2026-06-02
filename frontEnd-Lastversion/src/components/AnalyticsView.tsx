@@ -59,7 +59,7 @@ function AnalyticsView({ userName }: Props) {
             <h3 className="font-grotesk font-bold text-white">Calories Burned — This Week</h3>
             <div className="flex items-center gap-3 text-xs">
               <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-lime" /> Burned</div>
-              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-white/20" /> Target</div>
+              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-white/[0.06]" /> Target</div>
             </div>
           </div>
           <div className="flex items-end gap-3 h-36">

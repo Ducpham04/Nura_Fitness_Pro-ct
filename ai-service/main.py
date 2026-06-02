@@ -33,7 +33,7 @@ from app.schemas.nutrition import (
     GoalType, FitnessLevel, MealType, AdjustmentRequest, AdjustmentResponse,
     CheatMealRequest, CheatMealResponse, MealContextRequest, MealContextResponse
 )
-from app.schemas.workout import WorkoutSession
+from app.schemas.workout import ProgramTemplate
 from app.schemas.full_plan import FullPlanRequest, FullPlanResponse
 from app.core.analyzer import BodyAnalyzer, NutritionValidator
 from app.ai.planner import AIPlanner
@@ -420,27 +420,271 @@ async def generate_full_plan(request: FullPlanRequest):
         raise HTTPException(status_code=500, detail=f"Full plan generation failed: {str(e)}")
 
 
-@app.post("/workout-plan", response_model=List[WorkoutSession])
+@app.post("/workout-plan", response_model=ProgramTemplate)
 async def generate_workout_plan(request: FullPlanRequest):
     """
-    Generate standalone workout training plan
+    Generate a compact workout program template.
     """
     try:
         from app.ai.workout_planner import WorkoutPlanner
         wp = WorkoutPlanner()
-        sessions = wp.generate_plan(
+        template = wp.generate_template(
             user_profile=request.user_profile,
             days=request.days,
+            week_number=request.week_number,
+            total_weeks=request.total_weeks,
             available_equipment=request.available_equipment,
             workout_intensity=request.workout_intensity,
             duration_minutes=request.workout_duration_minutes,
+            progression_phase=request.progression_phase,
             preferences=request.preferences,
             allowed_exercises=[item.model_dump() for item in request.allowed_exercises],
             current_injuries=request.current_injuries or ""
         )
-        return sessions
+        return template
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Workout plan generation failed: {str(e)}")
+        raise HTTPException(status_code=422, detail=f"Workout template generation failed: {str(e)}")
+
+
+@app.post("/analyze-pose")
+async def analyze_pose(
+    media: UploadFile = File(...),
+    exercise_type: str = Form(...),
+    user_id: str = Form("unknown"),
+):
+    """
+    v2.4 — Analyze a workout form snapshot with Groq Vision.
+
+    This endpoint intentionally handles image snapshots only. Video/real-time
+    pose estimation should stay in a dedicated MediaPipe pipeline.
+    """
+    import io as _io
+    import json as _json
+    from PIL import Image as _Image
+
+    content_type = media.content_type or ""
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=415, detail="Only image snapshots are supported for pose analysis")
+
+    raw = await media.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="media file is required")
+    if len(raw) > 8 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="media file is too large; max 8MB")
+
+    try:
+        image = _Image.open(_io.BytesIO(raw))
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+        original_size = {"width": image.width, "height": image.height}
+        image.thumbnail((1024, 1024), _Image.Resampling.LANCZOS)
+        buffer = _io.BytesIO()
+        image.save(buffer, format="JPEG", quality=85, optimize=True)
+        image_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid image file: {exc}")
+
+    system_prompt = """You are a certified strength coach and exercise form analyst.
+Analyze ONE still image from a workout set. Be conservative: if body joints or the exercise are not clearly visible, lower confidence and ask for a better angle.
+
+Return ONLY JSON with this exact shape:
+{
+  "exercise_type": "string",
+  "overall_score": 0,
+  "risk_level": "low|medium|high",
+  "rep_detected": true,
+  "phase": "setup|eccentric|bottom|concentric|lockout|unknown",
+  "key_findings": ["short finding"],
+  "corrections": [
+    {"issue": "short issue", "cue": "short coaching cue", "severity": "low|medium|high"}
+  ],
+  "confidence": 0.0,
+  "notes": "short note"
+}
+
+Rules:
+- Do not diagnose medical conditions.
+- Do not claim exact joint angles unless clearly visible.
+- Focus on alignment, range of motion, control, and safety.
+- If the image does not show a person exercising, return overall_score 0, risk_level high, confidence 0.1."""
+
+    user_prompt = f"""Exercise type: {exercise_type}
+User ID: {user_id}
+Analyze this snapshot and return strict JSON only."""
+
+    try:
+        model_name = os.getenv("GROQ_VISION_MODEL", getattr(vision, "model_name", "llama-3.2-11b-vision-preview"))
+        response = vision.client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": user_prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}},
+                    ],
+                },
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.1,
+            max_tokens=700,
+        )
+
+        raw_text = response.choices[0].message.content or "{}"
+        result = _json.loads(raw_text)
+        result["exercise_type"] = result.get("exercise_type") or exercise_type
+        result["model"] = model_name
+        result["image_size"] = original_size
+        result["analyzed_at"] = datetime.now().isoformat()
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Pose analysis failed: {exc}")
+
+
+# ── v2.1: Natural Language Food Logging ─────────────────────────────────────
+@app.post("/log-food-natural")
+async def log_food_natural(body: dict):
+    """
+    v2.1 — Parse a free-text food log into structured nutrition data.
+    Input:  { "text": "Sáng ăn 2 trứng luộc và 1 bát phở bò", "meal_time": "breakfast" }
+    Output: { "items": [...], "total_calories": ..., "macros": {...}, "meal_time": "..." }
+    """
+    import json as _json, os as _os, httpx as _httpx
+    from openai import OpenAI as _OAI
+
+    text      = str(body.get("text", "")).strip()
+    meal_time = str(body.get("meal_time", "unknown"))
+    if not text:
+        raise HTTPException(status_code=400, detail="text is required")
+
+    api_key = _os.getenv("GROQ_API_KEY")
+    client  = _OAI(base_url="https://api.groq.com/openai/v1", api_key=api_key,
+                   http_client=_httpx.Client())
+
+    system_prompt = """Bạn là chuyên gia dinh dưỡng. Phân tích đoạn text mô tả bữa ăn thành JSON.
+RULES:
+- Trả về ONLY JSON, không markdown.
+- Với mỗi món ăn: name_vi (tên Việt), quantity_g (gram ước tính), calories, protein_g, carb_g, fat_g.
+- Nếu không đủ thông tin khẩu phần, ước tính theo khẩu phần tiêu chuẩn Việt Nam.
+- Tổng hợp macro toàn bữa vào "total".
+
+OUTPUT FORMAT:
+{"meal_time":"...","items":[{"name_vi":"...","quantity_g":...,"calories":...,"protein_g":...,"carb_g":...,"fat_g":...}],"total":{"calories":...,"protein_g":...,"carb_g":...,"fat_g":...},"confidence":"high|medium|low","notes":"..."}"""
+
+    try:
+        resp = client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": f"Bữa ăn ({meal_time}): {text}"},
+            ],
+            temperature=0.1,
+            max_tokens=600,
+        )
+        raw = resp.choices[0].message.content
+        # Strip markdown fences if any
+        for fence in ["```json", "```"]:
+            if fence in raw:
+                raw = raw.split(fence)[1].split("```")[0].strip()
+                break
+        result = _json.loads(raw)
+        result["meal_time"] = meal_time
+        result["source_text"] = text
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Natural language parsing failed: {e}")
+
+
+# ── v2.2: Auto-Regulation — adjust next week based on last week's performance ─
+@app.post("/auto-regulate")
+async def auto_regulate(body: dict):
+    """
+    v2.2 — Read last week's actual performance and suggest next week adjustments.
+    Input: {
+      "user_profile": {...},
+      "last_week_log": [
+        {"day": 1, "session": "upper_push", "completed_sets": 3, "rpe": 8,
+         "notes": "vai đau nhẹ", "weight_change_kg": -0.3}
+      ],
+      "current_week": 2,
+      "total_weeks": 4
+    }
+    Output: {
+      "adjustments": [...],
+      "template_patch": {"base_sets_delta": 0, "base_reps_delta": 0, "base_rest_seconds_delta": 0},
+      "next_phase": "...",
+      "deload_recommended": bool,
+      "reasoning": "..."
+    }
+    """
+    import json as _json, os as _os, httpx as _httpx
+    from openai import OpenAI as _OAI
+
+    user_profile     = body.get("user_profile", {})
+    current_template = body.get("current_template", {})
+    last_week        = body.get("last_week_log", [])
+    week_summary     = body.get("week_summary", {})
+    preferences      = body.get("preferences", {})
+    current_week     = int(body.get("current_week", 1))
+    total_weeks      = int(body.get("total_weeks", 4))
+
+    if not last_week:
+        raise HTTPException(status_code=400, detail="last_week_log is required")
+
+    api_key = _os.getenv("GROQ_API_KEY")
+    client  = _OAI(base_url="https://api.groq.com/openai/v1", api_key=api_key,
+                   http_client=_httpx.Client())
+
+    # Auto-derive next week's base phase
+    from app.ai.workout_planner import WorkoutPlanner
+    _, next_phase = WorkoutPlanner._get_phase(current_week + 1)
+
+    system_prompt = f"""Bạn là HLV cá nhân (NSCA-CSCS). Phân tích log tuần {current_week} và đưa ra điều chỉnh cho tuần {current_week + 1}/{total_weeks}.
+Phase tiếp theo mặc định: {next_phase}.
+
+PHÂN TÍCH:
+- RPE 1-10: 1-5 = quá nhẹ → tăng tải; 6-7 = vừa; 8-9 = vừa sức; 10 = quá nặng → giảm tải.
+- Bỏ buổi (no session log) → note trong adjustments.
+- Chấn thương/đau → đề xuất thay bài hoặc giảm tải nhóm cơ đó.
+- Cân giảm > 1kg/tuần (weight_loss goal) → OK. > 1.5kg → khuyến nghị tăng calo.
+- Cân tăng > 0.5kg/tuần (muscle_gain goal) → có thể tăng surplus.
+
+PATCH RULES:
+- Return bounded numeric deltas only. Do not rewrite the full template.
+- base_sets_delta: integer from -1 to +1.
+- base_reps_delta: integer from -2 to +2.
+- base_rest_seconds_delta: one of -15, 0, +15, +30.
+- If avg fatigue >= 8 or pain is mentioned: reduce sets or increase rest.
+- If completion < 70%: simplify by reducing sets/reps.
+- If completion > 90% and avg fatigue <= 6: add reps or reduce rest slightly.
+- If preferences.skipped_exercises has repeated exercises: prefer exercise_swap instead of increasing load.
+- If work_schedule or meal_prep_time suggests a busy user: keep volume realistic and favor adherence.
+
+OUTPUT FORMAT (JSON only, no markdown):
+{{"next_phase":"...","deload_recommended":false,"template_patch":{{"base_sets_delta":0,"base_reps_delta":0,"base_rest_seconds_delta":0}},"adjustments":[{{"area":"sets|reps|rest|exercise_swap|nutrition","change":"...","reason":"..."}}],"motivation_note":"...","reasoning":"..."}}"""
+
+    try:
+        resp = client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"User: {_json.dumps(user_profile, ensure_ascii=False)}\n\nPreferences:\n{_json.dumps(preferences, ensure_ascii=False)}\n\nWeek summary:\n{_json.dumps(week_summary, ensure_ascii=False)}\n\nCurrent template:\n{_json.dumps(current_template, ensure_ascii=False)}\n\nLog tuần {current_week}:\n{_json.dumps(last_week, ensure_ascii=False, indent=2)}"},
+            ],
+            temperature=0.3,
+            max_tokens=700,
+        )
+        raw = resp.choices[0].message.content
+        for fence in ["```json", "```"]:
+            if fence in raw:
+                raw = raw.split(fence)[1].split("```")[0].strip()
+                break
+        result = _json.loads(raw)
+        result["current_week"] = current_week
+        result["evaluated_week"] = current_week
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Auto-regulation failed: {e}")
 
 
 # User Preference Endpoints
@@ -635,6 +879,7 @@ async def chat(request: dict):
         user_id = request.get("user_id")
         message = request.get("message")
         history = request.get("history", [])
+        user_context = request.get("user_context", {})
         
         if not message:
             raise HTTPException(status_code=400, detail="Message is required")
@@ -643,7 +888,7 @@ async def chat(request: dict):
         preferences = preference_store.get_user_preferences(user_id) if user_id else {}
         
         # Call planner for chat
-        response = planner.chat(message, history, preferences)
+        response = planner.chat(message, history, preferences, user_context)
         
         return {
             "success": True,

@@ -47,6 +47,7 @@ export const API_ENDPOINTS = {
     DAILY_LOGS_BY_PLAN: (planId: number) => `/user/daily-training-logs/plan/${planId}`,
     DAILY_LOGS_SAVE: '/user/daily-training-logs',
     PERSONALIZED_TODAY: '/user/personalized/today',
+    PERSONALIZED_SCHEDULE: '/user/personalized/schedule',
   },
   // Nutrition
   NUTRITION: {
@@ -68,6 +69,9 @@ export const API_ENDPOINTS = {
     ANALYZE_FOOD: '/food-analysis/analyze',
     GENERATE_MEAL: '/ai-plans/generate-meal-hybrid',
     GENERATE_WORKOUT: '/ai-plans/generate-workout',
+    GENERATE_NEXT_WORKOUT_WEEK: (utId: number) => `/ai-plans/workout/${utId}/generate-next-week`,
+    AUTO_REGULATE_WORKOUT: '/ai-plans/auto-regulate',
+    LOG_FOOD_NATURAL: '/ai-plans/log-food-natural',
   },
   // Notifications
   NOTIFICATIONS: {

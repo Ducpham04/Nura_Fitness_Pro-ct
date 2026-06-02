@@ -22,7 +22,11 @@ interface Plan {
   progress?: number;
 }
 
-function TrainingPlansView() {
+interface TrainingPlansViewProps {
+  onPlanReady?: () => void;
+}
+
+function TrainingPlansView({ onPlanReady }: TrainingPlansViewProps) {
   const [plans, setPlans] = useState<TrainingPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,10 +72,26 @@ function TrainingPlansView() {
     }
   };
 
-  const handleAiSuccess = (data: any) => {
-    console.log("AI Workout Plan generated:", data);
-    loadTrainingPlans();
+  const handleAiSuccess = async (data: any) => {
     setAiModalOpen(false);
+    await loadTrainingPlans();
+
+    // Nếu personalization chưa chạy (personalized=false), trigger thủ công
+    if (data?.userTrainingId && !data?.personalized) {
+      try {
+        await fetch(`/api/user/training/${data.userTrainingId}/regenerate-personalized`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('authToken') || ''}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      } catch {
+        // Ignore — TrainingView sẽ tự retry khi load
+      }
+    }
+
+    onPlanReady?.();
   };
 
   // Convert API data to display format
@@ -114,6 +134,7 @@ function TrainingPlansView() {
 
     setSelectedPlan(null);
     await loadTrainingPlans();
+    onPlanReady?.();
   };
 
   if (loading) {
@@ -137,7 +158,7 @@ function TrainingPlansView() {
 
   if (selectedPlan) {
     return (
-      <div className="space-y-6 animate-fade-in max-h-[calc(100vh-200px)] overflow-y-auto">
+      <div className="space-y-6 animate-fade-in">
         <button onClick={() => setSelectedPlan(null)} className="sticky top-0 text-lime font-grotesk font-semibold text-sm flex items-center gap-1 hover:gap-2 transition-all bg-charcoal/50 backdrop-blur py-2 z-10">
           ← Back to plans
         </button>
@@ -217,7 +238,7 @@ function TrainingPlansView() {
                     <span className="text-neutral-400 text-sm">Completed</span>
                     <span className="text-white text-sm font-medium">{selectedPlan.progress}%</span>
                   </div>
-                  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-lime rounded-full transition-all duration-700"
                       style={{ width: `${selectedPlan.progress}%` }}
@@ -383,7 +404,7 @@ function TrainingPlansView() {
                     <span className="glass rounded-full px-2 py-1 text-neutral-400 text-xs">{getGoalLabel(plan.goal)}</span>
                   </div>
 
-                  <div className="w-full mt-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-grotesk font-semibold transition-all flex items-center justify-center gap-1">
+                  <div className="w-full mt-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.06] text-white text-xs font-grotesk font-semibold transition-all flex items-center justify-center gap-1">
                     View Details <ChevronRight className="w-3 h-3" />
                   </div>
                 </div>

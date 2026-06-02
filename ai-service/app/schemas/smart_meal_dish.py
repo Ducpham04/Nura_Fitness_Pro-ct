@@ -19,6 +19,11 @@ class DishCatalogItem(BaseModel):
     dish_role: DishRole
     suitable_meal_types: str = ""
 
+    @field_validator("suitable_meal_types", mode="before")
+    @classmethod
+    def coerce_none_to_empty(cls, v):
+        return "" if v is None else v
+
 
 class SmartDishPlanRequest(BaseModel):
     days: int = Field(default=7, ge=1, le=14)
