@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: fit_challenge_db
+    restart: always
+    environment:
+      POSTGRES_DB: fit_challenge
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fit_challenge"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - fit_network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: fit_challenge_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+    networks:
+      - fit_network
+
+  app:
+    build:
+      context: .
+      target: development  # QUAN TRỌNG: Dùng stage development
+    container_name: fit_challenge_app
+    ports:
+      - "8080:8080"
+      - "5005:5005"  # Debug port
+    volumes:
+      # Mount source code - KHÔNG CẦN REBUILD KHI THAY ĐỔI!
+      - ./src:/app/src:delegated
+      - ./pom.xml:/app/pom.xml:delegated
+      # Cache Maven dependencies
+      - maven-cache:/root/.m2
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/fit_challenge
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_PROFILES_ACTIVE: dev
+    networks:
+      - fit_network
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  maven-cache:  # Cache Maven để tăng tốc
+
+networks:
+  fit_network:
+    driver: bridge

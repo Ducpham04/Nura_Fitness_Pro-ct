@@ -1,0 +1,133 @@
+package com.example.fitchallenge.Entity;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "training_plan_details")
+public class TrainingPlanDetail {
+    // Mô tả bảng lưu trữ kế hoạch từng ngày
+    // 🆔 Mã chi tiết kế hoạch (primary key, tự động tăng)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "tpd_id")
+    private Long tpdId;
+
+    // 🔗 Kế hoạch gốc (một kế hoạch có nhiều chi tiết)
+    @ManyToOne
+    @JoinColumn(name = "tp_id")
+    private TrainingPlan trainingPlan;
+
+    // 📅 Ngày trong kế hoạch (bắt buộc nhập)
+    @Column(name = "day_number", nullable = false)
+    private Integer dayNumber;
+
+    // 🏋️‍♂️ Bài tập master data gắn với ngày tập
+    @ManyToOne
+    @JoinColumn(name = "exercise_id")
+    private Exercise exercise;
+
+    // 🔁 Số hiệp (sets), mặc định = 1
+    @Column(name = "sets", columnDefinition = "INTEGER DEFAULT 1")
+    private Integer sets = 1;
+
+    // 🔂 Số lần lặp trong mỗi hiệp (có thể null nếu không áp dụng)
+    @Column(name = "reps")
+    private Integer reps;
+    
+    // ⏱️ Thời lượng tập (tính bằng giây)
+    @Column(name = "duration")
+    private Integer duration;
+    
+    // ⏸️ Thời gian nghỉ giữa các hiệp (tính bằng giây)
+    @Column(name = "rest_time")
+    private Integer restTime;
+    
+    // 📝 Hướng dẫn tập luyện
+    @Column(name = "instructions", columnDefinition = "TEXT")
+    private String instructions;
+
+    // 🧱 Constructors
+    public TrainingPlanDetail() {}
+
+    public TrainingPlanDetail(TrainingPlan trainingPlan, Integer dayNumber, Exercise exercise, Integer sets, Integer reps) {
+        this.trainingPlan = trainingPlan;
+        this.dayNumber = dayNumber;
+        this.exercise = exercise;
+        this.sets = sets;
+        this.reps = reps;
+    }
+
+    // 🧩 Getters và Setters
+    public Long getTpdId() {
+        return tpdId;
+    }
+
+    public void setTpdId(Long tpdId) {
+        this.tpdId = tpdId;
+    }
+
+    public TrainingPlan getTrainingPlan() {
+        return trainingPlan;
+    }
+
+    public void setTrainingPlan(TrainingPlan trainingPlan) {
+        this.trainingPlan = trainingPlan;
+    }
+
+    public Integer getDayNumber() {
+        return dayNumber;
+    }
+
+    public void setDayNumber(Integer dayNumber) {
+        this.dayNumber = dayNumber;
+    }
+
+    public Exercise getExercise() {
+        return exercise;
+    }
+
+    public void setExercise(Exercise exercise) {
+        this.exercise = exercise;
+    }
+
+
+    public Integer getSets() {
+        return sets;
+    }
+
+    public void setSets(Integer sets) {
+        this.sets = sets;
+    }
+
+    public Integer getReps() {
+        return reps;
+    }
+
+    public void setReps(Integer reps) {
+        this.reps = reps;
+    }
+    
+    public Integer getDuration() {
+        return duration;
+    }
+    
+    public void setDuration(Integer duration) {
+        this.duration = duration;
+    }
+    
+    public Integer getRestTime() {
+        return restTime;
+    }
+    
+    public void setRestTime(Integer restTime) {
+        this.restTime = restTime;
+    }
+    
+    public String getInstructions() {
+        return instructions;
+    }
+    
+    public void setInstructions(String instructions) {
+        this.instructions = instructions;
+    }
+}

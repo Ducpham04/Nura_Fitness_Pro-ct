@@ -1,0 +1,141 @@
+package com.example.fitchallenge.service.impl;
+
+import com.example.fitchallenge.DTO.InformationBodyDTO;
+import com.example.fitchallenge.Entity.Goals;
+import com.example.fitchallenge.Entity.InformationBodyUser;
+import com.example.fitchallenge.Entity.User;
+import com.example.fitchallenge.config.NotificationResponse;
+import com.example.fitchallenge.repository.GoalRepository;
+import com.example.fitchallenge.repository.InformationBodyUserRepository;
+import com.example.fitchallenge.repository.User.UserRepository;
+import com.example.fitchallenge.service.InformationBodyUserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class InformationBodyImpl implements InformationBodyUserService {
+
+    private final InformationBodyUserRepository informationBodyUserRepository;
+    private final UserRepository usersRepository;
+    private final GoalRepository goalsRepository;
+
+    @Override
+    public NotificationResponse findByUserId(Long userId) {
+        List<InformationBodyUser> infUser = informationBodyUserRepository.findByUserId(userId);
+        List<InformationBodyDTO> dtoList = infUser.stream().map(this::toDto).toList();
+        return new NotificationResponse(true, "Success", dtoList);
+    }
+
+    @Override
+    @Transactional
+    public NotificationResponse createInformationBodyUser(InformationBodyDTO dto) {
+        try {
+            if (dto.getUserId() == null) {
+                return new NotificationResponse(false, "Thiếu User ID");
+            }
+            Optional<User> userOpt = usersRepository.findById(dto.getUserId());
+            if (userOpt.isEmpty()) {
+                return new NotificationResponse(false, "Không tìm thấy người dùng với ID: " + dto.getUserId());
+            }
+
+            InformationBodyUser info = new InformationBodyUser();
+            info.setUser(userOpt.get());
+            // Goal là tuỳ chọn — chỉ gán nếu có goalId hợp lệ
+            if (dto.getGoalId() != null) {
+                goalsRepository.findById(dto.getGoalId()).ifPresent(info::setGoals);
+            }
+            info.setHeightCm(dto.getHeightCm());
+            info.setWeightKg(dto.getWeightKg());
+            info.setAge(dto.getAge());
+            info.setGender(dto.getGender());
+            info.setBodyFatPct(dto.getBodyFatPct());
+            info.setBmi(dto.getBmi());
+            info.setCreatedAt(ZonedDateTime.now());
+
+            informationBodyUserRepository.save(info);
+            return new NotificationResponse(true, "Information body created successfully", toDto(info));
+        } catch (Exception e) {
+            return new NotificationResponse(false, "Error creating record: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public NotificationResponse updateInformationBodyUser(InformationBodyDTO dto) {
+        try {
+            Optional<InformationBodyUser> existingOpt = informationBodyUserRepository.findById(dto.getInfoId());
+            if (existingOpt.isEmpty()) {
+                return new NotificationResponse(false, "Information record not found");
+            }
+
+            InformationBodyUser info = existingOpt.get();
+
+            if (dto.getHeightCm() != null) info.setHeightCm(dto.getHeightCm());
+            if (dto.getWeightKg() != null) info.setWeightKg(dto.getWeightKg());
+            if (dto.getAge() != null) info.setAge(dto.getAge());
+            if (dto.getGender() != null) info.setGender(dto.getGender());
+            if (dto.getBodyFatPct() != null) info.setBodyFatPct(dto.getBodyFatPct());
+            if (dto.getBmi() != null) info.setBmi(dto.getBmi());
+
+            if (dto.getGoalId() != null) {
+                goalsRepository.findById(dto.getGoalId()).ifPresent(info::setGoals);
+            }
+
+            informationBodyUserRepository.save(info);
+            return new NotificationResponse(true, "Information body updated successfully", toDto(info));
+        } catch (Exception e) {
+            return new NotificationResponse(false, "Error updating record: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public NotificationResponse deleteInformationBodyUserById(Long id) {
+        try {
+            if (!informationBodyUserRepository.existsById(id)) {
+                return new NotificationResponse(false, "Information record not found");
+            }
+            informationBodyUserRepository.deleteById(id);
+            return new NotificationResponse(true, "Information record deleted successfully");
+        } catch (Exception e) {
+            return new NotificationResponse(false, "Error deleting record: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public NotificationResponse getAllInformationBodyUsers() {
+        List<InformationBodyUser> list = informationBodyUserRepository.findAll();
+        List<InformationBodyDTO> dtoList = list.stream().map(this::toDto).toList();
+        return new NotificationResponse(true, "All Information Body Users", dtoList);
+    }
+
+    private InformationBodyDTO toDto(InformationBodyUser info) {
+        InformationBodyDTO dto = new InformationBodyDTO();
+        dto.setInfoId(info.getInfoId());
+        if (info.getUser() != null) {
+            dto.setUserId(info.getUser().getId());
+            dto.setUserName(info.getUser().getUserName());
+        }
+        dto.setHeightCm(info.getHeightCm());
+        dto.setWeightKg(info.getWeightKg());
+        dto.setAge(info.getAge());
+        dto.setGender(info.getGender());
+        dto.setBodyFatPct(info.getBodyFatPct());
+        dto.setBmi(info.getBmi());
+        if (info.getGoals() != null) {
+            dto.setGoalId(info.getGoals().getId());
+            dto.setGoalName(info.getGoals().getName());
+        }
+        if (info.getCreatedAt() != null) {
+            dto.setCreatedAt(info.getCreatedAt().toString());
+        }
+        return dto;
+    }
+}

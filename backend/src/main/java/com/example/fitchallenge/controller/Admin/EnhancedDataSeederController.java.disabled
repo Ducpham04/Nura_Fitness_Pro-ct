@@ -1,0 +1,83 @@
+package com.example.fitchallenge.controller.Admin;
+
+import com.example.fitchallenge.service.impl.EnhancedDataSeederImpl;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Controller cho Enhanced Data Seeder
+ * Import data đầy đủ cho testing FE integration
+ */
+@RestController
+@RequestMapping("/api/admin/enhanced-seeder")
+@RequiredArgsConstructor
+public class EnhancedDataSeederController {
+
+    private final EnhancedDataSeederImpl enhancedDataSeeder;
+
+    /**
+     * POST /api/admin/enhanced-seeder/seed-all
+     * Seed tất cả data cho testing (bao gồm các entity mới)
+     */
+    @PostMapping("/seed-all")
+    public ResponseEntity<Map<String, Object>> seedAllData() {
+        try {
+            enhancedDataSeeder.seedAllDataForTesting();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "✅ Đã seed data đầy đủ cho testing!");
+            response.put("testAccounts", Map.of(
+                "user", Map.of(
+                    "email", "user1@test.com",
+                    "password", "password123",
+                    "role", "USER"
+                ),
+                "admin", Map.of(
+                    "email", "admin@test.com", 
+                    "password", "admin123",
+                    "role", "ADMIN"
+                )
+            ));
+            response.put("dataSeeded", Map.of(
+                "foodsWithPrices", "20 món ăn với giá thị trường",
+                "healthProfile", "Hồ sơ sức khỏe chi tiết",
+                "bodyMetrics", "5 lần đo body metrics",
+                "inventory", "6 items trong tủ lạnh",
+                "nutritionPlan", "Personalized nutrition plan + meals",
+                "budgetTracking", "7 ngày budget tracking",
+                "preferences", "3 preferences (disliked foods, equipment, prep time)",
+                "notifications", "3 notifications (unread/read)"
+            ));
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Lỗi: " + e.getMessage());
+            error.put("error", e.getClass().getSimpleName());
+            
+            return ResponseEntity.ok(error);
+        }
+    }
+
+    /**
+     * GET /api/admin/enhanced-seeder/status
+     * Kiểm tra trạng thái seeder
+     */
+    @GetMapping("/status")
+    public ResponseEntity<Map<String, Object>> getStatus() {
+        Map<String, Object> status = new HashMap<>();
+        status.put("available", true);
+        status.put("endpoints", Map.of(
+            "POST /api/admin/enhanced-seeder/seed-all", "Seed all data for testing",
+            "POST /api/admin/data-seeder/import-all", "Basic data (users, challenges, plans)"
+        ));
+        
+        return ResponseEntity.ok(status);
+    }
+}
