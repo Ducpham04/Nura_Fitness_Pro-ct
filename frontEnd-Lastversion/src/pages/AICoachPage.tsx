@@ -155,7 +155,7 @@ export default function AICoachPage() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto h-[calc(100vh-12rem)] flex flex-col gap-5 animate-fade-in">
+    <div className="max-w-5xl mx-auto flex flex-col gap-5 animate-fade-in lg:h-[calc(100vh-9rem)]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -178,10 +178,10 @@ export default function AICoachPage() {
         )}
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-5 overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row gap-5 min-h-0 lg:overflow-hidden">
         {/* Khu chat */}
-        <div className="flex-1 glass rounded-[2rem] border border-white/5 flex flex-col overflow-hidden">
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-hide">
+        <div className="glass rounded-[2rem] border border-white/5 flex flex-col overflow-hidden flex-1 min-h-0 h-[60vh] lg:h-auto">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-hide min-h-0">
             {messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[82%] rounded-2xl px-5 py-4 ${
