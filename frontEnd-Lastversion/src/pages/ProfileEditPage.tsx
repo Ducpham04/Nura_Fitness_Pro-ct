@@ -1,0 +1,229 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Loader2, Check, Scale, Activity, User, Target, Wallet } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuthContext } from '../context/AuthContext';
+import { userService } from '../services/userService';
+
+interface EditForm {
+  age: string;
+  weight: string;
+  height: string;
+  gender: string;   // MALE | FEMALE
+  goal: string;
+  budget: string;   // VND/ngày
+}
+
+export default function ProfileEditPage() {
+  const navigate = useNavigate();
+  const { user } = useAuthContext();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [goals, setGoals] = useState<any[]>([]);
+  const [form, setForm] = useState<EditForm>({
+    age: '', weight: '', height: '', gender: '', goal: '', budget: '',
+  });
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const [body, goalsRes] = await Promise.all([
+          userService.getBodyProfile(),
+          userService.getGoals(),
+        ]);
+        if (!mounted) return;
+        const b = body as any;
+        if (b) {
+          setForm({
+            age: b.age?.toString() || '',
+            weight: b.weight?.toString() || '',
+            height: b.height?.toString() || '',
+            gender: b.gender || '',
+            goal: b.goal || '',
+            budget: b.targetBudgetPerDay?.toString() || '',
+          });
+        }
+        const gData = (goalsRes?.data as any)?.data || goalsRes?.data;
+        if (Array.isArray(gData)) setGoals(gData);
+      } catch (e) {
+        console.error('Load profile edit failed:', e);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [user?.id]);
+
+  const update = (field: keyof EditForm, value: string) =>
+    setForm(prev => ({ ...prev, [field]: value }));
+
+  const canSave = !!(form.age && form.weight && form.height && form.gender && form.goal);
+
+  const handleSave = async () => {
+    if (!canSave) {
+      toast.error('Vui lòng nhập đủ số đo cơ bản');
+      return;
+    }
+    setSaving(true);
+    try {
+      await userService.postBodyProfile({
+        height: parseFloat(form.height),
+        weight: parseFloat(form.weight),
+        age: parseInt(form.age),
+        gender: form.gender,
+        goal: form.goal,
+      } as any);
+
+      if (form.budget && user?.id) {
+        await userService.updateBudgetLimit(user.id, parseInt(form.budget));
+      }
+
+      toast.success('Đã cập nhật hồ sơ');
+      navigate('/dashboard/profile');
+    } catch (e) {
+      console.error('Save profile failed:', e);
+      toast.error('Lưu hồ sơ thất bại, thử lại sau');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-64 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-lime animate-spin" />
+      </div>
+    );
+  }
+
+  const numFields: Array<{ field: keyof EditForm; label: string; unit: string; icon: any }> = [
+    { field: 'age', label: 'Tuổi', unit: 'tuổi', icon: User },
+    { field: 'weight', label: 'Cân nặng', unit: 'kg', icon: Scale },
+    { field: 'height', label: 'Chiều cao', unit: 'cm', icon: Activity },
+  ];
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-4 py-4 animate-fade-in pb-24">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => navigate('/dashboard/profile')}
+          className="w-9 h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+        <div>
+          <h1 className="font-grotesk font-bold text-xl text-white">Chỉnh sửa hồ sơ</h1>
+          <p className="text-neutral-500 text-xs">Cập nhật số đo & mục tiêu để AI điều chỉnh kế hoạch</p>
+        </div>
+      </div>
+
+      {/* Số đo cơ thể */}
+      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 space-y-4">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <Scale className="w-4 h-4 text-neutral-500" /> Thông số cơ thể
+        </h3>
+        {numFields.map(({ field, label, unit, icon: Icon }) => (
+          <div key={field}>
+            <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{label}</label>
+            <div className="relative">
+              <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
+              <input
+                type="number"
+                value={form[field]}
+                onChange={e => update(field, e.target.value)}
+                className="w-full bg-white/[0.06] border border-white/10 rounded-2xl pl-11 pr-16 py-3.5 text-white focus:outline-none focus:border-lime/40 transition-all"
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 text-sm">{unit}</span>
+            </div>
+          </div>
+        ))}
+
+        {/* Giới tính */}
+        <div>
+          <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">Giới tính</label>
+          <div className="grid grid-cols-2 gap-3">
+            {[{ v: 'MALE', l: 'Nam', e: '👨' }, { v: 'FEMALE', l: 'Nữ', e: '👩' }].map(({ v, l, e }) => (
+              <button key={v} type="button" onClick={() => update('gender', v)}
+                className={`p-3.5 rounded-2xl border transition-all flex items-center justify-center gap-2 ${
+                  form.gender === v ? 'bg-lime/10 border-lime/40 text-lime' : 'bg-white/[0.06] border-white/10 text-neutral-300 hover:border-white/20'
+                }`}>
+                <span className="text-xl">{e}</span>
+                <span className="font-grotesk font-semibold text-sm">{l}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Mục tiêu */}
+      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 space-y-4">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <Target className="w-4 h-4 text-neutral-500" /> Mục tiêu tập luyện
+        </h3>
+        {goals.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3">
+            {goals.map((g: any) => (
+              <button key={g.id} type="button" onClick={() => update('goal', g.name)}
+                className={`p-3.5 rounded-2xl text-left border transition-all ${
+                  form.goal === g.name ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'
+                }`}>
+                <div className="font-grotesk font-semibold text-sm">{g.name}</div>
+                {g.description && <div className="text-[10px] text-neutral-500 mt-1 line-clamp-1">{g.description}</div>}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <input
+            type="text"
+            value={form.goal}
+            onChange={e => update('goal', e.target.value)}
+            placeholder="Nhập mục tiêu"
+            className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-lime/40"
+          />
+        )}
+      </div>
+
+      {/* Ngân sách */}
+      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 space-y-3">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <Wallet className="w-4 h-4 text-neutral-500" /> Ngân sách ăn uống / ngày
+        </h3>
+        <div className="relative">
+          <input
+            type="number"
+            value={form.budget}
+            onChange={e => update('budget', e.target.value)}
+            placeholder="80000"
+            step={5000}
+            className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 pr-16 py-3.5 text-white focus:outline-none focus:border-lime/40"
+          />
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 text-sm">VND</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[50000, 80000, 120000, 200000].map(v => (
+            <button key={v} type="button" onClick={() => update('budget', v.toString())}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                form.budget === v.toString() ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.04] border-white/10 text-neutral-400 hover:text-white'
+              }`}>
+              {(v / 1000).toFixed(0)}k
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Save */}
+      <button
+        onClick={handleSave}
+        disabled={!canSave || saving}
+        className={`w-full rounded-2xl py-4 flex items-center justify-center gap-2 text-sm font-grotesk font-bold transition-all ${
+          canSave && !saving ? 'btn-lime' : 'bg-white/[0.06] text-neutral-500 cursor-not-allowed'
+        }`}
+      >
+        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+        {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+      </button>
+    </div>
+  );
+}

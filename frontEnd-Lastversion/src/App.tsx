@@ -7,6 +7,7 @@ import Register from './pages/Register';
 import DashboardLayout from './pages/DashboardLayout';
 import AdminPanel from './pages/AdminPanel';
 import Onboarding from './pages/Onboarding';
+import BodyAssessment from './pages/BodyAssessment';
 import HomePage from './pages/HomePage';
 import WorkoutTab from './components/WorkoutTab';
 import DietTab from './components/DietTab';
@@ -15,6 +16,7 @@ import ProfilePage from './pages/ProfilePage';
 import WelCome from './pages/WelCome';
 import AICoachPage from './pages/AICoachPage';
 import LogbookPage from './pages/LogbookPage';
+import ProfileEditPage from './pages/ProfileEditPage';
 
 // AppContent is rendered inside <Router> (via App below), so useNavigate works
 // in AuthProvider → useAuth.
@@ -51,6 +53,7 @@ function AppContent() {
 
       {/* Auth-required pre-dashboard routes */}
       <Route path="/onboarding" element={user ? <Onboarding /> : <Navigate to="/login" replace />} />
+      <Route path="/assessment" element={user ? <BodyAssessment /> : <Navigate to="/login" replace />} />
       <Route path="/welcome" element={user ? <WelCome /> : <Navigate to="/login" replace />} />
 
       {/* Admin route */}
@@ -67,6 +70,7 @@ function AppContent() {
         <Route path="diet" element={<DietTab />} />
         <Route path="challenges" element={<ChallengesView />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="profile/edit" element={<ProfileEditPage />} />
         <Route path="coach" element={<AICoachPage />} />
         <Route path="logbook" element={<LogbookPage />} />
       </Route>

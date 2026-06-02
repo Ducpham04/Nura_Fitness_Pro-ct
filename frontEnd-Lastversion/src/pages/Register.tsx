@@ -114,7 +114,7 @@ export default function Register() {
             <div className="w-8 h-8 rounded-lg bg-lime flex items-center justify-center">
               <Zap className="w-4 h-4 text-obsidian" fill="currentColor" />
             </div>
-            <span className="font-grotesk font-bold text-white text-lg">FitChallenge</span>
+            <span className="font-grotesk font-bold text-white text-lg">Fitnit</span>
           </Link>
         </div>
 

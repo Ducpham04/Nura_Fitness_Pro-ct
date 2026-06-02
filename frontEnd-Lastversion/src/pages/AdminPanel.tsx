@@ -1185,7 +1185,7 @@ export default function AdminPanel() {
             <Shield className="h-4 w-4 text-white" />
           </div>
           <div>
-            <p className="text-sm font-bold text-white">FitChallenge</p>
+            <p className="text-sm font-bold text-white">Fitnit</p>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Quản trị hệ thống</p>
           </div>
         </div>

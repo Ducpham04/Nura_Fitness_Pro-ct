@@ -13,7 +13,7 @@ export interface InventoryItem {
   unit: string;
 }
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 import { userService } from '../services/userService';
 import FoodInventoryPicker, { SelectedFoodInventoryItem } from '../components/FoodInventoryPicker';
@@ -210,11 +210,21 @@ function InventoryModal({ onClose, onSave }: { onClose: () => void; onSave: (ite
 }
 
 /* ─── Main Welcome Screen ─── */
+// Map tên mục tiêu (đa dạng) → goal chuẩn cho AI meal plan
+function resolveMealGoal(goal?: string): string {
+  const g = (goal || '').toLowerCase();
+  if (/giảm|lose|mỡ|fat|cut|weight_loss/.test(g)) return 'weight_loss';
+  if (/tăng|gain|cơ|muscle|bulk/.test(g)) return 'muscle_gain';
+  return 'maintenance';
+}
+
 export default function Welcome() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuthContext();
   const userName = user?.fullName || 'User';
-  
+  const mealGoal = resolveMealGoal((location.state as any)?.goal);
+
   const onComplete = async (finalBudget: number, finalInventory: InventoryItem[]) => {
     if (!user?.id) return;
     
@@ -240,7 +250,7 @@ export default function Welcome() {
         preferences: ["balanced"],
         budget: finalBudget,
         inventory: finalInventory.map(item => item.name),
-        goal: "maintenance",
+        goal: mealGoal,
         days: 7
       });
       if (!mealPlanResponse.success) {
@@ -322,7 +332,7 @@ export default function Welcome() {
             <div className="w-10 h-10 rounded-xl bg-lime flex items-center justify-center">
               <Zap className="w-5 h-5 text-obsidian" fill="currentColor" />
             </div>
-            <span className="font-grotesk font-bold text-white text-xl">FitChallenge</span>
+            <span className="font-grotesk font-bold text-white text-xl">Fitnit</span>
           </div>
         </div>
 

@@ -78,7 +78,7 @@ export default function Login() {
             <div className="w-8 h-8 rounded-lg bg-lime flex items-center justify-center">
               <Zap className="w-4 h-4 text-obsidian" fill="currentColor" />
             </div>
-            <span className="font-grotesk font-bold text-white text-lg">FitChallenge</span>
+            <span className="font-grotesk font-bold text-white text-lg">Fitnit</span>
           </Link>
         </div>
 
@@ -177,21 +177,6 @@ export default function Login() {
               )}
             </button>
           </form>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-white/[0.08]" />
-            <span className="text-neutral-500 text-xs">{t('auth.or')}</span>
-            <div className="flex-1 h-px bg-white/[0.08]" />
-          </div>
-
-          {/* Quick login demo */}
-          <button
-            onClick={() => { setEmail('demo@fitchallenge.com'); setPassword('123456'); }}
-            className="w-full btn-ghost py-3 text-sm font-grotesk font-medium transition-all"
-          >
-            {t('auth.demoAccount')}
-          </button>
         </div>
 
         {/* Sign up link */}

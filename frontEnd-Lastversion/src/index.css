@@ -479,3 +479,113 @@
   color: #CCFF00;
   text-shadow: 0 0 20px rgba(204, 255, 0, 0.5);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   LANDING — hiệu ứng sống động (orbs, aurora, scroll-reveal, 3D tilt)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Orbs trôi chậm tạo chiều sâu nền */
+@keyframes floatOrb {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(40px, -50px) scale(1.08); }
+  66%      { transform: translate(-30px, 30px) scale(0.95); }
+}
+.orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  will-change: transform;
+  pointer-events: none;
+}
+.orb-1 { animation: floatOrb 18s ease-in-out infinite; }
+.orb-2 { animation: floatOrb 24s ease-in-out infinite reverse; }
+.orb-3 { animation: floatOrb 30s ease-in-out infinite; }
+
+/* Aurora gradient nền dịch chuyển nhẹ */
+@keyframes auroraShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.aurora-bg {
+  background: linear-gradient(120deg,
+    rgba(204,255,0,0.06), rgba(59,130,246,0.05),
+    rgba(251,146,60,0.04), rgba(204,255,0,0.06));
+  background-size: 300% 300%;
+  animation: auroraShift 20s ease infinite;
+}
+
+/* Lưới nền mờ (depth) */
+.grid-overlay {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, #000 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, #000 30%, transparent 75%);
+}
+
+/* Glow pulse cho badge/điểm nhấn */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(204,255,0,0.35); }
+  50%      { box-shadow: 0 0 0 6px rgba(204,255,0,0); }
+}
+.glow-pulse { animation: glowPulse 2.4s ease-in-out infinite; }
+
+/* Headline gradient chạy nhẹ */
+@keyframes textShine {
+  to { background-position: 200% center; }
+}
+.text-shine {
+  background: linear-gradient(90deg, #fff 20%, #CCFF00 40%, #fff 60%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: textShine 5s linear infinite;
+}
+
+/* SCROLL REVEAL — phần tử ẩn rồi hiện khi vào viewport */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s var(--ease-out-expo), transform 0.7s var(--ease-out-expo);
+  will-change: opacity, transform;
+}
+.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+/* Stagger con */
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s var(--ease-out-expo), transform 0.6s var(--ease-out-expo);
+}
+.reveal-stagger.in-view > * { opacity: 1; transform: translateY(0); }
+.reveal-stagger.in-view > *:nth-child(1) { transition-delay: 0.05s; }
+.reveal-stagger.in-view > *:nth-child(2) { transition-delay: 0.15s; }
+.reveal-stagger.in-view > *:nth-child(3) { transition-delay: 0.25s; }
+.reveal-stagger.in-view > *:nth-child(4) { transition-delay: 0.35s; }
+
+/* 3D tilt card — depth khi hover */
+.tilt-card {
+  transition: transform 0.25s var(--ease-out-expo), box-shadow 0.25s ease;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.tilt-card:hover {
+  box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6), 0 0 0 1px rgba(204,255,0,0.1);
+}
+
+/* Float nhẹ cho mockup hero */
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-12px); }
+}
+.float-y { animation: floatY 6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .orb-1, .orb-2, .orb-3, .aurora-bg, .glow-pulse, .text-shine, .float-y { animation: none; }
+  .reveal, .reveal-stagger > * { opacity: 1; transform: none; transition: none; }
+}

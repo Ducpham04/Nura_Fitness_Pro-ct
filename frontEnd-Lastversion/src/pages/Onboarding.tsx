@@ -192,9 +192,18 @@ export default function Onboarding() {
       await userService.postBodyProfile(payload);
       await userService.postHealthProfile(healthPayload);
 
-      // Body & Health profiles saved, now navigate to dashboard
-      // The remaining setup (budget/inventory) will be handled on the HomePage
-      navigate('/dashboard');  
+      // Hồ sơ đã lưu → sang màn ĐÁNH GIÁ THỂ TRẠNG (BMI/BMR/TDEE),
+      // sau đó mới tới /welcome để thiết lập ngân sách + kho thực phẩm.
+      navigate('/assessment', {
+        state: {
+          age: parseInt(form.age),
+          weight: parseFloat(form.weight),
+          height: parseFloat(form.height),
+          gender: form.gender,
+          goal: form.goal,
+          activityLevel: form.activityLevel,
+        },
+      });
 
     } catch (error) {
       console.error("Lỗi khi lưu Health Profile:", error);
@@ -222,7 +231,7 @@ export default function Onboarding() {
             <div className="w-8 h-8 rounded-lg bg-lime flex items-center justify-center">
               <Zap className="w-4 h-4 text-obsidian" fill="currentColor" />
             </div>
-            <span className="font-grotesk font-bold text-white text-lg">FitChallenge</span>
+            <span className="font-grotesk font-bold text-white text-lg">Fitnit</span>
           </div>
         </div>
 

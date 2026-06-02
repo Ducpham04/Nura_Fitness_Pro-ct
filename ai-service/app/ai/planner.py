@@ -805,26 +805,34 @@ IMPORTANT:
         """
         General fitness coach chat
         """
-        system_prompt = """You are an elite AI Fitness Coach. Your goal is to provide concise, 
-        science-based, and highly motivating advice on training, nutrition, and recovery.
-        Be encouraging but maintain a professional, 'neural-link' style persona.
-        If a user asks about a specific meal or workout, use their preferences if provided."""
-        
+        system_prompt = """Bạn là Huấn luyện viên thể hình AI của ứng dụng Fitnit.
+        LUÔN trả lời bằng TIẾNG VIỆT, ngắn gọn, dễ hiểu, dựa trên khoa học và mang tính động viên.
+        Tư vấn về tập luyện, dinh dưỡng và phục hồi. Giọng điệu thân thiện, chuyên nghiệp, gần gũi.
+        Nếu người dùng hỏi về bữa ăn hay bài tập cụ thể, hãy dùng thông tin hồ sơ/sở thích nếu có.
+        Không bịa số liệu; nếu thiếu dữ liệu thì đưa lời khuyên tổng quát và gợi ý người dùng cập nhật hồ sơ."""
+
         if preferences:
-            system_prompt += f"\nUser Preferences: {json.dumps(preferences, ensure_ascii=False)}"
+            system_prompt += f"\nSở thích người dùng: {json.dumps(preferences, ensure_ascii=False)}"
 
         if user_context:
             system_prompt += (
-                "\nUser Context from app logs. Use it when relevant, but do not reveal raw JSON unless asked:\n"
+                "\nNgữ cảnh người dùng từ dữ liệu app (dùng khi liên quan, không tiết lộ JSON thô trừ khi được hỏi):\n"
                 + json.dumps(user_context, ensure_ascii=False)
             )
-            
+
         messages = [{"role": "system", "content": system_prompt}]
-        
+
+        # Chuẩn hóa role về giá trị Groq chấp nhận: 'assistant' hoặc 'user'
+        def _norm_role(r: str) -> str:
+            return "assistant" if str(r).lower() in ("ai", "assistant", "bot", "coach") else "user"
+
         # Add history
         for msg in history[-10:]: # Last 10 messages for context
-            messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
-            
+            content = msg.get("content", "")
+            if not content:
+                continue
+            messages.append({"role": _norm_role(msg.get("role", "user")), "content": content})
+
         # Add current message
         messages.append({"role": "user", "content": message})
         
@@ -838,4 +846,5 @@ IMPORTANT:
             )
             return response.choices[0].message.content
         except Exception as e:
-            return f"Neural link disrupted. Error: {str(e)}. I recommend sticking to your current plan while I recalibrate."
+            print(f"[AI Coach chat error] {e}")
+            return "Xin lỗi, hiện mình chưa kết nối được để phản hồi. Bạn thử lại sau giây lát nhé — trong lúc đó cứ bám theo kế hoạch hiện tại của bạn."
