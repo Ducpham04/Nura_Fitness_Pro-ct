@@ -255,6 +255,7 @@ class TrainingService {
       caloriesBurned?: number;
       fatigueLevel?: number;
       sleepHours?: number;
+      perceivedDifficulty?: number;
     }
   }): Promise<ApiResponse<any>> {
     const exerciseId = options.exerciseId ?? options.challengeId;

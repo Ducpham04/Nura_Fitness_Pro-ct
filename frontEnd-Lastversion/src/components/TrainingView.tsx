@@ -386,6 +386,10 @@ function TrainingView() {
   const [poseChecking, setPoseChecking] = useState(false);
   const [poseResult, setPoseResult] = useState<PoseAnalysisResult | null>(null);
   const [poseError, setPoseError] = useState<string | null>(null);
+  // Check-in sau buổi tập: độ mệt mỏi (1-5), độ khó RPE (1-10), giấc ngủ (giờ)
+  const [showCheckIn, setShowCheckIn] = useState(false);
+  const [savingCheckIn, setSavingCheckIn] = useState(false);
+  const [checkIn, setCheckIn] = useState<{ fatigue: number; rpe: number; sleep: string }>({ fatigue: 0, rpe: 0, sleep: '' });
 
   const loadTrainingSchedule = useCallback(async () => {
     if (!user) return;
@@ -565,6 +569,27 @@ function TrainingView() {
     if (currentSet === 0) return;
     if (!user || !activeExercise?.trainingPlanId || !activeExercise.dayNumber || !activeExercise.exerciseId) return;
 
+    // Hoàn thành bài → hỏi check-in (mệt mỏi/RPE/giấc ngủ) trước khi lưu.
+    if (markDone) {
+      setCheckIn({ fatigue: 0, rpe: 0, sleep: '' });
+      setShowCheckIn(true);
+      return;
+    }
+
+    // Dừng giữa chừng (IN_PROGRESS) → lưu luôn, không cần check-in.
+    await persistTrainingLog(false);
+  };
+
+  /**
+   * Lưu training log lên backend. `extra` chứa dữ liệu check-in (fatigue/RPE/sleep)
+   * khi user hoàn thành bài tập.
+   */
+  const persistTrainingLog = async (
+    markDone: boolean,
+    extra?: { fatigueLevel?: number; perceivedDifficulty?: number; sleepHours?: number }
+  ) => {
+    if (!user || !activeExercise?.trainingPlanId || !activeExercise.dayNumber || !activeExercise.exerciseId) return false;
+
     const response = await trainingService.saveTrainingLog(user.id, {
       trainingPlanId: activeExercise.trainingPlanId,
       dayNumber: activeExercise.dayNumber,
@@ -576,12 +601,15 @@ function TrainingView() {
         actualDurationMinutes: Math.max(1, Math.round(sessionTime / 60)),
         // Gửi estimatedCalories để backend dùng khi tính kcal đã đốt
         caloriesBurned: activeExercise.estimatedCalories || 0,
+        ...(extra?.fatigueLevel ? { fatigueLevel: extra.fatigueLevel } : {}),
+        ...(extra?.perceivedDifficulty ? { perceivedDifficulty: extra.perceivedDifficulty } : {}),
+        ...(extra?.sleepHours != null ? { sleepHours: extra.sleepHours } : {}),
       },
     });
 
     if (!response.success) {
       setSaveError(response.error?.message || 'Could not save training log');
-      return;
+      return false;
     }
 
     if (markDone) {
@@ -601,6 +629,20 @@ function TrainingView() {
         markDone,
       }
     }));
+    return true;
+  };
+
+  /** Xác nhận check-in → lưu kèm dữ liệu phục hồi. */
+  const submitCheckIn = async () => {
+    setSavingCheckIn(true);
+    const sleepNum = parseFloat(checkIn.sleep);
+    const ok = await persistTrainingLog(true, {
+      fatigueLevel: checkIn.fatigue || undefined,
+      perceivedDifficulty: checkIn.rpe || undefined,
+      sleepHours: !isNaN(sleepNum) && sleepNum > 0 ? sleepNum : undefined,
+    });
+    setSavingCheckIn(false);
+    if (ok) setShowCheckIn(false);
   };
 
   const analyzePoseSnapshot = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -1188,6 +1230,78 @@ function TrainingView() {
 
   return (
     <div className="space-y-5 animate-fade-in">
+      {/* ── Modal check-in sau buổi tập (overlay toàn màn, độc lập với session) ── */}
+      {showCheckIn && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0f1116] p-6 animate-fade-in">
+            <div className="text-center mb-5">
+              <div className="w-12 h-12 rounded-2xl bg-lime/10 flex items-center justify-center mx-auto mb-3">
+                <Check className="w-6 h-6 text-lime" />
+              </div>
+              <h3 className="font-grotesk font-bold text-white text-lg">Hoàn thành! Ghi nhận cảm nhận</h3>
+              <p className="text-neutral-500 text-xs mt-1">Giúp AI điều chỉnh kế hoạch & theo dõi phục hồi của bạn.</p>
+            </div>
+
+            {/* Độ mệt mỏi 1-5 */}
+            <div className="mb-5">
+              <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">Độ mệt mỏi</label>
+              <div className="grid grid-cols-5 gap-2">
+                {['Rất khỏe', 'Khỏe', 'Bình thường', 'Mệt', 'Kiệt sức'].map((lbl, i) => {
+                  const val = i + 1;
+                  return (
+                    <button key={val} type="button" onClick={() => setCheckIn(c => ({ ...c, fatigue: val }))}
+                      className={`py-2 rounded-xl border text-[10px] font-semibold leading-tight transition-all ${
+                        checkIn.fatigue === val ? 'bg-lime/15 border-lime/40 text-lime' : 'bg-white/[0.04] border-white/10 text-neutral-400 hover:text-white'
+                      }`}>
+                      <span className="block text-sm">{val}</span>{lbl}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Độ khó RPE 1-10 */}
+            <div className="mb-5">
+              <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">
+                Độ khó buổi tập (RPE) {checkIn.rpe > 0 && <span className="text-lime normal-case">· {checkIn.rpe}/10</span>}
+              </label>
+              <div className="grid grid-cols-10 gap-1">
+                {Array.from({ length: 10 }, (_, i) => i + 1).map(val => (
+                  <button key={val} type="button" onClick={() => setCheckIn(c => ({ ...c, rpe: val }))}
+                    className={`py-2 rounded-lg border text-xs font-bold transition-all ${
+                      checkIn.rpe === val ? 'bg-blue-500/20 border-blue-400/50 text-blue-300' : 'bg-white/[0.04] border-white/10 text-neutral-500 hover:text-white'
+                    }`}>
+                    {val}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Giấc ngủ đêm qua */}
+            <div className="mb-6">
+              <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">Giấc ngủ đêm qua (tùy chọn)</label>
+              <div className="relative">
+                <input type="number" step={0.5} min={0} max={14} value={checkIn.sleep}
+                  onChange={e => setCheckIn(c => ({ ...c, sleep: e.target.value }))}
+                  placeholder="VD: 7.5"
+                  className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 pr-16 py-3 text-white focus:outline-none focus:border-lime/40" />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 text-sm">giờ</span>
+              </div>
+            </div>
+
+            <button onClick={submitCheckIn} disabled={savingCheckIn}
+              className="w-full btn-lime py-3.5 rounded-2xl text-sm font-grotesk font-bold flex items-center justify-center gap-2 disabled:opacity-50">
+              {savingCheckIn ? 'Đang lưu...' : 'Lưu & hoàn thành'}
+              {!savingCheckIn && <Check className="w-4 h-4" />}
+            </button>
+            <button onClick={submitCheckIn} disabled={savingCheckIn}
+              className="w-full py-2.5 mt-1 text-xs text-neutral-600 hover:text-neutral-400 transition-colors">
+              Bỏ qua bước này
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4">
         <div>

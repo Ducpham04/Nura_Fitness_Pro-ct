@@ -109,19 +109,20 @@ export default function HomePage() {
   const budgetConfigured = hasActiveMealPlan || budgetBreakdown.length > 0 || aiBudgetTotal != null;
   // Giấc ngủ chỉ hiển thị khi thực sự có dữ liệu, không bịa "0h/8h".
   const sleepLogged = recovery.sleepHours > 0;
+  // Có dữ liệu phục hồi thật (sau khi check-in buổi tập) hay chưa.
+  const hasRecoveryData = !!recovery.recommendation || recovery.energyLevel > 0 || sleepLogged;
 
   const hour = new Date().getHours();
   const greeting = hour < 11 ? 'Chào buổi sáng' : hour < 14 ? 'Chào buổi trưa' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
 
-  const recoveryLabel = recovery.recommendation.toLowerCase() === 'rest'
-    ? 'Nên nghỉ ngơi'
-    : recovery.recommendation.toLowerCase() === 'light'
-    ? 'Tập nhẹ thôi'
+  const rcm = recovery.recommendation.toLowerCase();
+  const recoveryLabel = !hasRecoveryData ? 'Chưa có dữ liệu'
+    : rcm === 'rest' ? 'Nên nghỉ ngơi'
+    : rcm === 'light' ? 'Tập nhẹ thôi'
     : 'Sẵn sàng 100%';
-  const recoveryColor = recovery.recommendation.toLowerCase() === 'rest'
-    ? 'text-orange-400'
-    : recovery.recommendation.toLowerCase() === 'light'
-    ? 'text-blue-400'
+  const recoveryColor = !hasRecoveryData ? 'text-neutral-500'
+    : rcm === 'rest' ? 'text-orange-400'
+    : rcm === 'light' ? 'text-blue-400'
     : 'text-lime';
 
   useEffect(() => {
@@ -385,7 +386,7 @@ export default function HomePage() {
             {[
               { label: 'HRV', value: recovery.hrv || '—' },
               { label: 'RHR', value: recovery.restingHR || '—' },
-              { label: 'Năng lượng', value: `${recovery.energyLevel}/5` },
+              { label: 'Năng lượng', value: recovery.energyLevel ? `${recovery.energyLevel}/5` : '—' },
             ].map(({ label, value }) => (
               <div key={label} className="rounded-xl bg-white/[0.05] p-2.5 text-center">
                 <div className="text-white font-bold text-xs">{value}</div>

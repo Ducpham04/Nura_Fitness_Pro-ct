@@ -391,12 +391,13 @@ class UserService {
             })),
             recentActivities: Array.isArray(data.recentActivities) ? data.recentActivities : [],
             recovery: {
-              sleepHours: Number(data.recovery?.sleepHours ?? 7.5),
+              // Không bịa số: backend trả null khi chưa có dữ liệu thật → 0/'' để UI hiện "—"
+              sleepHours: Number(data.recovery?.sleepHours ?? 0),
               sleepGoal: Number(data.recovery?.sleepGoal ?? 8),
               hrv: data.recovery?.hrv ?? 0,
               restingHR: data.recovery?.restingHR ?? 0,
-              energyLevel: data.recovery?.energyLevel ?? 3,
-              recommendation: data.recovery?.recommendation ?? 'Intense',
+              energyLevel: data.recovery?.energyLevel ?? 0,
+              recommendation: data.recovery?.recommendation ?? '',
             },
             budgetBreakdown: data.budgetBreakdown || [],
             aiSuggestion: data.aiSuggestion || null,
