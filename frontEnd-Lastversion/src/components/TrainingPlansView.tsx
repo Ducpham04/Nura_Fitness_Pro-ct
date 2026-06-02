@@ -1,82 +1,57 @@
 import { useState, useEffect, memo } from 'react';
-import { Search, Star, Clock, TrendingUp, Play, CheckCircle, ChevronRight, Loader2, Zap } from 'lucide-react';
-import { trainingService, type TrainingPlan } from '../services/trainingService';
+import {
+  Zap, Loader2, Dumbbell, Calendar, Target, TrendingUp,
+  Play, RefreshCw, Sparkles, CheckCircle2,
+} from 'lucide-react';
+import { trainingService, type UserTraining } from '../services/trainingService';
 import { userService } from '../services/userService';
+import { useAuthContext } from '../context/AuthContext';
 import CyberpunkWorkoutModal from './CyberpunkWorkoutModal';
 
-interface Plan {
-  id: number | string;
-  name: string;
-  goal: 'lose' | 'muscle' | 'maintain' | 'endurance';
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  duration: string;
-  weeksCount: number;
-  workoutsPerWeek: number;
-  daysPerWeek: number;
-  rating?: number;
-  reviews?: number;
-  image?: string;
-  description: string;
-  features: string[];
-  started: boolean;
-  progress?: number;
-}
+const GOAL_LABELS: Record<string, string> = {
+  weight_loss: 'Giảm mỡ',
+  muscle_gain: 'Tăng cơ',
+  maintenance: 'Duy trì',
+  endurance: 'Sức bền',
+  strength: 'Sức mạnh',
+  lose: 'Giảm mỡ',
+  muscle: 'Tăng cơ',
+  maintain: 'Duy trì',
+};
 
 interface TrainingPlansViewProps {
   onPlanReady?: () => void;
 }
 
 function TrainingPlansView({ onPlanReady }: TrainingPlansViewProps) {
-  const [plans, setPlans] = useState<TrainingPlan[]>([]);
+  const { user } = useAuthContext();
+  const [training, setTraining] = useState<UserTraining | null>(null);
+  const [goalText, setGoalText] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [filterGoal, setFilterGoal] = useState<string>('all');
-  const [filterDifficulty, setFilterDifficulty] = useState<string>('all');
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [aiModalOpen, setAiModalOpen] = useState(false);
-  const [startingPlanId, setStartingPlanId] = useState<number | string | null>(null);
 
-  const [backendGoals, setBackendGoals] = useState<any[]>([]);
-
-  useEffect(() => {
-    loadTrainingPlans();
-    fetchGoals();
-  }, []);
-
-  const fetchGoals = async () => {
+  const load = async () => {
+    if (!user?.id) { setLoading(false); return; }
+    setLoading(true);
     try {
-      const response = await userService.getGoals();
-      if (response.success && response.data) {
-        const data = (response.data as any).data || response.data;
-        if (Array.isArray(data)) setBackendGoals(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch goals:", err);
-    }
-  };
-
-  const loadTrainingPlans = async () => {
-    try {
-      setLoading(true);
-      const response = await trainingService.getTrainingPlans();
-      if (response.success && response.data) {
-        setPlans(response.data);
-      } else {
-        setError(response.error?.message || 'Failed to load training plans');
-      }
-    } catch (err) {
-      setError('Failed to load training plans');
+      const list = await trainingService.getUserTraining(user.id);
+      const active = list.find(t => /active|in_progress/i.test(t.status || '')) || list[0] || null;
+      setTraining(active);
+    } catch (e) {
+      console.warn('[Chương trình] load failed:', e);
     } finally {
       setLoading(false);
     }
+    userService.getBodyProfile().then((b: any) => {
+      if (b?.goal) setGoalText(GOAL_LABELS[b.goal] || b.goal);
+    }).catch(() => {});
   };
+
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
 
   const handleAiSuccess = async (data: any) => {
     setAiModalOpen(false);
-    await loadTrainingPlans();
-
-    // Nếu personalization chưa chạy (personalized=false), trigger thủ công
+    await load();
     if (data?.userTrainingId && !data?.personalized) {
       try {
         await fetch(`/api/user/training/${data.userTrainingId}/regenerate-personalized`, {
@@ -86,333 +61,145 @@ function TrainingPlansView({ onPlanReady }: TrainingPlansViewProps) {
             'Content-Type': 'application/json',
           },
         });
-      } catch {
-        // Ignore — TrainingView sẽ tự retry khi load
-      }
+      } catch { /* TrainingView sẽ tự retry khi load */ }
     }
-
     onPlanReady?.();
   };
 
-  // Convert API data to display format
-  const displayPlans = plans.length > 0 ? plans.map((plan, index) => ({
-    id: plan.id || `plan-${index}`, // Ensure unique ID
-    name: plan.title,
-    goal: (plan.goal || 'muscle') as 'lose' | 'muscle' | 'maintain' | 'endurance',
-    difficulty: plan.difficulty.toLowerCase() as 'beginner' | 'intermediate' | 'advanced',
-    duration: `${plan.durationDays} days`,
-    weeksCount: Math.ceil(plan.durationDays / 7),
-    workoutsPerWeek: plan.workoutsPerWeek || 3,
-    daysPerWeek: plan.workoutsPerWeek || 3,
-    rating: plan.rating || 4.5,
-    reviews: plan.reviews || 0,
-    image: plan.imageUrl,
-    description: plan.description,
-    features: plan.features || [],
-    started: plan.started || false,
-    progress: plan.progress || 0,
-  })) : [];
-
-  const plansToShow = displayPlans;
-
-  const filtered = plansToShow.filter(p =>
-    (filterGoal === 'all' || p.goal === filterGoal) &&
-    (filterDifficulty === 'all' || p.difficulty === filterDifficulty) &&
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const handleStartPlan = async (plan: Plan) => {
-    setStartingPlanId(plan.id);
-    setError(null);
-    const response = await trainingService.startTrainingPlan(Number(plan.id));
-    setStartingPlanId(null);
-
-    if (!response.success) {
-      setError(response.error?.message || (response as any).message || 'Failed to start training plan');
-      return;
-    }
-
-    setSelectedPlan(null);
-    await loadTrainingPlans();
-    onPlanReady?.();
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-lime" />
-      </div>
-    );
-  }
-
-  if (error && plans.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-neutral-400 mb-4">{error}</p>
-        <button onClick={loadTrainingPlans} className="btn-lime px-4 py-2 text-xs">
-          Retry
-        </button>
-      </div>
-    );
-  }
-
-  if (selectedPlan) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <button onClick={() => setSelectedPlan(null)} className="sticky top-0 text-lime font-grotesk font-semibold text-sm flex items-center gap-1 hover:gap-2 transition-all bg-charcoal/50 backdrop-blur py-2 z-10">
-          ← Back to plans
-        </button>
-
-        <div className="grid lg:grid-cols-3 gap-6 pb-8">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="relative h-80 rounded-3xl overflow-hidden">
-              {selectedPlan.image ? (
-                <img src={selectedPlan.image} alt={selectedPlan.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-surface via-charcoal to-obsidian flex items-center justify-center">
-                  <Zap className="w-14 h-14 text-electric/70" />
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-charcoal to-transparent" />
-              <div className="absolute bottom-6 left-6 right-6">
-                <h1 className="font-grotesk font-bold text-3xl text-white mb-2">{selectedPlan.name}</h1>
-                <div className="flex items-center gap-4">
-                  <span className="glass-lime rounded-full px-4 py-1.5 text-lime text-sm font-grotesk font-bold">
-                    {selectedPlan.difficulty}
-                  </span>
-                  <span className="glass rounded-full px-4 py-1.5 text-neutral-300 text-sm font-grotesk">
-                    {selectedPlan.duration}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="glass rounded-3xl p-6 border border-white/5">
-              <h2 className="font-grotesk font-bold text-xl text-white mb-4">About this plan</h2>
-              <p className="text-neutral-200 leading-relaxed mb-6">{selectedPlan.description}</p>
-              
-              {selectedPlan.features.length > 0 && (
-                <>
-                  <h3 className="font-grotesk font-semibold text-white mb-3">Features</h3>
-                  <ul className="space-y-2">
-                    {selectedPlan.features.map((feature, i) => (
-                      <li key={i} className="flex items-center gap-2 text-neutral-200 text-sm">
-                        <CheckCircle className="w-4 h-4 text-lime" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="glass rounded-3xl p-6 border border-white/5">
-              <h3 className="font-grotesk font-bold text-white mb-4">Plan Details</h3>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-neutral-400 text-sm">Duration</span>
-                  <span className="text-white text-sm font-medium">{selectedPlan.duration}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-400 text-sm">Workouts/Week</span>
-                  <span className="text-white text-sm font-medium">{selectedPlan.workoutsPerWeek}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-400 text-sm">Difficulty</span>
-                  <span className="text-white text-sm font-medium capitalize">{selectedPlan.difficulty}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-400 text-sm">Goal</span>
-                  <span className="text-white text-sm font-medium capitalize">{selectedPlan.goal}</span>
-                </div>
-              </div>
-            </div>
-
-            {selectedPlan.started && (
-              <div className="glass rounded-3xl p-6 border border-white/5">
-                <h3 className="font-grotesk font-bold text-white mb-4">Your Progress</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-neutral-400 text-sm">Completed</span>
-                    <span className="text-white text-sm font-medium">{selectedPlan.progress}%</span>
-                  </div>
-                  <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-lime rounded-full transition-all duration-700"
-                      style={{ width: `${selectedPlan.progress}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <button
-              onClick={() => handleStartPlan(selectedPlan)}
-              disabled={startingPlanId === selectedPlan.id}
-              className="w-full btn-lime py-3 text-sm font-grotesk font-semibold active:scale-[0.98] transition-transform duration-150 ease-out disabled:opacity-60"
-            >
-              {startingPlanId === selectedPlan.id ? 'Starting...' : selectedPlan.started ? 'Continue Training' : 'Start This Plan'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const getGoalLabel = (goalName: string) => {
-    const goal = backendGoals.find(g => g.name === goalName);
-    return goal ? goal.name : goalName;
-  };
-
-  const difficultyColors = {
-    beginner: 'text-lime',
-    intermediate: 'text-electric',
-    advanced: 'text-warning'
-  };
+  const week = training?.weekNumber || 1;
+  const totalWeeks = training?.totalWeeks || 1;
+  const progress = training?.completionPercentage != null
+    ? Math.round(training.completionPercentage)
+    : Math.round((Math.max(0, week - 1) / Math.max(1, totalWeeks)) * 100);
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="max-w-4xl mx-auto px-4 space-y-6 animate-fade-in pb-10">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-grotesk font-bold text-2xl text-white">Training Plans</h1>
-          <p className="text-neutral-400 text-sm mt-1">Choose a plan that fits your goals</p>
+          <h1 className="font-grotesk font-bold text-2xl text-white">Chương trình của tôi</h1>
+          <p className="text-neutral-400 text-sm mt-1">Kế hoạch tập luyện AI cá nhân hóa theo mục tiêu của bạn.</p>
         </div>
-        <button 
+        <button
           onClick={() => setAiModalOpen(true)}
-          className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-electric text-white font-grotesk font-bold text-sm shadow-lg shadow-electric/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-lime text-black font-grotesk font-bold text-sm shadow-lg shadow-lime/20 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
         >
-          <Zap className="w-4 h-4" fill="currentColor" />
-          GENERATE AI PLAN
+          <Sparkles className="w-4 h-4" />
+          {training ? 'Tạo lại bằng AI' : 'Tạo kế hoạch AI'}
         </button>
       </div>
 
-      {aiModalOpen && (
-        <CyberpunkWorkoutModal 
-          onClose={() => setAiModalOpen(false)} 
-          onSuccess={handleAiSuccess} 
-        />
+      {loading ? (
+        <div className="h-64 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-lime animate-spin" />
+        </div>
+      ) : training ? (
+        <>
+          {/* Thẻ chương trình đang hoạt động */}
+          <div className="relative overflow-hidden rounded-3xl border border-white/[0.07] bg-gradient-to-br from-lime/[0.07] via-white/[0.02] to-blue-500/[0.05] p-6">
+            <div className="pointer-events-none absolute -top-16 -right-10 w-56 h-56 rounded-full"
+              style={{ background: 'radial-gradient(circle, rgba(204,255,0,0.10) 0%, transparent 70%)' }} />
+
+            <div className="relative flex items-start justify-between gap-4 mb-5">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-lime/15 border border-lime/25 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-lime">
+                    <span className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse" /> Đang hoạt động
+                  </span>
+                  {goalText && (
+                    <span className="rounded-full bg-white/[0.06] border border-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-300">
+                      {goalText}
+                    </span>
+                  )}
+                </div>
+                <h2 className="font-grotesk font-bold text-xl text-white truncate">
+                  {training.name || 'Kế hoạch tập của bạn'}
+                </h2>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-lime/10 border border-lime/20 flex items-center justify-center shrink-0">
+                <Dumbbell className="w-6 h-6 text-lime" />
+              </div>
+            </div>
+
+            {/* Tiến độ */}
+            <div className="relative mb-5">
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <span className="text-neutral-400">Tiến độ chương trình</span>
+                <span className="text-lime font-bold">{progress}%</span>
+              </div>
+              <div className="h-2 rounded-full bg-white/[0.08] overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-lime to-emerald-400 rounded-full transition-all duration-700"
+                  style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+
+            {/* Chỉ số */}
+            <div className="relative grid grid-cols-3 gap-3 mb-5">
+              {[
+                { icon: Calendar, label: 'Tuần', value: `${week}/${totalWeeks}`, color: 'text-blue-400' },
+                { icon: Target, label: 'Ngày hiện tại', value: training.currentDay || 1, color: 'text-orange-400' },
+                { icon: TrendingUp, label: 'Hoàn thành', value: `${progress}%`, color: 'text-lime' },
+              ].map(({ icon: Icon, label, value, color }) => (
+                <div key={label} className="rounded-2xl bg-white/[0.04] border border-white/[0.06] p-3 text-center">
+                  <Icon className={`w-4 h-4 ${color} mx-auto mb-1.5`} />
+                  <div className="font-grotesk font-bold text-base text-white">{value}</div>
+                  <div className="text-neutral-600 text-[9px] uppercase tracking-wider mt-0.5">{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Hành động */}
+            <div className="relative flex flex-col sm:flex-row gap-2.5">
+              <button
+                onClick={() => onPlanReady?.()}
+                className="flex-1 btn-lime py-3 rounded-2xl text-sm font-grotesk font-bold flex items-center justify-center gap-2"
+              >
+                <Play className="w-4 h-4" fill="currentColor" /> Vào tập hôm nay
+              </button>
+              <button
+                onClick={() => setAiModalOpen(true)}
+                className="flex-1 rounded-2xl border border-white/10 bg-white/[0.04] py-3 text-sm font-grotesk font-bold text-neutral-300 hover:text-white hover:border-white/20 transition-all flex items-center justify-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" /> Tạo lại bằng AI
+              </button>
+            </div>
+          </div>
+
+          {/* Ghi chú */}
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 flex items-start gap-3">
+            <CheckCircle2 className="w-4 h-4 text-lime mt-0.5 shrink-0" />
+            <p className="text-neutral-400 text-xs leading-relaxed">
+              Lịch tập chi tiết từng buổi nằm ở tab <span className="text-white font-semibold">"Bài Tập Hôm Nay"</span>.
+              Cuối mỗi tuần, dùng <span className="text-white font-semibold">"AI thích ứng"</span> để kế hoạch tự điều chỉnh
+              theo mức độ hoàn thành & cảm nhận của bạn.
+            </p>
+          </div>
+        </>
+      ) : (
+        /* Chưa có chương trình */
+        <div className="rounded-3xl border border-white/[0.07] bg-white/[0.03] p-10 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-lime/10 border border-lime/20 flex items-center justify-center mx-auto mb-5">
+            <Zap className="w-8 h-8 text-lime" />
+          </div>
+          <h3 className="font-grotesk font-bold text-white text-lg mb-2">Chưa có chương trình tập</h3>
+          <p className="text-neutral-400 text-sm max-w-sm mx-auto mb-6">
+            Tạo kế hoạch tập cá nhân hóa bằng AI — dựa trên mục tiêu, thể trạng, thiết bị và chấn thương của bạn.
+          </p>
+          <button
+            onClick={() => setAiModalOpen(true)}
+            className="btn-lime px-6 py-3.5 rounded-2xl text-sm font-grotesk font-bold inline-flex items-center gap-2"
+          >
+            <Sparkles className="w-4 h-4" /> Tạo kế hoạch AI
+          </button>
+        </div>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
-          <input
-            type="text"
-            placeholder="Search plans..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-charcoal border border-white/5 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-lime/20 transition-all"
-          />
-        </div>
-        <select
-          value={filterGoal}
-          onChange={(e) => setFilterGoal(e.target.value)}
-          className="px-4 py-2 bg-charcoal border border-white/5 rounded-xl text-white focus:outline-none focus:border-lime/20 transition-all"
-        >
-          <option value="all">All Goals</option>
-          {backendGoals.map(g => (
-            <option key={g.id} value={g.name}>{g.name}</option>
-          ))}
-        </select>
-        <select
-          value={filterDifficulty}
-          onChange={(e) => setFilterDifficulty(e.target.value)}
-          className="px-4 py-2 bg-charcoal border border-white/5 rounded-xl text-white focus:outline-none focus:border-lime/20 transition-all"
-        >
-          <option value="all">All Levels</option>
-          <option value="beginner">Beginner</option>
-          <option value="intermediate">Intermediate</option>
-          <option value="advanced">Advanced</option>
-        </select>
-      </div>
-
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {!loading && filtered.length === 0 && (
-          <div className="md:col-span-2 lg:col-span-3 glass rounded-3xl border border-white/5 p-8 text-center">
-            <Zap className="w-10 h-10 text-neutral-500 mx-auto mb-4" />
-            <h3 className="font-grotesk font-bold text-white text-lg mb-2">No training plans from API</h3>
-            <p className="text-neutral-400 text-sm mb-5">
-              Create template plans in Admin or generate an AI workout plan. No mock plans are shown here.
-            </p>
-            <button onClick={() => setAiModalOpen(true)} className="btn-lime px-5 py-3 text-xs font-grotesk font-bold">
-              Generate AI Plan
-            </button>
-          </div>
-        )}
-
-        {filtered.map(plan => (
-          <div
-            key={plan.id}
-            className="text-left group transition-all duration-300 hover:-translate-y-1"
-          >
-            <button
-              onClick={() => setSelectedPlan(plan)}
-              className="w-full h-full"
-            >
-              <div className="glass rounded-3xl overflow-hidden border border-white/5 hover:border-lime/20 transition-all h-full">
-                <div className="relative h-48">
-                  {plan.image ? (
-                    <img src={plan.image} alt={plan.name} className="w-full h-full object-cover" loading="lazy" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-surface via-charcoal to-obsidian flex items-center justify-center">
-                      <Zap className="w-12 h-12 text-electric/70" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-charcoal to-transparent" />
-                  <div className="absolute top-4 right-4">
-                    <span className={`glass rounded-full px-3 py-1 text-xs font-grotesk font-bold ${difficultyColors[plan.difficulty]}`}>
-                      {plan.difficulty}
-                    </span>
-                  </div>
-                  {plan.started && (
-                    <div className="absolute top-4 left-4">
-                      <div className="glass-lime rounded-full px-3 py-1 text-xs font-grotesk font-bold text-lime flex items-center gap-1">
-                        <Play className="w-3 h-3" />
-                        In Progress
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="p-6">
-                  <h3 className="font-grotesk font-bold text-lg text-white mb-2 group-hover:text-lime transition-colors">
-                    {plan.name}
-                  </h3>
-                  <p className="text-neutral-400 text-sm mb-4 line-clamp-2">{plan.description}</p>
-                  
-                  <div className="flex items-center gap-4 mb-4 text-xs">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-neutral-500" />
-                      <span className="text-neutral-400">{plan.duration}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3 text-neutral-500" />
-                      <span className="text-neutral-400">{plan.workoutsPerWeek}/week</span>
-                    </div>
-                    {plan.rating != null && (
-                      <div className="flex items-center gap-1">
-                        <Star className="w-3 h-3 text-lime" />
-                        <span className="text-white font-medium">{plan.rating}</span>
-                        {plan.reviews != null && <span className="text-neutral-500">({plan.reviews})</span>}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="glass rounded-full px-2 py-1 text-neutral-400 text-xs">{getGoalLabel(plan.goal)}</span>
-                  </div>
-
-                  <div className="w-full mt-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.06] text-white text-xs font-grotesk font-semibold transition-all flex items-center justify-center gap-1">
-                    View Details <ChevronRight className="w-3 h-3" />
-                  </div>
-                </div>
-              </div>
-            </button>
-          </div>
-        ))}
-      </div>
+      {aiModalOpen && (
+        <CyberpunkWorkoutModal
+          onClose={() => setAiModalOpen(false)}
+          onSuccess={handleAiSuccess}
+        />
+      )}
     </div>
   );
 }
