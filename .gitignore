@@ -5,29 +5,29 @@
 .env.*
 !.env.example
 
-# Frontend
--Fit_Ai_Challenge_Wep-App_FE/node_modules/
--Fit_Ai_Challenge_Wep-App_FE/dist/
--Fit_Ai_Challenge_Wep-App_FE/.vite/
+# Frontend (current folder)
+frontEnd-Lastversion/node_modules/
+frontEnd-Lastversion/dist/
+frontEnd-Lastversion/.vite/
+node_modules/
+dist/
 
-# Backend
-Fit_Ai_Challenge_Web-App_BE/target/
-Fit_Ai_Challenge_Web-App_BE/uploads/
-Fit_Ai_Challenge_Web-App_BE/.mvn/wrapper/maven-wrapper.jar
+# Backend (current folder)
 backend/target/
 backend/uploads/
+backend/.mvn/wrapper/maven-wrapper.jar
 
-# Python AI
+# Python AI (active service)
 venv/
 __pycache__/
 **/__pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
-fitness-ai-service/venv/
-fitness-ai-service/data/
-fitness-ai-service/models/*.pkl
-fitness-ai-service/__pycache__/
+
+# Stale duplicate AI service folder (~14GB venv/models/data) — never track.
+# TODO: có thể xóa khỏi đĩa, bản đang dùng là ai-service/
+fitness-ai-service/
 fitness-ai-service/**/__pycache__/
 fitness-ai-service/.pytest_cache/
 
