@@ -81,7 +81,7 @@ export default function AICoachPage() {
     if (!summary && !goalText) return;
     greetedRef.current = true;
 
-    const parts: string[] = [`Chào ${userName} 👋 Mình là huấn luyện viên AI của bạn.`];
+    const parts: string[] = [`Chào ${userName}, mình là huấn luyện viên AI của bạn.`];
     if (goalText) parts.push(`Mục tiêu hiện tại của bạn là ${goalText}.`);
     if (summary?.streakDays && summary.streakDays > 0) parts.push(`Bạn đang giữ chuỗi ${summary.streakDays} ngày — tuyệt vời!`);
     parts.push('Bạn muốn mình tư vấn gì hôm nay — bài tập, dinh dưỡng hay điều chỉnh kế hoạch?');

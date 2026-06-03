@@ -144,12 +144,12 @@ export default function ProfileEditPage() {
         <div>
           <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">Giới tính</label>
           <div className="grid grid-cols-2 gap-3">
-            {[{ v: 'MALE', l: 'Nam', e: '👨' }, { v: 'FEMALE', l: 'Nữ', e: '👩' }].map(({ v, l, e }) => (
+            {[{ v: 'MALE', l: 'Nam' }, { v: 'FEMALE', l: 'Nữ' }].map(({ v, l }) => (
               <button key={v} type="button" onClick={() => update('gender', v)}
                 className={`p-3.5 rounded-2xl border transition-all flex items-center justify-center gap-2 ${
                   form.gender === v ? 'bg-lime/10 border-lime/40 text-lime' : 'bg-white/[0.06] border-white/10 text-neutral-300 hover:border-white/20'
                 }`}>
-                <span className="text-xl">{e}</span>
+                <User className="w-5 h-5" />
                 <span className="font-grotesk font-semibold text-sm">{l}</span>
               </button>
             ))}

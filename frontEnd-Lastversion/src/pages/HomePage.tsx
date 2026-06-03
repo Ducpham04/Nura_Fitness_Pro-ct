@@ -4,7 +4,7 @@ import {
   Dumbbell, Brain,
   ChevronRight, Check, ShoppingCart,
   Wallet, Moon, Beef, Wheat, Apple,
-  Star, Flame, Play, History, Target, TrendingUp, Zap,
+  Star, Flame, Play, History, Target, TrendingUp, Zap, Compass, X,
 } from 'lucide-react';
 import ProgressRing from '../components/ProgressRing';
 import { useDashboard } from '../hooks/useDashboard';
@@ -200,7 +200,7 @@ export default function HomePage() {
               {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
             <h1 className="font-grotesk font-bold text-3xl sm:text-[2.1rem] leading-tight text-white">
-              {greeting},<br className="sm:hidden" /> <span className="text-lime">{userName}</span> 👋
+              {greeting},<br className="sm:hidden" /> <span className="text-lime">{userName}</span>
             </h1>
             <p className="text-neutral-400 text-sm mt-2 max-w-md">
               {userSummary.streakDays > 0
@@ -237,12 +237,12 @@ export default function HomePage() {
           <div className="flex items-start justify-between gap-3 mb-4">
             <div>
               <h3 className="font-grotesk font-bold text-white text-base flex items-center gap-2">
-                👋 Bắt đầu từ đây
+                <Compass className="w-4 h-4 text-lime" /> Bắt đầu từ đây
               </h3>
               <p className="text-neutral-500 text-xs mt-0.5">3 bước đầu tiên để làm quen với Fitnit</p>
             </div>
-            <button onClick={dismissGuide} className="text-neutral-600 hover:text-white transition-colors text-xs shrink-0">
-              Đã hiểu ✕
+            <button onClick={dismissGuide} className="text-neutral-600 hover:text-white transition-colors text-xs shrink-0 inline-flex items-center gap-1">
+              Đã hiểu <X className="w-3 h-3" />
             </button>
           </div>
           <div className="grid sm:grid-cols-3 gap-3">
@@ -605,12 +605,12 @@ export default function HomePage() {
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     <span className="text-neutral-600 text-xs">{ex.sets}</span>
                     {ex.muscle && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-lime/10 text-lime/70 border border-lime/20">
-                        💪 {ex.muscle}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-lime/10 text-lime/70 border border-lime/20 inline-flex items-center gap-1">
+                        <Dumbbell className="w-2.5 h-2.5" /> {ex.muscle}
                       </span>
                     )}
                     {ex.estimatedCalories && (
-                      <span className="text-[10px] text-orange-400">🔥 {ex.estimatedCalories} kcal</span>
+                      <span className="text-[10px] text-orange-400 inline-flex items-center gap-1"><Flame className="w-2.5 h-2.5" /> {ex.estimatedCalories} kcal</span>
                     )}
                   </div>
                 </div>

@@ -1,15 +1,26 @@
 import { useState, useMemo, useEffect } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ArrowRight, 
-  ArrowLeft, 
-  Zap, 
-  Target, 
-  Activity, 
-  Heart, 
-  Dumbbell, 
-  UtensilsCrossed 
+import {
+  ArrowRight,
+  ArrowLeft,
+  Zap,
+  Target,
+  Activity,
+  Heart,
+  Dumbbell,
+  UtensilsCrossed,
+  Flame,
+  Footprints,
+  StretchHorizontal,
+  Trophy,
+  Scale,
+  User,
+  Beef,
+  Salad,
+  Leaf,
+  Apple,
+  AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { userService } from '../services/userService';
@@ -53,25 +64,25 @@ const equipmentList = [
   { id: 'bands', label: 'Dây kháng lực' },
 ];
 
-const dietTypes = [
-  { id: 'omnivore', label: 'Ăn tạp', icon: '🍖' },
-  { id: 'vegetarian', label: 'Ăn chay', icon: '🥗' },
-  { id: 'vegan', label: 'Thuần chay', icon: '🌱' },
-  { id: 'keto', label: 'Keto', icon: '🥑' },
+const dietTypes: Array<{ id: string; label: string; icon: LucideIcon }> = [
+  { id: 'omnivore', label: 'Ăn tạp', icon: Beef },
+  { id: 'vegetarian', label: 'Ăn chay', icon: Salad },
+  { id: 'vegan', label: 'Thuần chay', icon: Leaf },
+  { id: 'keto', label: 'Keto', icon: Apple },
 ];
 
-// Hiển thị mục tiêu bằng tiếng Việt + emoji (ảnh từ backend là placeholder vỡ).
+// Hiển thị mục tiêu bằng tiếng Việt + icon Lucide (ảnh từ backend là placeholder vỡ).
 // Giữ NGUYÊN g.name làm value lưu xuống backend (GoalMapper xử lý).
-function goalDisplay(name: string): { icon: string; label: string; desc: string } {
+function goalDisplay(name: string): { Icon: LucideIcon; label: string; desc: string } {
   const g = (name || '').toLowerCase();
-  if (/lose|weight loss|fat|giảm|mỡ/.test(g)) return { icon: '🔥', label: 'Giảm mỡ', desc: 'Giảm cân & đốt mỡ thừa' };
-  if (/muscle|cơ|hypertrophy|gain|build/.test(g)) return { icon: '💪', label: 'Tăng cơ', desc: 'Xây dựng cơ bắp & sức mạnh' };
-  if (/endurance|cardio|stamina|bền/.test(g)) return { icon: '🏃', label: 'Sức bền', desc: 'Cải thiện tim mạch & sức bền' };
-  if (/flexib|mobility|dẻo|linh hoạt/.test(g)) return { icon: '🧘', label: 'Dẻo dai', desc: 'Tăng độ linh hoạt & vận động' };
-  if (/athletic|performance|thể thao|hiệu suất/.test(g)) return { icon: '🏆', label: 'Thể thao', desc: 'Nâng cao hiệu suất vận động' };
-  if (/strength|sức mạnh|power/.test(g)) return { icon: '🏋️', label: 'Sức mạnh', desc: 'Nâng cao sức mạnh tối đa' };
-  if (/general|fitness|maintain|duy trì|tổng/.test(g)) return { icon: '⚖️', label: 'Thể lực chung', desc: 'Duy trì sức khỏe tổng thể' };
-  return { icon: '🎯', label: name, desc: '' };
+  if (/lose|weight loss|fat|giảm|mỡ/.test(g)) return { Icon: Flame, label: 'Giảm mỡ', desc: 'Giảm cân & đốt mỡ thừa' };
+  if (/muscle|cơ|hypertrophy|gain|build/.test(g)) return { Icon: Dumbbell, label: 'Tăng cơ', desc: 'Xây dựng cơ bắp & sức mạnh' };
+  if (/endurance|cardio|stamina|bền/.test(g)) return { Icon: Footprints, label: 'Sức bền', desc: 'Cải thiện tim mạch & sức bền' };
+  if (/flexib|mobility|dẻo|linh hoạt/.test(g)) return { Icon: StretchHorizontal, label: 'Dẻo dai', desc: 'Tăng độ linh hoạt & vận động' };
+  if (/athletic|performance|thể thao|hiệu suất/.test(g)) return { Icon: Trophy, label: 'Thể thao', desc: 'Nâng cao hiệu suất vận động' };
+  if (/strength|sức mạnh|power/.test(g)) return { Icon: Dumbbell, label: 'Sức mạnh', desc: 'Nâng cao sức mạnh tối đa' };
+  if (/general|fitness|maintain|duy trì|tổng/.test(g)) return { Icon: Scale, label: 'Thể lực chung', desc: 'Duy trì sức khỏe tổng thể' };
+  return { Icon: Target, label: name, desc: '' };
 }
 
 const steps: Array<{
@@ -82,7 +93,7 @@ const steps: Array<{
   { title: 'Số đo cơ thể', subtitle: 'Dùng để tính nhu cầu năng lượng mỗi ngày của bạn.', icon: Activity },
   { title: 'Mục tiêu chính', subtitle: 'Bạn đang tập luyện vì điều gì?', icon: Target },
   { title: 'Mức độ vận động', subtitle: 'Hiện tại bạn tập luyện thường xuyên thế nào?', icon: Heart },
-  { title: 'Có chấn thương không?', subtitle: 'Giúp chúng tôi tạo bài tập an toàn cho bạn.', icon: '⚠️' },
+  { title: 'Có chấn thương không?', subtitle: 'Giúp chúng tôi tạo bài tập an toàn cho bạn.', icon: AlertTriangle },
   { title: 'Thiết bị sẵn có', subtitle: 'Bạn có thể sử dụng những gì?', icon: Dumbbell },
   { title: 'Chế độ ăn', subtitle: 'Chúng tôi sẽ điều chỉnh thực đơn phù hợp.', icon: UtensilsCrossed },
 ];
@@ -309,7 +320,7 @@ export default function Onboarding() {
                         : 'bg-white/[0.06] border-white/10 text-neutral-300 hover:border-white/20 hover:bg-white/[0.06]'
                     }`}
                   >
-                    <span className="text-3xl select-none">👨</span>
+                    <User className={`w-7 h-7 ${form.gender === 'male' ? 'text-lime' : 'text-neutral-400'}`} />
                     <span className="font-grotesk font-semibold text-sm">Nam</span>
                     <span className={`text-xs font-mono ${form.gender === 'male' ? 'text-lime/70' : 'text-neutral-600'}`}>
                       BMR +5 kcal
@@ -325,7 +336,7 @@ export default function Onboarding() {
                         : 'bg-white/[0.06] border-white/10 text-neutral-300 hover:border-white/20 hover:bg-white/[0.06]'
                     }`}
                   >
-                    <span className="text-3xl select-none">👩</span>
+                    <User className={`w-7 h-7 ${form.gender === 'female' ? 'text-pink-300' : 'text-neutral-400'}`} />
                     <span className="font-grotesk font-semibold text-sm">Nữ</span>
                     <span className={`text-xs font-mono ${form.gender === 'female' ? 'text-pink-400/70' : 'text-neutral-600'}`}>
                       BMR −161 kcal
@@ -334,8 +345,8 @@ export default function Onboarding() {
                 </div>
 
                 {!form.gender && (
-                  <p className="mt-2 text-xs text-center text-amber-500/70">
-                    ⚠️ Chọn giới tính để tiếp tục — ảnh hưởng đến kế hoạch calo cá nhân hóa của bạn
+                  <p className="mt-2 text-xs text-center text-amber-500/70 flex items-center justify-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Chọn giới tính để tiếp tục — ảnh hưởng đến kế hoạch calo cá nhân hóa của bạn
                   </p>
                 )}
               </div>
@@ -347,10 +358,11 @@ export default function Onboarding() {
             <div className="grid grid-cols-2 gap-3">
               {backendGoals.map(g => {
                 const gd = goalDisplay(g.name);
+                const selected = form.goal === g.name;
                 return (
                   <button key={g.id} onClick={() => update('goal', g.name)}
-                    className={`p-4 rounded-2xl text-left transition-all border ${form.goal === g.name ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'}`}>
-                    <div className="text-2xl mb-2">{gd.icon}</div>
+                    className={`p-4 rounded-2xl text-left transition-all border ${selected ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'}`}>
+                    <gd.Icon className={`w-6 h-6 mb-2 ${selected ? 'text-lime' : 'text-neutral-300'}`} />
                     <div className="font-grotesk font-semibold text-sm">{gd.label}</div>
                     <div className="text-[10px] text-neutral-500 mt-1 line-clamp-1">{gd.desc}</div>
                   </button>
@@ -405,13 +417,16 @@ export default function Onboarding() {
           {/* Step 5: Diet */}
           {step === 5 && (
             <div className="grid grid-cols-2 gap-3">
-              {dietTypes.map(d => (
-                <button key={d.id} onClick={() => update('dietType', d.id)}
-                  className={`p-4 rounded-2xl text-left border transition-all ${form.dietType === d.id ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'}`}>
-                  <div className="text-2xl mb-2">{d.icon}</div>
-                  <div className="font-grotesk font-semibold text-sm">{d.label}</div>
-                </button>
-              ))}
+              {dietTypes.map(d => {
+                const selected = form.dietType === d.id;
+                return (
+                  <button key={d.id} onClick={() => update('dietType', d.id)}
+                    className={`p-4 rounded-2xl text-left border transition-all ${selected ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'}`}>
+                    <d.icon className={`w-6 h-6 mb-2 ${selected ? 'text-lime' : 'text-neutral-300'}`} />
+                    <div className="font-grotesk font-semibold text-sm">{d.label}</div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

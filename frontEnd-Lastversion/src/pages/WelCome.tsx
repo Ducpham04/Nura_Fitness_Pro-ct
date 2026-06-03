@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
   Zap, Brain, Camera, UtensilsCrossed, ShoppingCart, Target,
-  ArrowRight, X, DollarSign, Package, Plus, Minus, Check
+  ArrowRight, X, DollarSign, Package, Plus, Minus, Check,
+  Leaf, Drumstick, Beef, Crown
 } from 'lucide-react';
 
 export interface InventoryItem {
@@ -53,10 +54,10 @@ function BudgetModal({ onClose, onSave }: { onClose: () => void; onSave: (budget
   const [step, setStep] = useState(0);
 
   const presets = [
-    { label: 'Tiết kiệm', value: 50000, desc: '~50k/ngày', icon: '🥬' },
-    { label: 'Vừa đủ', value: 80000, desc: '~80k/ngày', icon: '🍗' },
-    { label: 'Thoải mái', value: 120000, desc: '~120k/ngày', icon: '🥩' },
-    { label: 'Premium', value: 200000, desc: '~200k/ngày', icon: '🍣' },
+    { label: 'Tiết kiệm', value: 50000, desc: '~50k/ngày', icon: Leaf },
+    { label: 'Vừa đủ', value: 80000, desc: '~80k/ngày', icon: Drumstick },
+    { label: 'Thoải mái', value: 120000, desc: '~120k/ngày', icon: Beef },
+    { label: 'Premium', value: 200000, desc: '~200k/ngày', icon: Crown },
   ];
 
   const weeklyBudget = budget * 7;
@@ -89,7 +90,7 @@ function BudgetModal({ onClose, onSave }: { onClose: () => void; onSave: (budget
               {presets.map(p => (
                 <button key={p.value} onClick={() => setBudget(p.value)}
                   className={`p-4 rounded-2xl text-left border transition-all ${budget === p.value ? 'glass-lime border-lime/30' : 'glass border-white/5 hover:border-white/15'}`}>
-                  <div className="text-2xl mb-2">{p.icon}</div>
+                  <p.icon className={`w-6 h-6 mb-2 ${budget === p.value ? 'text-lime' : 'text-neutral-300'}`} />
                   <div className={`font-grotesk font-bold text-sm ${budget === p.value ? 'text-lime' : 'text-white'}`}>{p.label}</div>
                   <div className="text-neutral-400 text-xs mt-0.5">{p.desc}</div>
                 </button>
