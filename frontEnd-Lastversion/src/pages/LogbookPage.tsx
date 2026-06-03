@@ -112,7 +112,7 @@ export default function LogbookPage() {
           <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-lime mb-1">
             <History className="w-3.5 h-3.5" /> Nhật ký
           </div>
-          <h1 className="font-grotesk font-bold text-xl text-white">Lịch sử tập luyện</h1>
+          <h1 className="font-grotesk font-bold italic uppercase text-xl sm:text-2xl text-white leading-none tracking-tight">Lịch sử tập luyện</h1>
           <p className="text-neutral-500 text-xs mt-0.5">
             {completedLogs.length} buổi đã hoàn thành
           </p>

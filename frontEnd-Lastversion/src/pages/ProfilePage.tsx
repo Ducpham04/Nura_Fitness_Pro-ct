@@ -109,7 +109,7 @@ export default function ProfilePage() {
 
           {/* Name + level */}
           <div className="flex-1 min-w-0">
-            <h2 className="font-grotesk font-bold text-xl text-white truncate">{userName}</h2>
+            <h2 className="font-grotesk font-bold italic uppercase text-xl text-white truncate leading-none tracking-tight">{userName}</h2>
             <p className="text-neutral-500 text-xs truncate mt-0.5">{user?.email}</p>
             <div className="flex items-center gap-2 mt-1.5">
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-lime/15 text-lime border border-lime/25">

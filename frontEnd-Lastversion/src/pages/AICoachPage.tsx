@@ -163,7 +163,7 @@ export default function AICoachPage() {
             <Brain className="w-6 h-6 text-blue-400" />
           </div>
           <div>
-            <h1 className="font-grotesk font-bold text-2xl text-white tracking-tight">AI Coach</h1>
+            <h1 className="font-grotesk font-bold italic uppercase text-2xl text-white tracking-tight leading-none">AI Coach</h1>
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse" />
               <span className="text-lime text-[10px] font-bold uppercase tracking-widest">Trực tuyến • Trợ lý cá nhân</span>

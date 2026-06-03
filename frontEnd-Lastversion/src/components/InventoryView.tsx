@@ -160,7 +160,7 @@ function InventoryView() {
             <Package className="w-3.5 h-3.5" />
             Kho thực phẩm
           </div>
-          <h2 className="font-grotesk font-bold text-xl text-white">Tủ lạnh thông minh</h2>
+          <h2 className="font-grotesk font-bold italic uppercase text-white text-xl sm:text-2xl leading-[0.92] tracking-tight">Tủ lạnh thông minh</h2>
           <p className="text-neutral-500 text-sm mt-0.5">
             {(Array.isArray(items) ? items : []).length} mặt hàng
             {expiringSoon.length > 0 && ` · ${expiringSoon.length} sắp hết hạn`}

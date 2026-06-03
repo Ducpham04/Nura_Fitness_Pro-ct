@@ -555,8 +555,8 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
           <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-lime mb-2">
             <Utensils className="w-3.5 h-3.5" /> Dinh dưỡng
           </div>
-          <h2 className="font-grotesk font-bold text-2xl text-white">Kế hoạch dinh dưỡng</h2>
-          <p className="text-neutral-500 text-sm mt-1">Lên thực đơn thông minh theo ngân sách và tủ lạnh.</p>
+          <h2 className="font-grotesk font-bold italic uppercase text-2xl sm:text-[1.9rem] text-white leading-[0.92] tracking-tight">Kế hoạch dinh dưỡng</h2>
+          <p className="text-neutral-500 text-sm mt-1.5">Lên thực đơn thông minh theo ngân sách và tủ lạnh.</p>
         </div>
         <button onClick={() => setCyberpunkModalOpen(true)} className="btn-lime shrink-0 px-5 py-3 text-sm font-bold uppercase tracking-wider flex items-center gap-2">
           <Brain className="w-4 h-4" /> Tạo kế hoạch AI
@@ -595,7 +595,7 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
           <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-lime mb-1">
             <Utensils className="w-3.5 h-3.5" /> Thực đơn
           </div>
-          <h2 className="font-grotesk font-bold text-xl text-white">
+          <h2 className="font-grotesk font-bold italic uppercase text-xl text-white leading-none tracking-tight">
             {isToday ? 'Hôm nay' : selectedDate
               ? `${VI_DAYS_FULL[selectedDate.getDay()]}, ${selectedDate.getDate()}/${selectedDate.getMonth()+1}`
               : `Ngày ${selectedDay}`}

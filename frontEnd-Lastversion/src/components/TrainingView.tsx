@@ -1352,7 +1352,7 @@ function TrainingView() {
             <Activity className="w-3.5 h-3.5" />
             Personal workout
           </div>
-          <h2 className="font-grotesk font-bold text-white text-2xl leading-tight">Lịch tập cá nhân</h2>
+          <h2 className="font-grotesk font-bold italic uppercase text-white text-2xl sm:text-[1.9rem] leading-[0.92] tracking-tight">Lịch tập cá nhân</h2>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-neutral-400">
             <span className="flex items-center gap-1.5">
               <Check className="w-3.5 h-3.5 text-lime" />

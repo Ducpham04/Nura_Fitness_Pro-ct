@@ -2,6 +2,7 @@ import { useState, useEffect, memo } from 'react';
 import { Search, Trophy, Clock, Users, Play, CheckCircle, ChevronRight, Video, Zap, Award, Loader2 } from 'lucide-react';
 import { challengeService, type Challenge } from '../services/challengeService';
 import { userService } from '../services/userService';
+import NikeHeader from './NikeHeader';
 
 interface ChallengeUI {
   id: number;
@@ -317,12 +318,7 @@ function ChallengesView() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="font-grotesk font-bold text-2xl text-white">Thử thách</h1>
-          <p className="text-neutral-400 text-sm mt-1">Thi đua & nhận phần thưởng</p>
-        </div>
-      </div>
+      <NikeHeader eyebrow="Đấu trường" title="Thử thách" subtitle="Thi đua & nhận phần thưởng" />
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
