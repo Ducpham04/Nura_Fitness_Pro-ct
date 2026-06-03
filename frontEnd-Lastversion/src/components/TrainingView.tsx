@@ -23,6 +23,8 @@ import {
   RefreshCw,
   Search,
   X as XIcon,
+  Scale,
+  Moon,
 } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { trainingService, type DailyTrainingLog, type PersonalizedWorkoutExercise, type AlternativeExercise } from '../services/trainingService';
@@ -135,21 +137,29 @@ const translateMuscle = (muscle: string): string => {
   return map[muscle.toLowerCase()] || muscle;
 };
 
-/** Dịch movement pattern sang tiếng Việt với icon */
-const translateMovement = (pattern?: string): { label: string; icon: string; desc: string } => {
-  const map: Record<string, { label: string; icon: string; desc: string }> = {
-    'PUSH':  { label: 'Đẩy',        icon: '🔵', desc: 'Vận động đẩy — kích hoạt ngực, vai, tay sau' },
-    'PULL':  { label: 'Kéo',        icon: '🟣', desc: 'Vận động kéo — kích hoạt lưng, tay trước' },
-    'SQUAT': { label: 'Ngồi xổm',   icon: '🟡', desc: 'Vận động squat — kích hoạt đùi, mông' },
-    'HINGE': { label: 'Gập hông',   icon: '🟠', desc: 'Vận động gập hông — kích hoạt mông, đùi sau' },
-    'LUNGE': { label: 'Bước chân',  icon: '🟢', desc: 'Vận động đơn chân — cân bằng & sức mạnh' },
-    'CORE':  { label: 'Cơ lõi',     icon: '⚪', desc: 'Tăng cường ổn định cột sống và cơ bụng' },
-    'CARDIO':{ label: 'Tim mạch',   icon: '❤️', desc: 'Tăng nhịp tim, đốt calo, sức bền' },
-    'MOBILITY':{ label: 'Linh hoạt', icon: '💙', desc: 'Cải thiện tầm vận động khớp và dẻo dai' },
-    'LOWER_ACCESSORY': { label: 'Hỗ trợ chi dưới', icon: '🦵', desc: 'Tăng cường cơ vùng chân' },
+/** Dịch movement pattern sang tiếng Việt */
+const translateMovement = (pattern?: string): { label: string; desc: string } => {
+  const map: Record<string, { label: string; desc: string }> = {
+    'PUSH':  { label: 'Đẩy',        desc: 'Vận động đẩy — kích hoạt ngực, vai, tay sau' },
+    'PULL':  { label: 'Kéo',        desc: 'Vận động kéo — kích hoạt lưng, tay trước' },
+    'SQUAT': { label: 'Ngồi xổm',   desc: 'Vận động squat — kích hoạt đùi, mông' },
+    'HINGE': { label: 'Gập hông',   desc: 'Vận động gập hông — kích hoạt mông, đùi sau' },
+    'LUNGE': { label: 'Bước chân',  desc: 'Vận động đơn chân — cân bằng & sức mạnh' },
+    'CORE':  { label: 'Cơ lõi',     desc: 'Tăng cường ổn định cột sống và cơ bụng' },
+    'CARDIO':{ label: 'Tim mạch',   desc: 'Tăng nhịp tim, đốt calo, sức bền' },
+    'MOBILITY':{ label: 'Linh hoạt', desc: 'Cải thiện tầm vận động khớp và dẻo dai' },
+    'LOWER_ACCESSORY': { label: 'Hỗ trợ chi dưới', desc: 'Tăng cường cơ vùng chân' },
   };
   const key = (pattern || '').toUpperCase();
-  return map[key] || { label: formatEnumLabel(pattern), icon: '⚡', desc: '' };
+  return map[key] || { label: formatEnumLabel(pattern), desc: '' };
+};
+
+/** Tên plan hiển thị thân thiện — ẩn tên kỹ thuật/khóa định danh "... - User {id}". */
+const displayPlanName = (name?: string): string => {
+  if (!name) return 'Kế hoạch tập cá nhân hóa';
+  if (/neural protocol/i.test(name)) return 'Kế hoạch tập cá nhân hóa';
+  const cleaned = name.replace(/\s*[-–]\s*User\s*\d+\s*$/i, '').trim();
+  return cleaned || 'Kế hoạch tập cá nhân hóa';
 };
 
 /** Parse notes thô từ backend → { phase, benefit, tempo } */
@@ -529,7 +539,7 @@ function TrainingView() {
     try {
       const res = await trainingService.swapExercise(panelExercise.id, alt.id);
       if (res?.success !== false) {
-        toast.success(`Đã đổi sang "${i18n.language === 'vi' && alt.nameVi ? alt.nameVi : alt.name}" ✓`);
+        toast.success(`Đã đổi sang "${i18n.language === 'vi' && alt.nameVi ? alt.nameVi : alt.name}"`);
         setShowSwap(false);
         // Reload lịch tập để cập nhật UI
         setLoading(true);
@@ -813,11 +823,11 @@ function TrainingView() {
             <div className="flex-1 min-w-0">
               <h2 className="font-grotesk font-bold text-white text-xl leading-tight">{exerciseName}</h2>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-lime/15 text-lime border border-lime/25 font-semibold">
-                  💪 {translateMuscle(activeExercise.muscle || '')}
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-lime/15 text-lime border border-lime/25 font-semibold inline-flex items-center gap-1">
+                  <Dumbbell className="w-3 h-3" /> {translateMuscle(activeExercise.muscle || '')}
                 </span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] text-neutral-400 border border-white/[0.08]">
-                  {movement.icon} {movement.label}
+                  {movement.label}
                 </span>
                 {activeExercise.difficulty && (
                   <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${difficultyTone(activeExercise.difficulty)}`}>
@@ -1034,14 +1044,16 @@ function TrainingView() {
           {/* ALL SETS DONE — summary */}
           {allSetsDone && (
             <div className="rounded-2xl border border-lime/30 bg-lime/[0.06] p-5 text-center">
-              <div className="text-4xl mb-2">🎯</div>
+              <div className="w-12 h-12 rounded-full bg-lime/15 flex items-center justify-center mx-auto mb-2">
+                <Check className="w-6 h-6 text-lime" />
+              </div>
               <p className="text-lime font-grotesk font-bold text-lg">Hoàn thành!</p>
               <p className="text-neutral-400 text-sm mt-1">
                 {targetSets} set · {sessionData.reps} rep · {formatTime(sessionTime)}
               </p>
               <div className="flex justify-center gap-4 mt-3 text-xs text-neutral-500">
-                <span>🔥 {activeExercise.estimatedCalories || 0} kcal</span>
-                {activeExercise.muscle && <span>💪 {translateMuscle(activeExercise.muscle)}</span>}
+                <span className="inline-flex items-center gap-1"><Flame className="w-3 h-3" /> {activeExercise.estimatedCalories || 0} kcal</span>
+                {activeExercise.muscle && <span className="inline-flex items-center gap-1"><Dumbbell className="w-3 h-3" /> {translateMuscle(activeExercise.muscle)}</span>}
               </div>
             </div>
           )}
@@ -1054,8 +1066,8 @@ function TrainingView() {
               </p>
               <p className="text-neutral-500 text-xs leading-relaxed">{parsed.benefit}</p>
               {parsed.tempo && parsed.tempo !== 'N/A' && (
-                <p className="text-neutral-600 text-xs mt-1.5">
-                  ⏱ Nhịp độ: <span className="text-neutral-400 font-mono">{parsed.tempo}</span> (xuống – dừng – lên)
+                <p className="text-neutral-600 text-xs mt-1.5 flex items-center gap-1.5">
+                  <Timer className="w-3 h-3" /> Nhịp độ: <span className="text-neutral-400 font-mono">{parsed.tempo}</span> (xuống – dừng – lên)
                 </p>
               )}
             </div>
@@ -1065,16 +1077,16 @@ function TrainingView() {
           {activeExercise.equipment && (
             <div className="flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-2.5 text-sm">
               <span className="text-neutral-500 text-xs">Dụng cụ</span>
-              <span className="text-white text-xs font-medium">
+              <span className="text-white text-xs font-medium inline-flex items-center gap-1.5">
                 {activeExercise.equipment.toUpperCase() === 'BODYWEIGHT'
-                  ? '🤸 Tự trọng'
-                  : `🏋️ ${formatEnumLabel(activeExercise.equipment)}`}
+                  ? <><Activity className="w-3.5 h-3.5" /> Tự trọng</>
+                  : <><Dumbbell className="w-3.5 h-3.5" /> {formatEnumLabel(activeExercise.equipment)}</>}
               </span>
             </div>
           )}
           {activeExercise.recommendedWeight && (
             <div className="flex items-center justify-between rounded-xl border border-cyan-500/20 bg-cyan-500/[0.04] px-4 py-2.5">
-              <span className="text-neutral-500 text-xs">⚖️ Tạ gợi ý</span>
+              <span className="text-neutral-500 text-xs inline-flex items-center gap-1.5"><Scale className="w-3.5 h-3.5" /> Tạ gợi ý</span>
               <span className="text-cyan-400 text-xs font-semibold">{activeExercise.recommendedWeight}</span>
             </div>
           )}
@@ -1354,7 +1366,7 @@ function TrainingView() {
             {activePlan?.name && (
               <>
                 <span className="hidden sm:block text-neutral-600">·</span>
-                <span className="text-neutral-500 truncate max-w-[200px]">{activePlan.name}</span>
+                <span className="text-neutral-500 truncate max-w-[200px]">{displayPlanName(activePlan.name)}</span>
               </>
             )}
           </div>
@@ -1383,12 +1395,12 @@ function TrainingView() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-neutral-400 text-xs truncate">
-                {activePlan.name} · Tuần {activePlan.weekNumber || currentWeekNum}/{activePlan.totalWeeks || totalWeeksCount}
+                {displayPlanName(activePlan.name)} · Tuần {activePlan.weekNumber || currentWeekNum}/{activePlan.totalWeeks || totalWeeksCount}
               </span>
               <span className="text-white text-xs font-semibold shrink-0 ml-3">
                 {progressPercent}%
                 {completedCount === scheduleExercises.length && scheduleExercises.length > 0 && (
-                  <span className="ml-2 text-lime">✓</span>
+                  <Check className="w-3 h-3 text-lime inline ml-1.5" />
                 )}
               </span>
             </div>
@@ -1500,10 +1512,10 @@ function TrainingView() {
                       )}
 
                       {/* Status: rest / done / progress */}
-                      <div className={`text-[9px] mt-1 leading-none font-semibold ${
+                      <div className={`text-[9px] mt-1 leading-none font-semibold flex items-center justify-center ${
                         allDone ? 'text-lime' : isActive ? 'text-lime/60' : isRest ? 'text-neutral-700' : 'text-neutral-600'
                       }`}>
-                        {isRest ? '🌙' : allDone ? '✓' : `${dayDone}/${dayExercises.length}`}
+                        {isRest ? <Moon className="w-2.5 h-2.5" /> : allDone ? <Check className="w-2.5 h-2.5" /> : `${dayDone}/${dayExercises.length}`}
                       </div>
                     </button>
                   );
@@ -1598,8 +1610,8 @@ function TrainingView() {
                           {/* Muscle group badge + secondary muscles + exercise type */}
                           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                             {ex.muscle && (
-                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-lime/10 text-lime/80 border border-lime/20">
-                                💪 {ex.muscle}
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-lime/10 text-lime/80 border border-lime/20 inline-flex items-center gap-1">
+                                <Dumbbell className="w-2.5 h-2.5" /> {ex.muscle}
                               </span>
                             )}
                             {ex.secondaryMuscles?.slice(0, 2).map(m => (
@@ -1614,13 +1626,13 @@ function TrainingView() {
                           <div className="flex items-center gap-2.5 mt-1.5 text-xs text-neutral-500 flex-wrap">
                             <span>{ex.sets}</span>
                             <span>·</span>
-                            <span>Rest {formatDuration(ex.restTime)}</span>
+                            <span>Nghỉ {formatDuration(ex.restTime)}</span>
                             <span>·</span>
                             <span>{ex.estimatedCalories || 0} kcal</span>
                             {ex.recommendedWeight && (
                               <>
                                 <span>·</span>
-                                <span className="text-cyan-400 font-medium">🏋️ {ex.recommendedWeight}</span>
+                                <span className="text-cyan-400 font-medium inline-flex items-center gap-1"><Dumbbell className="w-2.5 h-2.5" /> {ex.recommendedWeight}</span>
                               </>
                             )}
                           </div>
@@ -1686,10 +1698,10 @@ function TrainingView() {
                       <h3 className="font-grotesk font-bold text-white text-lg leading-snug">{ex.name}</h3>
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-lime/20 text-lime border border-lime/30">
-                          💪 {translateMuscle(ex.muscle || '')}
+                          <Dumbbell className="w-2.5 h-2.5" /> {translateMuscle(ex.muscle || '')}
                         </span>
                         <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/[0.08] text-neutral-300 border border-white/10">
-                          {movement.icon} {movement.label}
+                          {movement.label}
                         </span>
                       </div>
                     </div>
@@ -1756,14 +1768,14 @@ function TrainingView() {
                           <span className="text-neutral-500 flex items-center gap-1.5">
                             <Dumbbell className="w-3 h-3" /> Dụng cụ
                           </span>
-                          <span className="text-white font-medium">
-                            {ex.equipment.toUpperCase() === 'BODYWEIGHT' ? '🤸 Tự trọng (không cần dụng cụ)' : `🏋️ ${formatEnumLabel(ex.equipment)}`}
+                          <span className="text-white font-medium inline-flex items-center gap-1.5">
+                            {ex.equipment.toUpperCase() === 'BODYWEIGHT' ? <><Activity className="w-3 h-3" /> Tự trọng (không cần dụng cụ)</> : <><Dumbbell className="w-3 h-3" /> {formatEnumLabel(ex.equipment)}</>}
                           </span>
                         </div>
                       )}
                       {ex.recommendedWeight && (
                         <div className="flex items-center justify-between text-xs py-1 border-b border-white/[0.04]">
-                          <span className="text-neutral-500">⚖️ Tạ gợi ý</span>
+                          <span className="text-neutral-500 inline-flex items-center gap-1.5"><Scale className="w-3 h-3" /> Tạ gợi ý</span>
                           <span className="text-cyan-400 font-semibold">{ex.recommendedWeight}</span>
                         </div>
                       )}
@@ -1777,7 +1789,7 @@ function TrainingView() {
                       )}
                       {parsed.phase && (
                         <div className="flex items-center justify-between text-xs py-1">
-                          <span className="text-neutral-500">📍 Giai đoạn tập</span>
+                          <span className="text-neutral-500 inline-flex items-center gap-1.5"><Target className="w-3 h-3" /> Giai đoạn tập</span>
                           <span className="text-neutral-300">{PHASE_VI[parsed.phase] || parsed.phase}</span>
                         </div>
                       )}
@@ -1823,7 +1835,7 @@ function TrainingView() {
                                         : 'border-white/[0.08] text-neutral-500 hover:text-white hover:border-white/20'
                                     }`}
                                   >
-                                    {m === '' ? '🎯 Cùng nhóm cơ' : translateMuscle(m)}
+                                    {m === '' ? <span className="inline-flex items-center gap-1"><Target className="w-2.5 h-2.5" /> Cùng nhóm cơ</span> : translateMuscle(m)}
                                   </button>
                                 ))}
                               </div>
@@ -1875,8 +1887,8 @@ function TrainingView() {
                                       {alt.imageUrl ? (
                                         <img src={alt.imageUrl} alt={altName} className="w-full h-full object-cover opacity-70" />
                                       ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-lg">
-                                          {alt.requiredEquipment === 'BODYWEIGHT' ? '🤸' : '🏋️'}
+                                        <div className="w-full h-full flex items-center justify-center text-neutral-500">
+                                          {alt.requiredEquipment === 'BODYWEIGHT' ? <Activity className="w-4 h-4" /> : <Dumbbell className="w-4 h-4" />}
                                         </div>
                                       )}
                                     </div>
@@ -1886,8 +1898,8 @@ function TrainingView() {
                                         {altName}
                                       </p>
                                       <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                                        <span className="text-[9px] text-neutral-500">
-                                          💪 {translateMuscle(alt.primaryMuscle || '')}
+                                        <span className="text-[9px] text-neutral-500 inline-flex items-center gap-1">
+                                          <Dumbbell className="w-2 h-2" /> {translateMuscle(alt.primaryMuscle || '')}
                                         </span>
                                         {alt.defaultSets && alt.defaultReps && (
                                           <span className="text-[9px] text-neutral-600">
