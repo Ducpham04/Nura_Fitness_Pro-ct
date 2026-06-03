@@ -29,34 +29,34 @@ interface FormData {
 
 
 const activityLevels = [
-  { id: 'sedentary', label: 'Sedentary', desc: 'Little or no exercise' },
-  { id: 'light', label: 'Lightly Active', desc: '1-3 days/week' },
-  { id: 'moderate', label: 'Moderately Active', desc: '3-5 days/week' },
-  { id: 'very', label: 'Very Active', desc: '6-7 days/week' },
+  { id: 'sedentary', label: 'Ít vận động', desc: 'Hầu như không tập' },
+  { id: 'light', label: 'Vận động nhẹ', desc: '1-3 ngày/tuần' },
+  { id: 'moderate', label: 'Vận động vừa', desc: '3-5 ngày/tuần' },
+  { id: 'very', label: 'Vận động nhiều', desc: '6-7 ngày/tuần' },
 ];
 
 const injuriesList = [
-  { id: 'none', label: 'No injuries' },
-  { id: 'back', label: 'Back pain' },
-  { id: 'knee', label: 'Knee issues' },
-  { id: 'shoulder', label: 'Shoulder pain' },
-  { id: 'ankle', label: 'Ankle/Foot' },
-  { id: 'wrist', label: 'Wrist/Hand' },
+  { id: 'none', label: 'Không chấn thương' },
+  { id: 'back', label: 'Đau lưng' },
+  { id: 'knee', label: 'Vấn đề đầu gối' },
+  { id: 'shoulder', label: 'Đau vai' },
+  { id: 'ankle', label: 'Cổ chân / Bàn chân' },
+  { id: 'wrist', label: 'Cổ tay / Bàn tay' },
 ];
 
 const equipmentList = [
-  { id: 'dumbbells', label: 'Dumbbells' },
-  { id: 'barbell', label: 'Barbell' },
-  { id: 'kettlebell', label: 'Kettlebell' },
-  { id: 'machine', label: 'Machine' },
-  { id: 'bodyweight', label: 'Bodyweight only' },
-  { id: 'bands', label: 'Resistance bands' },
+  { id: 'dumbbells', label: 'Tạ đơn' },
+  { id: 'barbell', label: 'Tạ đòn' },
+  { id: 'kettlebell', label: 'Tạ ấm' },
+  { id: 'machine', label: 'Máy tập' },
+  { id: 'bodyweight', label: 'Chỉ trọng lượng cơ thể' },
+  { id: 'bands', label: 'Dây kháng lực' },
 ];
 
 const dietTypes = [
-  { id: 'omnivore', label: 'Omnivore', icon: '🍖' },
-  { id: 'vegetarian', label: 'Vegetarian', icon: '🥗' },
-  { id: 'vegan', label: 'Vegan', icon: '🌱' },
+  { id: 'omnivore', label: 'Ăn tạp', icon: '🍖' },
+  { id: 'vegetarian', label: 'Ăn chay', icon: '🥗' },
+  { id: 'vegan', label: 'Thuần chay', icon: '🌱' },
   { id: 'keto', label: 'Keto', icon: '🥑' },
 ];
 
@@ -65,12 +65,12 @@ const steps: Array<{
   subtitle: string;
   icon: LucideIcon | string;
 }> = [
-  { title: 'Your body metrics', subtitle: 'We use this to calculate your daily needs.', icon: Activity },
-  { title: 'Your primary goal', subtitle: 'What are you training for?', icon: Target },
-  { title: 'Activity level', subtitle: 'How often do you currently exercise?', icon: Heart },
-  { title: 'Any injuries?', subtitle: 'Help us create safe workouts for you.', icon: '⚠️' },
-  { title: 'Available equipment', subtitle: 'What do you have access to?', icon: Dumbbell },
-  { title: 'Diet preference', subtitle: 'We\'ll tailor meal plans accordingly.', icon: UtensilsCrossed },
+  { title: 'Số đo cơ thể', subtitle: 'Dùng để tính nhu cầu năng lượng mỗi ngày của bạn.', icon: Activity },
+  { title: 'Mục tiêu chính', subtitle: 'Bạn đang tập luyện vì điều gì?', icon: Target },
+  { title: 'Mức độ vận động', subtitle: 'Hiện tại bạn tập luyện thường xuyên thế nào?', icon: Heart },
+  { title: 'Có chấn thương không?', subtitle: 'Giúp chúng tôi tạo bài tập an toàn cho bạn.', icon: '⚠️' },
+  { title: 'Thiết bị sẵn có', subtitle: 'Bạn có thể sử dụng những gì?', icon: Dumbbell },
+  { title: 'Chế độ ăn', subtitle: 'Chúng tôi sẽ điều chỉnh thực đơn phù hợp.', icon: UtensilsCrossed },
 ];
 
 function ParticleField() {
@@ -242,7 +242,7 @@ export default function Onboarding() {
         </div>
 
         <div className="text-center mb-6">
-          <div className="text-neutral-400 text-xs font-grotesk uppercase tracking-widest">Step {step + 1} of {steps.length}</div>
+          <div className="text-neutral-400 text-xs font-grotesk uppercase tracking-widest">Bước {step + 1} / {steps.length}</div>
         </div>
 
         <div className="glass rounded-3xl p-8 border border-white/5 mb-6">
@@ -261,9 +261,9 @@ export default function Onboarding() {
             <div className="space-y-4">
               {/* Numeric inputs */}
               {[
-                { field: 'age' as const, label: 'Age', unit: 'years' },
-                { field: 'weight' as const, label: 'Weight', unit: 'kg' },
-                { field: 'height' as const, label: 'Height', unit: 'cm' },
+                { field: 'age' as const, label: 'Tuổi', unit: 'tuổi' },
+                { field: 'weight' as const, label: 'Cân nặng', unit: 'kg' },
+                { field: 'height' as const, label: 'Chiều cao', unit: 'cm' },
               ].map(({ field, label, unit }) => (
                 <div key={field}>
                   <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{label}</label>
@@ -282,8 +282,8 @@ export default function Onboarding() {
               {/* Gender selector */}
               <div>
                 <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-3 block">
-                  Gender <span className="text-amber-400">*</span>
-                  <span className="normal-case ml-2 text-neutral-500 tracking-normal font-normal">— used for BMR &amp; calorie calculations</span>
+                  Giới tính <span className="text-amber-400">*</span>
+                  <span className="normal-case ml-2 text-neutral-500 tracking-normal font-normal">— dùng để tính BMR &amp; lượng calo</span>
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
@@ -296,7 +296,7 @@ export default function Onboarding() {
                     }`}
                   >
                     <span className="text-3xl select-none">👨</span>
-                    <span className="font-grotesk font-semibold text-sm">Male</span>
+                    <span className="font-grotesk font-semibold text-sm">Nam</span>
                     <span className={`text-xs font-mono ${form.gender === 'male' ? 'text-lime/70' : 'text-neutral-600'}`}>
                       BMR +5 kcal
                     </span>
@@ -312,7 +312,7 @@ export default function Onboarding() {
                     }`}
                   >
                     <span className="text-3xl select-none">👩</span>
-                    <span className="font-grotesk font-semibold text-sm">Female</span>
+                    <span className="font-grotesk font-semibold text-sm">Nữ</span>
                     <span className={`text-xs font-mono ${form.gender === 'female' ? 'text-pink-400/70' : 'text-neutral-600'}`}>
                       BMR −161 kcal
                     </span>
@@ -321,7 +321,7 @@ export default function Onboarding() {
 
                 {!form.gender && (
                   <p className="mt-2 text-xs text-center text-amber-500/70">
-                    ⚠️ Select gender to continue — this affects your personalized calorie plan
+                    ⚠️ Chọn giới tính để tiếp tục — ảnh hưởng đến kế hoạch calo cá nhân hóa của bạn
                   </p>
                 )}
               </div>
@@ -404,11 +404,11 @@ export default function Onboarding() {
         <div className="flex items-center justify-between">
           <button onClick={() => setStep(s => s - 1)} disabled={step === 0 || isSubmitting}
             className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-grotesk font-medium text-sm transition-all ${step === 0 ? 'opacity-30 cursor-not-allowed' : 'text-white hover:bg-white/[0.06]'}`}>
-            <ArrowLeft className="w-4 h-4" /> Back
+            <ArrowLeft className="w-4 h-4" /> Quay lại
           </button>
           <button onClick={handleNext} disabled={!canAdvance() || isSubmitting}
             className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-grotesk font-semibold text-sm transition-all ${canAdvance() && !isSubmitting ? 'bg-lime text-obsidian' : 'bg-white/[0.06] text-neutral-500'}`}>
-            {isSubmitting ? 'Processing...' : step === steps.length - 1 ? 'Launch My Plan' : 'Continue'}
+            {isSubmitting ? 'Đang xử lý...' : step === steps.length - 1 ? 'Tạo kế hoạch' : 'Tiếp tục'}
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
