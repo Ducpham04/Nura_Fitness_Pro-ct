@@ -1,7 +1,8 @@
 import { useState, memo, useEffect, useCallback } from 'react';
-import { Plus, Search, AlertTriangle, ShoppingCart, Loader2, Package } from 'lucide-react';
+import { Plus, Search, AlertTriangle, ShoppingCart, Loader2, Package, X, Check } from 'lucide-react';
 import { inventoryService, InventoryItem } from '../services/inventoryService';
 import { useAuthContext } from '../context/AuthContext';
+import FoodInventoryPicker, { SelectedFoodInventoryItem } from './FoodInventoryPicker';
 
 const statusConfig = {
   keep:     { label: 'Còn tốt',    color: 'text-lime',        bg: 'bg-lime/10 border-lime/20' },
@@ -24,6 +25,9 @@ function InventoryView() {
   const [filter, setFilter] = useState<'all' | InventoryItem['status']>('all');
   const [expiringSoon, setExpiringSoon] = useState<InventoryItem[]>([]);
   const [shoppingAdvice, setShoppingAdvice] = useState<string>('');
+  const [showAdd, setShowAdd] = useState(false);
+  const [addItems, setAddItems] = useState<SelectedFoodInventoryItem[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const fetchInventory = useCallback(async () => {
     if (!user?.id) return;
@@ -57,6 +61,32 @@ function InventoryView() {
 
   useEffect(() => { fetchInventory(); }, [fetchInventory]);
 
+  const openAdd = () => { setAddItems([]); setShowAdd(true); };
+
+  const handleSaveAdd = async () => {
+    if (!user?.id || addItems.length === 0) return;
+    setSaving(true);
+    try {
+      const expiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      // Thêm tuần tự từng nguyên liệu vào kho
+      for (const it of addItems) {
+        await inventoryService.addItem(user.id, {
+          name: it.name,
+          quantity: it.quantity,
+          unit: it.unit || 'g',
+          expiryDate: expiry,
+        });
+      }
+      setShowAdd(false);
+      setAddItems([]);
+      await fetchInventory();
+    } catch (e) {
+      console.error('Add inventory failed:', e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const filtered = (Array.isArray(items) ? items : []).filter(i =>
     (filter === 'all' || i.status === filter) &&
     (i.name || '').toLowerCase().includes(search.toLowerCase())
@@ -84,7 +114,7 @@ function InventoryView() {
             {expiringSoon.length > 0 && ` · ${expiringSoon.length} sắp hết hạn`}
           </p>
         </div>
-        <button className="flex items-center gap-1.5 rounded-xl border border-lime/20 bg-lime/[0.06] px-4 py-2.5 text-lime text-sm font-semibold hover:bg-lime/10 transition-colors">
+        <button onClick={openAdd} className="flex items-center gap-1.5 rounded-xl border border-lime/20 bg-lime/[0.06] px-4 py-2.5 text-lime text-sm font-semibold hover:bg-lime/10 transition-colors">
           <Plus className="w-4 h-4" />
           Thêm món
         </button>
@@ -186,6 +216,33 @@ function InventoryView() {
           <div>
             <p className="font-semibold text-white text-sm mb-1">Gợi ý mua sắm từ AI</p>
             <p className="text-neutral-400 text-sm leading-relaxed">{shoppingAdvice}</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal thêm món vào tủ lạnh ── */}
+      {showAdd && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#0f1116] p-6 animate-fade-in max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <div>
+                <h3 className="font-grotesk font-bold text-white text-lg">Thêm vào tủ lạnh</h3>
+                <p className="text-neutral-500 text-xs mt-0.5">Chọn nguyên liệu & nhập số gram đang có</p>
+              </div>
+              <button onClick={() => setShowAdd(false)} className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-neutral-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 min-h-0">
+              <FoodInventoryPicker items={addItems} onChange={setAddItems} />
+            </div>
+
+            <button onClick={handleSaveAdd} disabled={addItems.length === 0 || saving}
+              className="w-full btn-lime py-3.5 mt-4 rounded-2xl text-sm font-grotesk font-bold flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shrink-0">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              {saving ? 'Đang lưu...' : `Thêm ${addItems.length} món vào tủ lạnh`}
+            </button>
           </div>
         </div>
       )}
