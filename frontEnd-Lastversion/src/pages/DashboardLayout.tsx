@@ -20,15 +20,18 @@ export default function DashboardLayout() {
       }
       try {
         const profile = await userService.getBodyProfile();
-        if (!profile) {
-          console.error('No user profile found or network error, redirecting to onboarding');
-          navigate('/onboarding');
+        // Onboarding coi như HOÀN TẤT khi có đủ số đo cơ bản (cao/nặng/tuổi).
+        // User mới có thể có bản ghi profile rỗng → vẫn phải vào onboarding.
+        const p = profile as any;
+        const onboardingDone = !!(p && p.height && p.weight && p.age);
+        if (!onboardingDone) {
+          navigate('/onboarding', { replace: true });
           return;
         }
         setChecking(false);
       } catch (e) {
         console.error('Error checking profile, redirecting to onboarding:', e);
-        navigate('/onboarding');
+        navigate('/onboarding', { replace: true });
       }
     }
     checkUserSetup();
