@@ -66,6 +66,13 @@ export default function HomePage() {
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [hasActiveMealPlan, setHasActiveMealPlan] = useState(false);
   const { user } = useAuthContext();
+  const [guideDismissed, setGuideDismissed] = useState(() => {
+    try { return localStorage.getItem('home_guide_dismissed') === '1'; } catch { return false; }
+  });
+  const dismissGuide = () => {
+    setGuideDismissed(true);
+    try { localStorage.setItem('home_guide_dismissed', '1'); } catch { /* ignore */ }
+  };
   const { data, isLoading, error, refresh, updateStats } = useDashboard();
   const navigate = useNavigate();
 
@@ -223,6 +230,39 @@ export default function HomePage() {
           </Link>
         </div>
       </div>
+
+      {/* ── Hướng dẫn bắt đầu cho user mới ── */}
+      {!guideDismissed && userSummary.streakDays === 0 && stats.caloriesBurned === 0 && (
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div>
+              <h3 className="font-grotesk font-bold text-white text-base flex items-center gap-2">
+                👋 Bắt đầu từ đây
+              </h3>
+              <p className="text-neutral-500 text-xs mt-0.5">3 bước đầu tiên để làm quen với Fitnit</p>
+            </div>
+            <button onClick={dismissGuide} className="text-neutral-600 hover:text-white transition-colors text-xs shrink-0">
+              Đã hiểu ✕
+            </button>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-3">
+            {[
+              { n: '1', icon: Dumbbell, title: 'Xem buổi tập', desc: 'AI đã tạo lịch tập theo mục tiêu của bạn', to: '/dashboard/workout', color: 'text-lime' },
+              { n: '2', icon: Apple, title: 'Khám phá thực đơn', desc: 'Thực đơn gợi ý theo ngân sách bạn đặt', to: '/dashboard/diet', color: 'text-orange-400' },
+              { n: '3', icon: TrendingUp, title: 'Ghi lại tiến độ', desc: 'Hoàn thành buổi tập & ghi bữa ăn để theo dõi', to: '/dashboard/workout', color: 'text-blue-400' },
+            ].map(({ n, icon: Icon, title, desc, to, color }) => (
+              <Link key={n} to={to} className="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 hover:border-white/15 hover:bg-white/[0.04] transition-all">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-5 h-5 rounded-full bg-white/[0.08] flex items-center justify-center text-[10px] font-bold text-neutral-400">{n}</span>
+                  <Icon className={`w-4 h-4 ${color}`} />
+                </div>
+                <p className="text-white text-sm font-semibold group-hover:text-lime transition-colors">{title}</p>
+                <p className="text-neutral-500 text-xs mt-1 leading-relaxed">{desc}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Setup notification ── */}
       {isSetupIncomplete && (
