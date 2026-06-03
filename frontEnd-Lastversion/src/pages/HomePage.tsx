@@ -13,6 +13,7 @@ import { useAuthContext } from '../context/AuthContext';
 import SetupWizard from '../components/SetupWizard';
 import { nutritionService } from '../services/nutritionService';
 import { CountUp, containerStagger, fadeUp, fadeScale, premiumEase } from '../lib/motion';
+import MacroRadial from '../components/MacroRadial';
 
 function pct(v: number, goal: number) { return goal ? Math.min(100, Math.round((v / goal) * 100)) : 0; }
 
@@ -570,14 +571,16 @@ export default function HomePage() {
         </div>
       </motion.div>
 
-      {/* ── Macros ── */}
+      {/* ── Macros (biểu đồ vòng) ── */}
       <motion.div variants={fadeUp} className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.045] to-white/[0.015] p-5 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.5)]">
-        <h3 className="text-sm font-semibold text-white mb-4">Dinh dưỡng hôm nay</h3>
-        <div className="grid sm:grid-cols-3 gap-5">
-          <MacroBar label="Protein" consumed={stats.proteinConsumed} goal={stats.proteinGoal} unit="g" color="#FF3B30" icon={Beef} />
-          <MacroBar label="Carbs" consumed={stats.carbsConsumed} goal={stats.carbsGoal} unit="g" color="#CCFF00" icon={Wheat} />
-          <MacroBar label="Fat" consumed={stats.fatConsumed} goal={stats.fatGoal} unit="g" color="#007AFF" icon={Apple} />
-        </div>
+        <h3 className="font-grotesk font-bold italic uppercase text-white text-sm tracking-tight mb-4">Dinh dưỡng hôm nay</h3>
+        <MacroRadial
+          protein={{ label: 'Protein', consumed: stats.proteinConsumed, goal: stats.proteinGoal, color: '#FF3B30' }}
+          carbs={{ label: 'Carbs', consumed: stats.carbsConsumed, goal: stats.carbsGoal, color: '#CCFF00' }}
+          fat={{ label: 'Fat', consumed: stats.fatConsumed, goal: stats.fatGoal, color: '#007AFF' }}
+          caloriesConsumed={stats.caloriesConsumed}
+          caloriesGoal={stats.caloriesGoal}
+        />
       </motion.div>
 
       {/* ── Today's training ── */}
