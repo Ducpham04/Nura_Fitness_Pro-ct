@@ -14,5 +14,6 @@ public interface AIGatewayService {
     NotificationResponse scanInventoryImage(MultipartFile image, Long userId);
     NotificationResponse logFoodNatural(Map<String, Object> body, Long userId);
     NotificationResponse suggestDishesFromIngredients(Map<String, Object> body, Long userId);
+    NotificationResponse suggestShoppingList(Map<String, Object> body, Long userId);
     NotificationResponse autoRegulate(Map<String, Object> body, Long userId);
 }

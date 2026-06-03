@@ -1266,6 +1266,22 @@ public class AIGatewayServiceImpl implements AIGatewayService {
         }
     }
 
+    @Override
+    public NotificationResponse suggestShoppingList(Map<String, Object> body, Long userId) {
+        log.info("Suggest shopping for user: {}", userId);
+        try {
+            ResponseEntity<Map> resp = restTemplate.postForEntity(aiServiceUrl + "/suggest-shopping", body, Map.class);
+            Map<String, Object> result = resp.getBody();
+            if (result == null || !Boolean.TRUE.equals(result.get("success"))) {
+                return new NotificationResponse(false, "AI chưa gợi ý được, thử lại nhé");
+            }
+            return new NotificationResponse(true, "Gợi ý mua sắm thành công", result);
+        } catch (Exception e) {
+            log.error("suggestShopping error", e);
+            return new NotificationResponse(false, "Gợi ý mua sắm thất bại: " + e.getMessage());
+        }
+    }
+
     // ── v2.2: Auto-Regulation ────────────────────────────────────────────────
     @Override
     @Transactional

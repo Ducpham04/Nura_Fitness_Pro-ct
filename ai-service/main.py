@@ -918,6 +918,22 @@ async def suggest_dishes(request: dict):
         raise HTTPException(status_code=500, detail=f"Suggest dishes failed: {str(e)}")
 
 
+@app.post("/suggest-shopping")
+async def suggest_shopping(request: dict):
+    """
+    Gợi ý nên mua thêm gì dựa trên tủ lạnh hiện có + ngân sách.
+    Body: { "inventory": "trứng, gạo", "budget": 80000, "count": 6 }
+    """
+    try:
+        inventory = (request.get("inventory") or "").strip()
+        budget = int(request.get("budget", 0) or 0)
+        count = int(request.get("count", 6) or 6)
+        items = planner.suggest_shopping_list(inventory, budget, count)
+        return {"success": True, "items": items, "timestamp": datetime.now().isoformat()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Suggest shopping failed: {str(e)}")
+
+
 if __name__ == "__main__":
     print("🚀 Starting Fitness AI Service")
     print("🤖 AI Provider: Groq (Llama 3.3 & 3.2 Vision)")

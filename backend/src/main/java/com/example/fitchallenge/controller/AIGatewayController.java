@@ -243,6 +243,21 @@ public class AIGatewayController {
         }
     }
 
+    @PostMapping("/ai-plans/suggest-shopping")
+    @Operation(summary = "Suggest shopping list from inventory",
+               description = "Dựa trên tủ lạnh hiện có + ngân sách → AI gợi ý nên mua thêm gì")
+    public ResponseEntity<NotificationResponse> suggestShopping(
+            @RequestBody Map<String, Object> body,
+            @RequestHeader("userId") Long userId) {
+        try {
+            return ResponseEntity.ok(aiGatewayService.suggestShoppingList(body, userId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                new NotificationResponse(false, "Gợi ý mua sắm thất bại: " + e.getMessage())
+            );
+        }
+    }
+
     // ── v2.2: Auto-Regulation ────────────────────────────────────────────────
     @PostMapping("/ai-plans/auto-regulate")
     @Operation(summary = "Auto-regulate next week's plan",

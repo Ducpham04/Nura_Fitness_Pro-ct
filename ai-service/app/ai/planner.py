@@ -895,3 +895,42 @@ IMPORTANT:
         except Exception as e:
             print(f"[suggest_dishes error] {e}")
             return []
+
+    def suggest_shopping_list(self, inventory: str, budget: int = 0, count: int = 6) -> list:
+        """
+        Gợi ý nên MUA THÊM gì dựa trên nguyên liệu đang có + ngân sách.
+        Trả về list[dict]: {name, reason}.
+        """
+        system_prompt = (
+            "Bạn là trợ lý dinh dưỡng người Việt. Dựa trên nguyên liệu người dùng ĐANG CÓ "
+            "và ngân sách, gợi ý những thứ NÊN MUA THÊM để bữa ăn đa dạng, đủ đạm-rau-tinh bột. "
+            "Ưu tiên thực phẩm phổ biến, hợp túi tiền. Đừng gợi ý thứ họ đã có. "
+            "CHỈ trả về JSON array hợp lệ, không thêm chữ nào ngoài JSON. "
+            "Mỗi phần tử: {\"name\": tên thực phẩm, \"reason\": lý do ngắn nên mua}."
+        )
+        budget_txt = f"Ngân sách khoảng {budget:,}đ/ngày. " if budget else ""
+        user_prompt = f"Đang có: {inventory or 'chưa có gì'}. {budget_txt}Gợi ý {count} thứ nên mua thêm."
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.6,
+                max_tokens=700,
+            )
+            raw = response.choices[0].message.content.strip()
+            if "```" in raw and raw.count("```") >= 2:
+                raw = raw.split("```")[1].replace("json", "", 1).strip()
+            start, end = raw.find("["), raw.rfind("]")
+            if start != -1 and end != -1:
+                raw = raw[start:end + 1]
+            items = json.loads(raw)
+            out = []
+            for it in items[:count]:
+                out.append({"name": str(it.get("name", "")).strip(), "reason": str(it.get("reason", "")).strip()})
+            return [i for i in out if i["name"]]
+        except Exception as e:
+            print(f"[suggest_shopping error] {e}")
+            return []

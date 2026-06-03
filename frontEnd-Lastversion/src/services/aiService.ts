@@ -61,6 +61,15 @@ class AIService {
     );
   }
 
+  /** Gợi ý nên mua thêm gì dựa trên tủ lạnh + ngân sách. */
+  async suggestShopping(userId: number, inventory: string, budget = 0): Promise<ApiResponse<any>> {
+    return await apiClient.post<any>(
+      '/ai-plans/suggest-shopping',
+      { inventory, budget, count: 6 },
+      { headers: { 'userId': userId.toString() } }
+    );
+  }
+
   async autoRegulateWorkout(userId: number, utId: number): Promise<ApiResponse<any>> {
     return await apiClient.post<any>(
       '/ai-plans/auto-regulate',

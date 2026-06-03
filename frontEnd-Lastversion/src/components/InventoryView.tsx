@@ -28,7 +28,7 @@ function InventoryView() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | InventoryItem['status']>('all');
   const [expiringSoon, setExpiringSoon] = useState<InventoryItem[]>([]);
-  const [shoppingAdvice, setShoppingAdvice] = useState<string>('');
+  const [shoppingItems, setShoppingItems] = useState<{ name: string; reason: string }[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [addItems, setAddItems] = useState<SelectedFoodInventoryItem[]>([]);
   const [saving, setSaving] = useState(false);
@@ -37,29 +37,28 @@ function InventoryView() {
   const [suggesting, setSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<DishSuggestion[]>([]);
   const [loggingDish, setLoggingDish] = useState<string | null>(null);
+  const [portions, setPortions] = useState<Record<number, number>>({});
 
   const fetchInventory = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     try {
       const response = await inventoryService.getInventory(user.id);
-      if (response.success && response.data) {
-        setItems(Array.isArray(response.data) ? response.data : []);
-      }
+      const invItems = (response.success && Array.isArray(response.data)) ? response.data : [];
+      setItems(invItems);
 
       const expiring = await inventoryService.getExpiringSoon(user.id, 3);
       if (expiring.success && expiring.data) {
         setExpiringSoon(Array.isArray(expiring.data) ? expiring.data : []);
       }
 
-      const shopping = await inventoryService.generateShoppingList(user.id, 7);
-      if (shopping.success && shopping.data) {
-        const adviceData = shopping.data.data || shopping.data;
-        if (Array.isArray(adviceData)) {
-          setShoppingAdvice(adviceData.map((i: any) => i.name).join(', '));
-        } else if (adviceData.summary) {
-          setShoppingAdvice(adviceData.summary);
-        }
+      // Gợi ý mua sắm THẬT từ AI (dựa trên tủ lạnh hiện có)
+      const invNames = invItems.map((i: any) => i.name).join(', ');
+      const shopping = await aiService.suggestShopping(user.id, invNames, 0);
+      const sData = (shopping.data as any)?.data || shopping.data;
+      const sItems = sData?.items;
+      if (shopping.success && Array.isArray(sItems)) {
+        setShoppingItems(sItems);
       }
     } catch (error) {
       console.error('Failed to fetch inventory:', error);
@@ -119,13 +118,16 @@ function InventoryView() {
     }
   };
 
-  const logDish = async (dish: DishSuggestion) => {
+  const logDish = async (dish: DishSuggestion, idx: number) => {
     if (!user?.id) return;
+    const portion = portions[idx] ?? 1;
     setLoggingDish(dish.name);
     try {
-      const res = await aiService.logFoodNatural(user.id, dish.name, 'OTHER');
+      // Gửi kèm khẩu phần để AI tính đúng lượng calo thực ăn vào
+      const text = portion === 1 ? dish.name : `${dish.name} (${portion} khẩu phần)`;
+      const res = await aiService.logFoodNatural(user.id, text, 'OTHER');
       if (res.success) {
-        toast.success(`Đã ghi "${dish.name}" vào nhật ký ăn uống`);
+        toast.success(`Đã ghi "${dish.name}" (${portion} phần) vào nhật ký`);
         window.dispatchEvent(new CustomEvent('meal-logged'));
       } else {
         toast.error('Ghi nhật ký thất bại, thử lại nhé');
@@ -214,13 +216,16 @@ function InventoryView() {
 
         {suggestions.length > 0 && (
           <div className="grid sm:grid-cols-2 gap-2.5 mt-3">
-            {suggestions.map((d, i) => (
+            {suggestions.map((d, i) => {
+              const portion = portions[i] ?? 1;
+              const scaledCal = Math.round(d.est_calories * portion);
+              return (
               <div key={i} className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-white font-semibold text-sm">{d.name}</p>
                   {d.est_calories > 0 && (
                     <span className="text-orange-400 text-[11px] font-bold inline-flex items-center gap-0.5 shrink-0">
-                      <Flame className="w-3 h-3" /> {d.est_calories}
+                      <Flame className="w-3 h-3" /> {scaledCal}
                     </span>
                   )}
                 </div>
@@ -228,13 +233,26 @@ function InventoryView() {
                 {d.ingredients?.length > 0 && (
                   <p className="text-neutral-600 text-[11px] mt-1.5">Nguyên liệu: {d.ingredients.join(', ')}</p>
                 )}
-                <button onClick={() => logDish(d)} disabled={loggingDish === d.name}
+                {/* Khẩu phần — bạn ăn bao nhiêu */}
+                <div className="flex items-center gap-1.5 mt-2.5">
+                  <span className="text-neutral-500 text-[11px]">Khẩu phần:</span>
+                  {[0.5, 1, 1.5, 2].map(p => (
+                    <button key={p} onClick={() => setPortions(prev => ({ ...prev, [i]: p }))}
+                      className={`px-2 py-0.5 rounded-md text-[11px] font-bold border transition-colors ${
+                        portion === p ? 'bg-lime/15 border-lime/40 text-lime' : 'bg-white/[0.04] border-white/10 text-neutral-400 hover:text-white'
+                      }`}>
+                      {p === 0.5 ? '½' : p === 1.5 ? '1½' : p}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => logDish(d, i)} disabled={loggingDish === d.name}
                   className="w-full mt-2.5 rounded-lg border border-lime/25 bg-lime/[0.06] py-1.5 text-lime text-xs font-bold hover:bg-lime/12 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
                   {loggingDish === d.name ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                  Đã ăn món này
+                  Đã ăn {portion !== 1 ? `${portion === 0.5 ? '½' : portion === 1.5 ? '1½' : portion} phần` : 'món này'}
                 </button>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -314,14 +332,24 @@ function InventoryView() {
       </div>
 
       {/* AI shopping suggestion */}
-      {shoppingAdvice && (
-        <div className="rounded-2xl border border-blue-400/20 bg-blue-400/[0.05] p-4 flex gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-400/10 border border-blue-400/20 flex items-center justify-center shrink-0">
-            <ShoppingCart className="w-4 h-4 text-blue-400" />
+      {shoppingItems.length > 0 && (
+        <div className="rounded-2xl border border-blue-400/20 bg-blue-400/[0.05] p-4">
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-400/10 border border-blue-400/20 flex items-center justify-center shrink-0">
+              <ShoppingCart className="w-4 h-4 text-blue-400" />
+            </div>
+            <div>
+              <p className="font-semibold text-white text-sm">Gợi ý mua sắm từ AI</p>
+              <p className="text-neutral-500 text-xs">Nên mua thêm để bữa ăn đa dạng & đủ chất</p>
+            </div>
           </div>
-          <div>
-            <p className="font-semibold text-white text-sm mb-1">Gợi ý mua sắm từ AI</p>
-            <p className="text-neutral-400 text-sm leading-relaxed">{shoppingAdvice}</p>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {shoppingItems.map((it, i) => (
+              <div key={i} className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2">
+                <p className="text-white text-sm font-semibold">{it.name}</p>
+                {it.reason && <p className="text-neutral-500 text-[11px] mt-0.5 leading-relaxed">{it.reason}</p>}
+              </div>
+            ))}
           </div>
         </div>
       )}
