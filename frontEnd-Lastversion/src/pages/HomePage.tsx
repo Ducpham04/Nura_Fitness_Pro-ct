@@ -6,11 +6,13 @@ import {
   Wallet, Moon, Beef, Wheat, Apple,
   Star, Flame, Play, History, Target, TrendingUp, Zap, Compass, X,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import ProgressRing from '../components/ProgressRing';
 import { useDashboard } from '../hooks/useDashboard';
 import { useAuthContext } from '../context/AuthContext';
 import SetupWizard from '../components/SetupWizard';
 import { nutritionService } from '../services/nutritionService';
+import { CountUp, containerStagger, fadeUp, fadeScale } from '../lib/motion';
 
 function pct(v: number, goal: number) { return goal ? Math.min(100, Math.round((v / goal) * 100)) : 0; }
 
@@ -183,13 +185,17 @@ export default function HomePage() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto space-y-5 pb-24 animate-fade-in">
+    <motion.div variants={containerStagger} initial="hidden" animate="show"
+      className="max-w-6xl mx-auto space-y-5 pb-24">
       <Confetti active={goalReached} />
 
       {/* ── Hero chào mừng ── */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/[0.07] bg-gradient-to-br from-lime/[0.08] via-white/[0.02] to-blue-500/[0.06] p-6 sm:p-7">
+      <motion.div variants={fadeScale}
+        className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-br from-lime/[0.08] via-white/[0.02] to-blue-500/[0.06] p-6 sm:p-7 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.6)]">
         {/* glow trang trí */}
-        <div className="pointer-events-none absolute -top-16 -right-10 w-56 h-56 rounded-full"
+        <motion.div className="pointer-events-none absolute -top-16 -right-10 w-56 h-56 rounded-full"
+          animate={{ scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }}
+          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
           style={{ background: 'radial-gradient(circle, rgba(204,255,0,0.12) 0%, transparent 70%)' }} />
         <div className="pointer-events-none absolute -bottom-20 left-10 w-56 h-56 rounded-full"
           style={{ background: 'radial-gradient(circle, rgba(0,122,255,0.10) 0%, transparent 70%)' }} />
@@ -229,7 +235,7 @@ export default function HomePage() {
             <Apple className="w-3.5 h-3.5" /> Ghi bữa ăn
           </Link>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Hướng dẫn bắt đầu cho user mới ── */}
       {!guideDismissed && userSummary.streakDays === 0 && stats.caloriesBurned === 0 && (
@@ -283,10 +289,10 @@ export default function HomePage() {
       )}
 
       {/* ── 3 stats cards ── */}
-      <div className="grid sm:grid-cols-3 gap-4">
+      <motion.div variants={fadeUp} className="grid sm:grid-cols-3 gap-4">
 
         {/* Calories — 2 layout: có data / chưa log ăn */}
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 flex flex-col gap-4">
+        <div className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.045] to-white/[0.015] p-5 flex flex-col gap-4 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-1 hover:border-white/[0.14] hover:shadow-[0_16px_44px_-14px_rgba(0,0,0,0.65)]">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Năng lượng</span>
             <Flame className="w-4 h-4 text-orange-400" />
@@ -298,7 +304,7 @@ export default function HomePage() {
               <div className="flex items-center gap-4">
                 <ProgressRing progress={pct(stats.caloriesConsumed, stats.caloriesGoal)} size={56} strokeWidth={5} />
                 <div>
-                  <div className="font-grotesk font-bold text-2xl text-white leading-none">{Math.round(stats.caloriesConsumed)}</div>
+                  <div className="font-grotesk font-bold text-2xl text-white leading-none"><CountUp value={Math.round(stats.caloriesConsumed)} /></div>
                   <div className="text-neutral-500 text-xs mt-1">/ {Math.round(stats.caloriesGoal)} kcal ăn vào</div>
                 </div>
               </div>
@@ -319,7 +325,7 @@ export default function HomePage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="font-grotesk font-bold text-3xl leading-none">
-                    <span className="text-orange-400">{stats.caloriesBurned}</span>
+                    <CountUp value={stats.caloriesBurned} className="text-orange-400" />
                   </div>
                   <div className="text-neutral-500 text-xs mt-1">kcal đã đốt hôm nay</div>
                 </div>
@@ -341,7 +347,7 @@ export default function HomePage() {
         </div>
 
         {/* Budget */}
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 flex flex-col gap-4">
+        <div className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.045] to-white/[0.015] p-5 flex flex-col gap-4 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-1 hover:border-white/[0.14] hover:shadow-[0_16px_44px_-14px_rgba(0,0,0,0.65)]">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Ngân sách hôm nay</span>
             <Wallet className="w-4 h-4 text-blue-400" />
@@ -350,7 +356,7 @@ export default function HomePage() {
           {budgetConfigured ? (
             <>
               <div>
-                <div className="font-grotesk font-bold text-3xl text-white leading-none">{(remainingBudget / 1000).toFixed(0)}k</div>
+                <div className="font-grotesk font-bold text-3xl text-white leading-none"><CountUp value={remainingBudget / 1000} suffix="k" /></div>
                 <div className="text-neutral-500 text-xs mt-1">VND còn lại</div>
               </div>
               <div>
@@ -391,7 +397,7 @@ export default function HomePage() {
         </div>
 
         {/* Recovery */}
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 flex flex-col gap-4">
+        <div className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.045] to-white/[0.015] p-5 flex flex-col gap-4 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-1 hover:border-white/[0.14] hover:shadow-[0_16px_44px_-14px_rgba(0,0,0,0.65)]">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Phục hồi</span>
             <span className={`text-[10px] font-bold px-2 py-1 rounded-lg bg-white/[0.06] ${recoveryColor}`}>
@@ -435,10 +441,10 @@ export default function HomePage() {
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── AI Coach + Quick actions ── */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
+      <motion.div variants={fadeUp} className="grid gap-4 lg:grid-cols-[1fr_260px]">
         <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-9 h-9 rounded-xl bg-blue-400/10 border border-blue-400/20 flex items-center justify-center shrink-0">
@@ -485,10 +491,10 @@ export default function HomePage() {
             </Link>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Tiến độ tập luyện tuần này ── */}
-      <div className="grid sm:grid-cols-2 gap-4">
+      <motion.div variants={fadeUp} className="grid sm:grid-cols-2 gap-4">
 
         {/* Weekly workout progress */}
         <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
@@ -555,20 +561,20 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Macros ── */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
+      <motion.div variants={fadeUp} className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.045] to-white/[0.015] p-5 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.5)]">
         <h3 className="text-sm font-semibold text-white mb-4">Dinh dưỡng hôm nay</h3>
         <div className="grid sm:grid-cols-3 gap-5">
           <MacroBar label="Protein" consumed={stats.proteinConsumed} goal={stats.proteinGoal} unit="g" color="#FF3B30" icon={Beef} />
           <MacroBar label="Carbs" consumed={stats.carbsConsumed} goal={stats.carbsGoal} unit="g" color="#CCFF00" icon={Wheat} />
           <MacroBar label="Fat" consumed={stats.fatConsumed} goal={stats.fatGoal} unit="g" color="#007AFF" icon={Apple} />
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Today's training ── */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] overflow-hidden">
+      <motion.div variants={fadeUp} className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.045] to-white/[0.015] overflow-hidden shadow-[0_4px_24px_-10px_rgba(0,0,0,0.5)]">
         <div className="px-5 py-4 border-b border-white/[0.05] flex items-center justify-between">
           <h3 className="font-semibold text-white text-sm">Bài tập hôm nay</h3>
           <Link to="/dashboard/workout" className="text-lime text-xs font-bold flex items-center gap-1 hover:underline">
@@ -630,11 +636,11 @@ export default function HomePage() {
             ))}
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* ── Recent activities ── */}
       {recentActivities.length > 0 && (
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] overflow-hidden">
+        <motion.div variants={fadeUp} className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.045] to-white/[0.015] overflow-hidden shadow-[0_4px_24px_-10px_rgba(0,0,0,0.5)]">
           <div className="px-5 py-4 border-b border-white/[0.05] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-lime" />
@@ -664,7 +670,7 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
 
       {showSetupWizard && user && (
@@ -679,6 +685,6 @@ export default function HomePage() {
           }}
         />
       )}
-    </div>
+    </motion.div>
   );
 }
