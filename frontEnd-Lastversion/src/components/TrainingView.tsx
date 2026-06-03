@@ -29,6 +29,8 @@ import { trainingService, type DailyTrainingLog, type PersonalizedWorkoutExercis
 import { aiService } from '../services/aiService';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import CyberpunkWorkoutModal from './CyberpunkWorkoutModal';
+import { Sparkles } from 'lucide-react';
 
 interface TrainingExercise {
   id: number;
@@ -250,7 +252,7 @@ const ExerciseVideoPlayer = memo(({ videoUrl, name, defaultExpanded = false }: {
 });
 
 /** Hiển thị khi schedule rỗng — tự động thử regenerate nếu có plan ID */
-function EmptySchedule({ activePlanId, onRetry }: { activePlanId?: number; onRetry: () => void }) {
+function EmptySchedule({ activePlanId, onRetry, onCreatePlan }: { activePlanId?: number; onRetry: () => void; onCreatePlan: () => void }) {
   const [regenerating, setRegenerating] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -287,11 +289,11 @@ function EmptySchedule({ activePlanId, onRetry }: { activePlanId?: number; onRet
       <p className="text-neutral-400 text-sm mb-6 max-w-md mx-auto">
         {activePlanId
           ? 'Plan của bạn đã được tạo nhưng lịch tập cá nhân chưa được sinh. Nhấn bên dưới để tạo.'
-          : 'Tạo AI workout plan hoặc chọn một training plan để bắt đầu.'}
+          : 'Bạn chưa có chương trình tập. Tạo kế hoạch AI cá nhân hóa theo mục tiêu, thể trạng & thiết bị của bạn để bắt đầu.'}
       </p>
       {msg && <p className="text-lime text-xs mb-4 animate-pulse">{msg}</p>}
-      <div className="flex gap-3 justify-center">
-        {activePlanId && (
+      <div className="flex flex-wrap gap-3 justify-center">
+        {activePlanId ? (
           <button
             onClick={tryRegenerate}
             disabled={regenerating}
@@ -301,6 +303,10 @@ function EmptySchedule({ activePlanId, onRetry }: { activePlanId?: number; onRet
               ? <><div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />Đang tạo...</>
               : <><RefreshCw className="w-4 h-4" />Tạo lịch tập ngay</>
             }
+          </button>
+        ) : (
+          <button onClick={onCreatePlan} className="btn-lime px-5 py-2.5 text-sm inline-flex items-center gap-2">
+            <Sparkles className="w-4 h-4" />Tạo kế hoạch AI
           </button>
         )}
         <button onClick={onRetry} className="px-5 py-2.5 text-sm border border-white/[0.08] rounded-xl text-neutral-400 hover:text-white inline-flex items-center gap-2 transition-colors">
@@ -390,6 +396,8 @@ function TrainingView() {
   const [showCheckIn, setShowCheckIn] = useState(false);
   const [savingCheckIn, setSavingCheckIn] = useState(false);
   const [checkIn, setCheckIn] = useState<{ fatigue: number; rpe: number; sleep: string }>({ fatigue: 0, rpe: 0, sleep: '' });
+  // Modal tạo kế hoạch AI (gộp từ tab "Kế Hoạch Tập" cũ)
+  const [aiPlanModalOpen, setAiPlanModalOpen] = useState(false);
 
   const loadTrainingSchedule = useCallback(async () => {
     if (!user) return;
@@ -446,6 +454,21 @@ function TrainingView() {
   useEffect(() => {
     loadTrainingSchedule();
   }, [loadTrainingSchedule]);
+
+  // Sau khi tạo kế hoạch AI mới → đóng modal, sinh personalization nếu cần, tải lại lịch
+  const handleAiPlanSuccess = async (data: any) => {
+    setAiPlanModalOpen(false);
+    if (data?.userTrainingId && !data?.personalized) {
+      try {
+        const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
+        await fetch(`/api/user/training/${data.userTrainingId}/regenerate-personalized`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        });
+      } catch { /* loadTrainingSchedule sẽ tự retry */ }
+    }
+    await loadTrainingSchedule();
+  };
 
   useEffect(() => {
     if (!cameraActive) return;
@@ -1230,6 +1253,14 @@ function TrainingView() {
 
   return (
     <div className="space-y-5 animate-fade-in">
+      {/* ── Modal tạo kế hoạch AI ── */}
+      {aiPlanModalOpen && (
+        <CyberpunkWorkoutModal
+          onClose={() => setAiPlanModalOpen(false)}
+          onSuccess={handleAiPlanSuccess}
+        />
+      )}
+
       {/* ── Modal check-in sau buổi tập (overlay toàn màn, độc lập với session) ── */}
       {showCheckIn && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
@@ -1328,13 +1359,22 @@ function TrainingView() {
             )}
           </div>
         </div>
-        <button
-          onClick={() => window.location.reload()}
-          className="shrink-0 rounded-xl border border-white/10 px-3 py-2 text-neutral-400 text-xs font-medium hover:text-white hover:border-white/20 transition-colors flex items-center gap-1.5"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          Reload
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            onClick={() => setAiPlanModalOpen(true)}
+            className="rounded-xl bg-lime/10 border border-lime/25 px-3 py-2 text-lime text-xs font-bold hover:bg-lime/20 transition-colors flex items-center gap-1.5"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {activePlan ? 'Tạo lại bằng AI' : 'Tạo kế hoạch AI'}
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            className="rounded-xl border border-white/10 px-3 py-2 text-neutral-400 text-xs font-medium hover:text-white hover:border-white/20 transition-colors flex items-center gap-1.5"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Tải lại</span>
+          </button>
+        </div>
       </div>
 
       {/* ── Progress strip ── */}
@@ -1399,7 +1439,7 @@ function TrainingView() {
 
       {/* ── Empty state ── */}
       {!loading && scheduleExercises.length === 0 && (
-        <EmptySchedule activePlanId={activePlan?.id} onRetry={loadTrainingSchedule} />
+        <EmptySchedule activePlanId={activePlan?.id} onRetry={loadTrainingSchedule} onCreatePlan={() => setAiPlanModalOpen(true)} />
       )}
 
       {/* ── Main content ── */}
