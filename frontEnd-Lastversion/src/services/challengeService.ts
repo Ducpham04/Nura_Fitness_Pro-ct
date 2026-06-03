@@ -90,16 +90,18 @@ class ChallengeService {
     const response = await apiClient.get<any>('/challenges');
     
     if (response.success && response.data) {
-      const challenges = response.data.data || response.data;
+      const raw = response.data;
+      // Hỗ trợ nhiều dạng: mảng trực tiếp | Spring Page {content} | wrap {data}
+      const list = Array.isArray(raw) ? raw : (raw.content ?? raw.data ?? []);
       return {
         success: true,
-        data: challenges.map((challenge: any) => this.mapChallenge(challenge))
+        data: (Array.isArray(list) ? list : []).map((challenge: any) => this.mapChallenge(challenge))
       };
     }
-    
+
     return {
       success: false,
-      error: response.error || { code: 'FETCH_ERROR', message: 'Failed to load challenges', timestamp: new Date().toISOString() }
+      error: response.error || { code: 'FETCH_ERROR', message: 'Không tải được danh sách thử thách', timestamp: new Date().toISOString() }
     };
   }
 

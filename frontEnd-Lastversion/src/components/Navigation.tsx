@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Dumbbell, Utensils, User, LogOut, Zap, Brain, History } from 'lucide-react';
+import { Home, Dumbbell, Utensils, User, LogOut, Zap, Brain, History, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuthContext } from '../context/AuthContext';
 import LanguageSelector from './LanguageSelector';
@@ -15,6 +15,7 @@ export default function Navigation() {
     { id: 'home', icon: Home, label: t('nav.home'), path: '/dashboard' },
     { id: 'workout', icon: Dumbbell, label: t('nav.workout'), path: '/dashboard/workout' },
     { id: 'diet', icon: Utensils, label: t('nav.diet'), path: '/dashboard/diet' },
+    { id: 'challenges', icon: Trophy, label: t('nav.challenges'), path: '/dashboard/challenges' },
     { id: 'coach', icon: Brain, label: t('nav.coach'), path: '/dashboard/coach' },
     { id: 'logbook', icon: History, label: t('nav.logbook'), path: '/dashboard/logbook' },
     { id: 'profile', icon: User, label: t('nav.profile'), path: '/dashboard/profile' },
