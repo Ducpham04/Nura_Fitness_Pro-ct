@@ -227,6 +227,22 @@ public class AIGatewayController {
         }
     }
 
+    @PostMapping("/ai-plans/suggest-dishes")
+    @Operation(summary = "Suggest dishes from ingredients",
+               description = "Nhập nguyên liệu đang có → AI gợi ý món Việt nấu được (tên, nguyên liệu, calo ước tính, cách làm ngắn)")
+    public ResponseEntity<NotificationResponse> suggestDishes(
+            @RequestBody Map<String, Object> body,
+            @RequestHeader("userId") Long userId) {
+        try {
+            NotificationResponse response = aiGatewayService.suggestDishesFromIngredients(body, userId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                new NotificationResponse(false, "Gợi ý món thất bại: " + e.getMessage())
+            );
+        }
+    }
+
     // ── v2.2: Auto-Regulation ────────────────────────────────────────────────
     @PostMapping("/ai-plans/auto-regulate")
     @Operation(summary = "Auto-regulate next week's plan",

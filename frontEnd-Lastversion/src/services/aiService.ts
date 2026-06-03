@@ -52,6 +52,15 @@ class AIService {
     );
   }
 
+  /** Gợi ý món nấu được từ nguyên liệu (vd: "mực, hành, cà chua"). */
+  async suggestDishes(userId: number, ingredients: string, count = 4): Promise<ApiResponse<any>> {
+    return await apiClient.post<any>(
+      '/ai-plans/suggest-dishes',
+      { ingredients, count },
+      { headers: { 'userId': userId.toString() } }
+    );
+  }
+
   async autoRegulateWorkout(userId: number, utId: number): Promise<ApiResponse<any>> {
     return await apiClient.post<any>(
       '/ai-plans/auto-regulate',

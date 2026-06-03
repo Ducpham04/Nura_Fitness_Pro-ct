@@ -899,6 +899,25 @@ async def chat(request: dict):
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
 
+@app.post("/suggest-dishes")
+async def suggest_dishes(request: dict):
+    """
+    Gợi ý món ăn nấu được từ nguyên liệu người dùng nhập.
+    Body: { "ingredients": "mực, hành, cà chua", "count": 4 }
+    """
+    try:
+        ingredients = (request.get("ingredients") or "").strip()
+        if not ingredients:
+            raise HTTPException(status_code=400, detail="ingredients is required")
+        count = int(request.get("count", 4) or 4)
+        dishes = planner.suggest_dishes_from_ingredients(ingredients, count)
+        return {"success": True, "dishes": dishes, "timestamp": datetime.now().isoformat()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Suggest dishes failed: {str(e)}")
+
+
 if __name__ == "__main__":
     print("🚀 Starting Fitness AI Service")
     print("🤖 AI Provider: Groq (Llama 3.3 & 3.2 Vision)")

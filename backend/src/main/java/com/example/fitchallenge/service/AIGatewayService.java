@@ -13,5 +13,6 @@ public interface AIGatewayService {
     NotificationResponse chatWithCoach(Map<String, Object> chatRequest, Long userId);
     NotificationResponse scanInventoryImage(MultipartFile image, Long userId);
     NotificationResponse logFoodNatural(Map<String, Object> body, Long userId);
+    NotificationResponse suggestDishesFromIngredients(Map<String, Object> body, Long userId);
     NotificationResponse autoRegulate(Map<String, Object> body, Long userId);
 }

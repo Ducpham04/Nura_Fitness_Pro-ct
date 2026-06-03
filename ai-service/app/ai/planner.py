@@ -848,3 +848,50 @@ IMPORTANT:
         except Exception as e:
             print(f"[AI Coach chat error] {e}")
             return "Xin lỗi, hiện mình chưa kết nối được để phản hồi. Bạn thử lại sau giây lát nhé — trong lúc đó cứ bám theo kế hoạch hiện tại của bạn."
+
+    def suggest_dishes_from_ingredients(self, ingredients: str, count: int = 4) -> list:
+        """
+        Gợi ý món ăn Việt nấu được từ nguyên liệu người dùng có.
+        Trả về list[dict]: {name, ingredients[], est_calories, how_to}.
+        """
+        system_prompt = (
+            "Bạn là đầu bếp AI người Việt. Dựa trên nguyên liệu người dùng đang có, "
+            "gợi ý các MÓN ĂN VIỆT thực tế có thể nấu. "
+            "CHỈ trả về JSON array hợp lệ, không thêm chữ nào ngoài JSON. "
+            "Mỗi phần tử: {\"name\": tên món tiếng Việt, "
+            "\"ingredients\": [danh sách nguyên liệu chính], "
+            "\"est_calories\": số kcal ước tính mỗi khẩu phần (số nguyên), "
+            "\"how_to\": cách làm ngắn gọn 1 câu}."
+        )
+        user_prompt = f"Nguyên liệu đang có: {ingredients}. Hãy gợi ý {count} món."
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.6,
+                max_tokens=900,
+            )
+            raw = response.choices[0].message.content.strip()
+            # Bóc JSON (phòng khi model bọc trong ```json ... ```)
+            if "```" in raw:
+                raw = raw.split("```")[1].replace("json", "", 1).strip() if raw.count("```") >= 2 else raw
+            start, end = raw.find("["), raw.rfind("]")
+            if start != -1 and end != -1:
+                raw = raw[start:end + 1]
+            dishes = json.loads(raw)
+            # Chuẩn hóa
+            out = []
+            for d in dishes[:count]:
+                out.append({
+                    "name": str(d.get("name", "")).strip(),
+                    "ingredients": d.get("ingredients", []) if isinstance(d.get("ingredients"), list) else [],
+                    "est_calories": int(d.get("est_calories", 0) or 0),
+                    "how_to": str(d.get("how_to", "")).strip(),
+                })
+            return [d for d in out if d["name"]]
+        except Exception as e:
+            print(f"[suggest_dishes error] {e}")
+            return []
