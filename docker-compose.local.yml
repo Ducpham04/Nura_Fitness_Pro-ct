@@ -73,14 +73,15 @@ services:
       - ./ai-service/.env
     environment:
       HOST: 0.0.0.0
-      PORT: 5001
+      # App bind cố định 8001 (Dockerfile CMD --port 8001). Map host 8011 để
+      # tránh xung đột với uvicorn host:8001 khi chạy local song song.
       CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost:5174,http://localhost:5175
     ports:
-      - "5001:5001"
+      - "8011:8001"
     networks:
       - fit-network
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
