@@ -39,6 +39,12 @@ public class FoodController {
         return foodService.getFoodById(id);
     }
 
+    /** Danh sách thực phẩm cho trang admin (đồng bộ với POST/PUT/DELETE /admin/foods). */
+    @GetMapping("/admin/foods")
+    public NotificationResponse getAllFoodsAdmin(){
+        return foodService.getAllFoods();
+    }
+
     @GetMapping("/foods")
     public NotificationResponse getAllFoods(){
         return foodService.getAllFoods();

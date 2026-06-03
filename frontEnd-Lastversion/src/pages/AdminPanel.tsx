@@ -394,7 +394,9 @@ function FieldInput({ field, value, onChange, remoteData, onFileChange }: {
     <textarea className={`${base} min-h-24 resize-y`} value={String(value || '')} onChange={e => onChange(e.target.value)} />
   );
   if (field.type === 'select') {
-    const opts = remoteData?.[field.name] ?? field.options?.map(o => ({ label: o, value: o })) ?? [];
+    const opts = remoteData?.[field.name]
+      ?? field.options?.map((o, i) => ({ label: field.optionLabels?.[i] ?? o, value: o }))
+      ?? [];
     return (
       <select className={`${base} bg-slate-800`} value={String(value || '')} onChange={e => onChange(e.target.value)}>
         <option value="">— Chọn {field.label} —</option>
@@ -1106,6 +1108,18 @@ export default function AdminPanel() {
 
   async function saveForm() {
     if (!activeModule) return;
+    // Validate các trường bắt buộc trước khi gọi API → báo lỗi rõ ràng, tránh 500.
+    const missing = activeModule.fields
+      .filter(f => f.required)
+      .filter(f => {
+        const v = form[f.name];
+        return v === undefined || v === null || String(v).trim() === '';
+      })
+      .map(f => f.label);
+    if (missing.length > 0) {
+      setError(`Vui lòng nhập đầy đủ trường bắt buộc: ${missing.join(', ')}`);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -1845,6 +1859,7 @@ export default function AdminPanel() {
                           </span>
                           <FieldInput field={field} value={form[field.name] ?? ''} onChange={v => setForm(p => ({ ...p, [field.name]: v }))} remoteData={remoteData}
                             onFileChange={(name, file) => setFormFiles(prev => { const next = { ...prev }; if (file) next[name] = file; else delete next[name]; return next; })} />
+                          {field.hint && <p className="mt-1 text-[11px] leading-snug text-slate-500">{field.hint}</p>}
                         </label>
                       ))}
                     </div>
@@ -1908,6 +1923,7 @@ export default function AdminPanel() {
                         </span>
                         <FieldInput field={field} value={form[field.name] ?? ''} onChange={v => setForm(p => ({ ...p, [field.name]: v }))} remoteData={remoteData}
                           onFileChange={(name, file) => setFormFiles(prev => { const next = { ...prev }; if (file) next[name] = file; else delete next[name]; return next; })} />
+                        {field.hint && <p className="mt-1 text-[11px] leading-snug text-slate-500">{field.hint}</p>}
                       </label>
                     );
                   })}

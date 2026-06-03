@@ -38,6 +38,10 @@ export interface AdminFieldConfig {
   type?: 'text' | 'number' | 'password' | 'select' | 'textarea' | 'boolean' | 'image-upload';
   options?: string[];
   required?: boolean;
+  /** Gợi ý/giải thích hiển thị dưới ô nhập — giúp admin hiểu cần điền gì. */
+  hint?: string;
+  /** Nhãn tiếng Việt cho từng option enum (theo thứ tự options). */
+  optionLabels?: string[];
   /** Load options từ API: endpoint + field lấy label + field lấy value */
   remoteOptions?: { endpoint: string; labelField: string; valueField: string };
 }
@@ -277,11 +281,12 @@ export const adminModules: AdminModuleConfig[] = [
       { name: 'description',  label: 'Mô tả',    type: 'textarea' },
       { name: 'durationDays', label: 'Số ngày',  type: 'number', required: true },
       { name: 'rewardPoints', label: 'Điểm thưởng', type: 'number', required: true },
-      { name: 'reward',       label: 'Nhãn thưởng' },
-      { name: 'aiRulesJson',  label: 'Quy tắc AI (JSON)', type: 'textarea' },
-      { name: 'exerciseIds',  label: 'Danh sách bài tập (ID, phân cách bằng dấu phẩy)' },
+      { name: 'reward',       label: 'Nhãn thưởng', hint: 'Mô tả ngắn phần thưởng, vd: "Huy hiệu Vàng".' },
+      { name: 'aiRulesJson',  label: 'Quy tắc AI (JSON)', type: 'textarea', hint: 'Để trống nếu không dùng. Định dạng JSON cho chấm điểm tự động.' },
+      { name: 'exerciseIds',  label: 'Danh sách bài tập', hint: 'Nhập ID các bài tập, phân cách bằng dấu phẩy. Vd: 1,5,12' },
       { name: 'status',       label: 'Trạng thái', type: 'select',
-        options: ['ACTIVE', 'INACTIVE', 'DRAFT', 'COMPLETED'] },
+        options: ['ACTIVE', 'INACTIVE', 'DRAFT', 'COMPLETED'],
+        optionLabels: ['Đang chạy', 'Tạm tắt', 'Bản nháp', 'Đã kết thúc'] },
     ],
   },
   {
@@ -299,7 +304,7 @@ export const adminModules: AdminModuleConfig[] = [
       { name: 'exerciseType',           label: 'Loại bài tập' },
       { name: 'exerciseCategory',       label: 'Nhóm bài tập',           type: 'select', options: ['COMPOUND', 'ISOLATION', 'MOBILITY'] },
       { name: 'primaryMuscle',          label: 'Nhóm cơ chính' },
-      { name: 'secondaryMuscles',       label: 'Nhóm cơ phụ' },
+      { name: 'secondaryMuscles',       label: 'Nhóm cơ phụ', hint: 'Phân cách bằng dấu phẩy, vd: Triceps, Shoulders' },
       { name: 'requiredEquipment',      label: 'Dụng cụ cần thiết',      type: 'select', options: ['BODYWEIGHT', 'DUMBBELL', 'BARBELL', 'RESISTANCE_BAND', 'MACHINE', 'CABLE'] },
       { name: 'equipmentAlternatives',  label: 'Dụng cụ thay thế',       type: 'textarea' },
       { name: 'contraindicatedInjuries', label: 'Chấn thương chống chỉ định', type: 'textarea' },
@@ -308,7 +313,7 @@ export const adminModules: AdminModuleConfig[] = [
       { name: 'defaultSets',            label: 'Số hiệp mặc định',       type: 'number' },
       { name: 'defaultReps',            label: 'Số lần mặc định',        type: 'number' },
       { name: 'defaultRestSeconds',     label: 'Thời gian nghỉ (giây)',  type: 'number' },
-      { name: 'metValue',               label: 'MET chuẩn',              type: 'number' },
+      { name: 'metValue',               label: 'MET chuẩn',              type: 'number', hint: 'Hệ số tiêu hao năng lượng để tính kcal (vd: nhẹ 3.0, nặng 8.0)' },
       { name: 'estimatedMet',           label: 'MET ước tính',           type: 'number' },
       { name: 'tempo',                  label: 'Tempo' },
       { name: 'rpeMin',                 label: 'RPE thấp nhất',          type: 'number' },
@@ -389,8 +394,9 @@ export const adminModules: AdminModuleConfig[] = [
       { name: 'dishName',         label: 'Tên món ăn',   required: true },
       { name: 'imageUrl',         label: 'Ảnh món ăn' },
       { name: 'dishRole',         label: 'Vai trò món',  type: 'select', required: true,
-        options: ['MAIN_PROTEIN', 'SOUP', 'VEGETABLE', 'CARB_BASE', 'ONE_POT'] },
-      { name: 'suitableMealTypes', label: 'Bữa phù hợp (phân cách bằng dấu phẩy)' },
+        options: ['MAIN_PROTEIN', 'SOUP', 'VEGETABLE', 'CARB_BASE', 'ONE_POT'],
+        optionLabels: ['Món đạm chính', 'Canh/Súp', 'Rau', 'Tinh bột nền', 'Món một nồi'] },
+      { name: 'suitableMealTypes', label: 'Bữa phù hợp', hint: 'Phân cách bằng dấu phẩy. Vd: BREAKFAST,LUNCH,DINNER' },
       { name: 'isActive',         label: 'Đang hoạt động', type: 'boolean' },
     ],
   },
