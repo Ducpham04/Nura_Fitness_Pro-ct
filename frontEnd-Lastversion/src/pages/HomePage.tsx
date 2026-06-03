@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Dumbbell, Brain,
@@ -13,7 +13,8 @@ import { useAuthContext } from '../context/AuthContext';
 import SetupWizard from '../components/SetupWizard';
 import { nutritionService } from '../services/nutritionService';
 import { CountUp, containerStagger, fadeUp, fadeScale, premiumEase } from '../lib/motion';
-import MacroRadial from '../components/MacroRadial';
+// Lazy-load để tách recharts (~140kb) khỏi bundle chính
+const MacroRadial = lazy(() => import('../components/MacroRadial'));
 
 function pct(v: number, goal: number) { return goal ? Math.min(100, Math.round((v / goal) * 100)) : 0; }
 
@@ -574,6 +575,7 @@ export default function HomePage() {
       {/* ── Macros (biểu đồ vòng) ── */}
       <motion.div variants={fadeUp} className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.045] to-white/[0.015] p-5 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.5)]">
         <h3 className="font-grotesk font-bold italic uppercase text-white text-sm tracking-tight mb-4">Dinh dưỡng hôm nay</h3>
+        <Suspense fallback={<div className="h-[150px] flex items-center justify-center"><div className="w-6 h-6 border-2 border-lime border-t-transparent rounded-full animate-spin" /></div>}>
         <MacroRadial
           protein={{ label: 'Protein', consumed: stats.proteinConsumed, goal: stats.proteinGoal, color: '#FF3B30' }}
           carbs={{ label: 'Carbs', consumed: stats.carbsConsumed, goal: stats.carbsGoal, color: '#CCFF00' }}
@@ -581,6 +583,7 @@ export default function HomePage() {
           caloriesConsumed={stats.caloriesConsumed}
           caloriesGoal={stats.caloriesGoal}
         />
+        </Suspense>
       </motion.div>
 
       {/* ── Today's training ── */}
