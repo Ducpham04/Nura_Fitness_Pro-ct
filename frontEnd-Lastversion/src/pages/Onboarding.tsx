@@ -60,6 +60,20 @@ const dietTypes = [
   { id: 'keto', label: 'Keto', icon: '🥑' },
 ];
 
+// Hiển thị mục tiêu bằng tiếng Việt + emoji (ảnh từ backend là placeholder vỡ).
+// Giữ NGUYÊN g.name làm value lưu xuống backend (GoalMapper xử lý).
+function goalDisplay(name: string): { icon: string; label: string; desc: string } {
+  const g = (name || '').toLowerCase();
+  if (/lose|weight loss|fat|giảm|mỡ/.test(g)) return { icon: '🔥', label: 'Giảm mỡ', desc: 'Giảm cân & đốt mỡ thừa' };
+  if (/muscle|cơ|hypertrophy|gain|build/.test(g)) return { icon: '💪', label: 'Tăng cơ', desc: 'Xây dựng cơ bắp & sức mạnh' };
+  if (/endurance|cardio|stamina|bền/.test(g)) return { icon: '🏃', label: 'Sức bền', desc: 'Cải thiện tim mạch & sức bền' };
+  if (/flexib|mobility|dẻo|linh hoạt/.test(g)) return { icon: '🧘', label: 'Dẻo dai', desc: 'Tăng độ linh hoạt & vận động' };
+  if (/athletic|performance|thể thao|hiệu suất/.test(g)) return { icon: '🏆', label: 'Thể thao', desc: 'Nâng cao hiệu suất vận động' };
+  if (/strength|sức mạnh|power/.test(g)) return { icon: '🏋️', label: 'Sức mạnh', desc: 'Nâng cao sức mạnh tối đa' };
+  if (/general|fitness|maintain|duy trì|tổng/.test(g)) return { icon: '⚖️', label: 'Thể lực chung', desc: 'Duy trì sức khỏe tổng thể' };
+  return { icon: '🎯', label: name, desc: '' };
+}
+
 const steps: Array<{
   title: string;
   subtitle: string;
@@ -331,16 +345,17 @@ export default function Onboarding() {
           {/* Step 1: Goal */}
           {step === 1 && (
             <div className="grid grid-cols-2 gap-3">
-              {backendGoals.map(g => (
-                <button key={g.id} onClick={() => update('goal', g.name)}
-                  className={`p-4 rounded-2xl text-left transition-all border ${form.goal === g.name ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'}`}>
-                  <div className="text-2xl mb-2">
-                    {g.imageLink ? <img src={g.imageLink} alt="" className="w-8 h-8 object-contain" /> : '🎯'}
-                  </div>
-                  <div className="font-grotesk font-semibold text-sm">{g.name}</div>
-                  <div className="text-[10px] text-neutral-500 mt-1 line-clamp-1">{g.description}</div>
-                </button>
-              ))}
+              {backendGoals.map(g => {
+                const gd = goalDisplay(g.name);
+                return (
+                  <button key={g.id} onClick={() => update('goal', g.name)}
+                    className={`p-4 rounded-2xl text-left transition-all border ${form.goal === g.name ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'}`}>
+                    <div className="text-2xl mb-2">{gd.icon}</div>
+                    <div className="font-grotesk font-semibold text-sm">{gd.label}</div>
+                    <div className="text-[10px] text-neutral-500 mt-1 line-clamp-1">{gd.desc}</div>
+                  </button>
+                );
+              })}
             </div>
           )}
 

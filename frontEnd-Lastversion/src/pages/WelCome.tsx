@@ -39,12 +39,12 @@ function ParticleField() {
 
 /* ─── Feature cards data ─── */
 const features = [
-  { icon: Brain, title: 'AI Pose Detection', desc: 'Real-time form tracking with skeleton overlay', color: 'text-electric', bg: 'bg-electric/10', border: 'border-electric/20' },
-  { icon: UtensilsCrossed, title: 'Smart Meal Planner', desc: 'Personalized meals within your daily budget', color: 'text-lime', bg: 'bg-lime/10', border: 'border-lime/20' },
-  { icon: ShoppingCart, title: 'Inventory Tracker', desc: 'Track food items, expiry dates, and costs', color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/20' },
-  { icon: Camera, title: 'AI Coach', desc: 'Chat with your personal fitness assistant', color: 'text-electric', bg: 'bg-electric/10', border: 'border-electric/20' },
-  { icon: Target, title: 'Challenges & Rewards', desc: 'Compete, earn points, and redeem prizes', color: 'text-lime', bg: 'bg-lime/10', border: 'border-lime/20' },
-  { icon: Zap, title: 'Training Plans', desc: 'Programs tailored to your goals & equipment', color: 'text-electric', bg: 'bg-electric/10', border: 'border-electric/20' },
+  { icon: Brain, title: 'Phân tích form bằng AI', desc: 'Theo dõi tư thế thời gian thực với khung xương', color: 'text-electric', bg: 'bg-electric/10', border: 'border-electric/20' },
+  { icon: UtensilsCrossed, title: 'Thực đơn thông minh', desc: 'Bữa ăn cá nhân hóa theo ngân sách của bạn', color: 'text-lime', bg: 'bg-lime/10', border: 'border-lime/20' },
+  { icon: ShoppingCart, title: 'Quản lý kho thực phẩm', desc: 'Theo dõi nguyên liệu, hạn dùng & chi phí', color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/20' },
+  { icon: Camera, title: 'AI Coach', desc: 'Trò chuyện với trợ lý thể hình cá nhân', color: 'text-electric', bg: 'bg-electric/10', border: 'border-electric/20' },
+  { icon: Target, title: 'Thử thách & Phần thưởng', desc: 'Thi đua, tích điểm và đổi quà', color: 'text-lime', bg: 'bg-lime/10', border: 'border-lime/20' },
+  { icon: Zap, title: 'Kế hoạch tập luyện', desc: 'Chương trình theo mục tiêu & thiết bị của bạn', color: 'text-electric', bg: 'bg-electric/10', border: 'border-electric/20' },
 ];
 
 /* ─── Budget Modal ─── */
@@ -303,11 +303,11 @@ export default function Welcome() {
           <div className="w-20 h-20 rounded-full bg-lime/10 flex items-center justify-center mx-auto mb-6 glow-lime">
             <Check className="w-10 h-10 text-lime" />
           </div>
-          <h1 className="font-grotesk font-bold text-4xl text-white mb-3">You're all set, {userName}!</h1>
+          <h1 className="font-grotesk font-bold text-4xl text-white mb-3">Hoàn tất, {userName}!</h1>
           <p className="text-neutral-400 text-lg mb-2">AI đang chuẩn bị kế hoạch cá nhân hóa cho bạn</p>
           <div className="flex items-center justify-center gap-2 mt-4">
             <div className="w-2 h-2 rounded-full bg-lime animate-pulse" />
-            <span className="text-lime font-grotesk font-semibold text-sm">Loading Dashboard...</span>
+            <span className="text-lime font-grotesk font-semibold text-sm">Đang vào trang chủ...</span>
           </div>
         </div>
       </div>
@@ -339,7 +339,7 @@ export default function Welcome() {
         {/* Welcome message */}
         <div className="text-center mb-10">
           <h1 className="font-grotesk font-bold text-4xl sm:text-5xl text-white mb-4">
-            Welcome, <span className="text-gradient-lime">{userName}</span>
+            Chào mừng, <span className="text-gradient-lime">{userName}</span>
           </h1>
           <p className="text-neutral-400 text-lg max-w-md mx-auto">
             Nền tảng AI fitness cá nhân hóa — từ tập luyện đến dinh dưỡng, tất cả trong một ứng dụng.

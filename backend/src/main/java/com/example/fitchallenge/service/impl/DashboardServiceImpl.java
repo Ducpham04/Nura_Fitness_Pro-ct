@@ -579,9 +579,15 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         // ── 5. Budget ─────────────────────────────────────────────────────
+        // Ưu tiên: chi tiêu thực tế hôm nay (BudgetTracking) → ngân sách user đặt
+        // ở onboarding (UserBodyProfile.targetBudgetPerDay) → mặc định 80k.
         BudgetTracking todayBudget = budgetTrackingRepository.findByUserAndDate(user, today).orElse(null);
-        BigDecimal budgetLimit = todayBudget != null && todayBudget.getDailyBudget() != null
-                ? BigDecimal.valueOf(todayBudget.getDailyBudget()) : BigDecimal.valueOf(80000);
+        Integer profileBudget = profile != null ? profile.getTargetBudgetPerDay() : null;
+        BigDecimal budgetLimit = (todayBudget != null && todayBudget.getDailyBudget() != null)
+                ? BigDecimal.valueOf(todayBudget.getDailyBudget())
+                : (profileBudget != null && profileBudget > 0
+                        ? BigDecimal.valueOf(profileBudget)
+                        : BigDecimal.valueOf(80000));
         BigDecimal budgetSpent = todayBudget != null && todayBudget.getActualSpent() != null
                 ? BigDecimal.valueOf(todayBudget.getActualSpent()) : BigDecimal.ZERO;
 
