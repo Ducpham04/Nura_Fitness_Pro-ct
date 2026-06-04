@@ -34,7 +34,7 @@ class AuthService {
   // Register
   async register(data: RegisterRequest): Promise<boolean> {
     const response = await apiClient.post<BEAuthResponse>(
-      API_ENDPOINTS.AUTH.REGISTER, 
+      API_ENDPOINTS.AUTH.REGISTER,
       data
     );
 
@@ -43,7 +43,8 @@ class AuthService {
       this.saveAuthData(feData);
       return true;
     }
-    return false;
+    // Ném kèm message từ backend (vd "Email này đã được đăng ký!") để UI hiển thị
+    throw new Error(response.error?.message || 'Đăng ký thất bại');
   }
 
   // Logout

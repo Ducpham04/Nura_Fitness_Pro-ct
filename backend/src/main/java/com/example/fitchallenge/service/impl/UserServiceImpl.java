@@ -8,6 +8,7 @@ import com.example.fitchallenge.config.NotificationResponse;
 import com.example.fitchallenge.repository.*;
 import com.example.fitchallenge.repository.User.UserRepository;
 import com.example.fitchallenge.service.UserService;
+import com.example.fitchallenge.exception.DuplicateResourceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -108,18 +109,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public JwtResponse registerCustomer(RegisterRequestCustomer registerRequestCustomer) {
-        // 1. Validate input
+        // 1. Validate input → IllegalArgumentException ⇒ 400 BAD_REQUEST (có message rõ)
         if (registerRequestCustomer.getEmail() == null || registerRequestCustomer.getEmail().trim().isEmpty()) {
-            throw new RuntimeException("Email là bắt buộc");
+            throw new IllegalArgumentException("Email là bắt buộc");
         }
         if (registerRequestCustomer.getPassword() == null || registerRequestCustomer.getPassword().length() < 6) {
-            throw new RuntimeException("Mật khẩu phải có ít nhất 6 ký tự");
+            throw new IllegalArgumentException("Mật khẩu phải có ít nhất 6 ký tự");
         }
 
-        // 2. Check email tồn tại
+        // 2. Check email tồn tại → DuplicateResourceException ⇒ 409 CONFLICT (không còn 500)
         String email = registerRequestCustomer.getEmail().trim().toLowerCase();
         if (userRepository.existsByEmail(email)) {
-            throw new RuntimeException("Email này đã được đăng ký!");
+            throw new DuplicateResourceException("Email này đã được đăng ký!");
         }
 
         // 3. Lấy Role mặc định (Bạn đang để ID là 5 cho Customer)

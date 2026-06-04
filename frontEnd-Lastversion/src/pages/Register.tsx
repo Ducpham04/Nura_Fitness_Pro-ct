@@ -86,13 +86,15 @@ export default function Register() {
     }
 
     setLoading(true);
-    const success = await register({ email, password, fullName: name });
-    setLoading(false);
-
-    if (success) {
-      onRegister();
-    } else {
-      setError(authError || t('auth.registerFailed'));
+    try {
+      const success = await register({ email, password, fullName: name });
+      if (success) onRegister();
+      else setError(authError || t('auth.registerFailed'));
+    } catch (err) {
+      // Hiển thị message thật từ backend (vd "Email này đã được đăng ký!")
+      setError(err instanceof Error ? err.message : (authError || t('auth.registerFailed')));
+    } finally {
+      setLoading(false);
     }
   };
 

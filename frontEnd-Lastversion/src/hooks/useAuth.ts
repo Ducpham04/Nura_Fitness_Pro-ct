@@ -93,8 +93,9 @@ export function useAuth(): UseAuthReturn {
       setError('Registration failed. Please try again.');
       return false;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      return false;
+      const msg = err instanceof Error ? err.message : 'An error occurred';
+      setError(msg);
+      throw new Error(msg); // ném tiếp để trang Register hiển thị đúng message
     } finally {
       setIsLoading(false);
     }
