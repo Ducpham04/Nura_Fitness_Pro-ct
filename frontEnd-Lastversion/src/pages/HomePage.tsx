@@ -15,6 +15,7 @@ import { nutritionService } from '../services/nutritionService';
 import { CountUp, containerStagger, fadeUp, fadeScale, premiumEase } from '../lib/motion';
 // Lazy-load để tách recharts (~140kb) khỏi bundle chính
 const MacroRadial = lazy(() => import('../components/MacroRadial'));
+const TrendChart = lazy(() => import('../components/TrendChart'));
 
 function pct(v: number, goal: number) { return goal ? Math.min(100, Math.round((v / goal) * 100)) : 0; }
 
@@ -571,6 +572,19 @@ export default function HomePage() {
           </div>
         </div>
       </motion.div>
+
+      {/* ── Biểu đồ xu hướng (cân nặng / calo đốt) ── */}
+      {user?.id && (
+        <motion.div variants={fadeUp}>
+          <Suspense fallback={
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] h-[260px] flex items-center justify-center">
+              <div className="w-6 h-6 border-2 border-lime border-t-transparent rounded-full animate-spin" />
+            </div>
+          }>
+            <TrendChart userId={user.id} />
+          </Suspense>
+        </motion.div>
+      )}
 
       {/* ── Macros (biểu đồ vòng) ── */}
       <motion.div variants={fadeUp} className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.045] to-white/[0.015] p-5 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.5)]">

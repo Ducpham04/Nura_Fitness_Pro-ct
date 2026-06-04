@@ -25,6 +25,13 @@ export interface UserBodyProfile {
   injuryNotes: string;
 }
 
+export interface BodyMetricPoint {
+  weightKg?: number;
+  bmi?: number;
+  bodyFatPct?: number;
+  recordedAt?: string;
+}
+
 export interface DashboardData {
   userSummary: {
     id: number;
@@ -422,6 +429,31 @@ class UserService {
           timestamp: new Date().toISOString(),
         },
       };
+    }
+  }
+
+  /**
+   * Lịch sử chỉ số cơ thể (cân nặng, BMI, % mỡ) theo thời gian.
+   * Dùng cho biểu đồ xu hướng trên Dashboard. Trả mảng rỗng nếu chưa có dữ liệu.
+   */
+  async getBodyMetricHistory(): Promise<BodyMetricPoint[]> {
+    try {
+      const res = await apiClient.get<any>(API_ENDPOINTS.HEALTH.BODY_METRIC);
+      const raw = res.data;
+      const list = Array.isArray(raw) ? raw : (raw?.data ?? raw?.content ?? []);
+      if (!Array.isArray(list)) return [];
+      return list
+        .map((m: any): BodyMetricPoint => ({
+          weightKg: m.weightKg != null ? Number(m.weightKg) : undefined,
+          bmi: m.bmi != null ? Number(m.bmi) : undefined,
+          bodyFatPct: m.bodyFatPct != null ? Number(m.bodyFatPct) : undefined,
+          recordedAt: m.recordedAt || m.createdAt || '',
+        }))
+        .filter((m: BodyMetricPoint) => m.recordedAt && m.weightKg != null)
+        .sort((a: BodyMetricPoint, b: BodyMetricPoint) =>
+          (a.recordedAt || '').localeCompare(b.recordedAt || ''));
+    } catch {
+      return [];
     }
   }
 }
