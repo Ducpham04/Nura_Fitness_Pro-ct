@@ -1,4 +1,4 @@
-import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer } from 'recharts';
+import { RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts';
 import { CountUp } from '../lib/motion';
 
 interface Macro { label: string; consumed: number; goal: number; color: string; }
@@ -27,19 +27,19 @@ export default function MacroRadial({
     <div className="flex items-center gap-5">
       {/* Vòng macro */}
       <div className="relative w-[150px] h-[150px] shrink-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <RadialBarChart
-            innerRadius="42%" outerRadius="100%" data={data}
-            startAngle={90} endAngle={-270} barSize={9}
-          >
-            <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
-            <RadialBar
-              background={{ fill: 'rgba(255,255,255,0.06)' }}
-              dataKey="value" cornerRadius={6} isAnimationActive
-              animationDuration={1100} animationEasing="ease-out"
-            />
-          </RadialBarChart>
-        </ResponsiveContainer>
+        {/* Kích thước cố định 150×150 → không cần ResponsiveContainer (tránh cảnh báo width/height -1) */}
+        <RadialBarChart
+          width={150} height={150}
+          innerRadius="42%" outerRadius="100%" data={data}
+          startAngle={90} endAngle={-270} barSize={9}
+        >
+          <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+          <RadialBar
+            background={{ fill: 'rgba(255,255,255,0.06)' }}
+            dataKey="value" cornerRadius={6} isAnimationActive
+            animationDuration={1100} animationEasing="ease-out"
+          />
+        </RadialBarChart>
         {/* Tâm: tổng kcal */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <CountUp value={Math.round(caloriesConsumed)} className="font-grotesk font-bold text-2xl text-white leading-none" />
