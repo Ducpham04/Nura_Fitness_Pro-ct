@@ -68,6 +68,19 @@ class FullPlanRequest(BaseModel):
     current_injuries: Optional[str] = ""
     allowed_exercises: List[AllowedWorkoutExercise] = Field(default_factory=list)
 
+    # ── Đơn tập cá nhân hóa (từ PersonalizationResolver ở backend) ──────────────
+    # Ràng buộc cứng theo guideline ACSM/NSCA/WHO. AI tôn trọng, không tự đoán.
+    risk_tier: Optional[str] = Field(default="A", description="A=khỏe / B=thận trọng / C=bệnh lý")
+    archetype: Optional[str] = Field(default="general")
+    intensity_cap_pct: Optional[int] = Field(default=85, description="Trần cường độ %1RM")
+    rep_range_hint: Optional[str] = Field(default="", description="vd '12-15'")
+    impact_policy: Optional[str] = Field(default="mixed", description="mixed | low_impact_only")
+    split_strategy: Optional[str] = Field(default="", description="full_body_lowimpact|lower_focus|core_focus|upper_lower|full_body|light_general")
+    focus_areas: Optional[List[str]] = Field(default_factory=list, description="Vùng cơ ưu tiên (primary muscle)")
+    include_mobility: Optional[bool] = False
+    include_balance: Optional[bool] = False
+    education_level: Optional[str] = Field(default="basic", description="basic | detailed")
+
 
 class FullPlanResponse(BaseModel):
     """Complete integrated response with meal + workout"""

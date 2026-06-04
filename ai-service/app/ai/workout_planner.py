@@ -63,6 +63,17 @@ class WorkoutPlanner:
         },
     }
 
+    # ── Pattern theo CHIẾN LƯỢC chia buổi (ưu tiên hơn _LEVEL_PATTERNS khi có) ──
+    # Cho phép cá nhân hóa thật: không ép full-body, bias vùng cơ, chế độ nhẹ cho người lớn tuổi.
+    _SPLIT_PATTERNS = {
+        "full_body_lowimpact": ["full_body", "rest", "full_body", "rest", "full_body", "rest", "rest"],
+        "lower_focus":         ["lower", "upper_push", "rest", "lower", "core", "rest", "rest"],
+        "core_focus":          ["core", "full_body", "rest", "core", "cardio_core", "rest", "rest"],
+        "upper_lower":         ["upper_push", "lower", "rest", "upper_pull", "lower", "rest", "rest"],
+        "full_body":           ["full_body", "rest", "full_body", "rest", "full_body", "rest", "rest"],
+        "light_general":       ["full_body", "rest", "cardio_core", "rest", "full_body", "rest", "rest"],
+    }
+
     def __init__(self):
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
@@ -118,6 +129,7 @@ class WorkoutPlanner:
         preferences: List[str] = None,
         allowed_exercises: List[Dict] = None,
         current_injuries: str = "",
+        prescription: Dict = None,
     ) -> ProgramTemplate:
         allowed_exercises = allowed_exercises or []
         if not allowed_exercises:
@@ -136,11 +148,45 @@ class WorkoutPlanner:
         rest_rec      = phase_params["rest"]
         intensity_pct = phase_params["intensity_pct"]
 
-        # Pick pattern from level + goal
-        pattern_hint = json.dumps(
-            self._LEVEL_PATTERNS.get(level_key, self._LEVEL_PATTERNS["intermediate"])
-                                 .get(goal_key, self._LEVEL_PATTERNS["intermediate"]["muscle_gain"])
-        )
+        # ── Áp "đơn tập" cá nhân hóa (ràng buộc cứng từ backend) ────────────────
+        rx = prescription or {}
+        cap = int(rx.get("intensity_cap_pct") or 100)
+        if intensity_pct > cap:
+            intensity_pct = cap                      # cap cường độ theo tuổi/rủi ro
+        if rx.get("rep_range_hint"):
+            rep_range = rx["rep_range_hint"]         # rep cao hơn cho nhóm thận trọng
+        split_strategy = (rx.get("split_strategy") or "").strip()
+        focus_areas    = rx.get("focus_areas") or []
+        impact_policy  = rx.get("impact_policy") or "mixed"
+        archetype      = rx.get("archetype") or "general"
+        edu_level      = rx.get("education_level") or "basic"
+
+        # Pattern: ưu tiên split_strategy của đơn tập → KHÔNG ép full-body
+        if split_strategy in self._SPLIT_PATTERNS:
+            pattern_hint = json.dumps(self._SPLIT_PATTERNS[split_strategy])
+        else:
+            pattern_hint = json.dumps(
+                self._LEVEL_PATTERNS.get(level_key, self._LEVEL_PATTERNS["intermediate"])
+                                     .get(goal_key, self._LEVEL_PATTERNS["intermediate"]["muscle_gain"])
+            )
+
+        # Ràng buộc cá nhân hóa thêm vào prompt
+        rx_rules = []
+        if impact_policy == "low_impact_only":
+            rx_rules.append('- LOW-IMPACT ONLY: tuyệt đối KHÔNG bài nhảy/plyometric/chạy mạnh (high_impact).')
+        if focus_areas:
+            rx_rules.append(f'- FOCUS: ưu tiên NHIỀU set/bài cho nhóm cơ {focus_areas} (vẫn giữ cân bằng cơ đối kháng).')
+        if rx.get("include_mobility"):
+            rx_rules.append('- Thêm khởi động/độ linh hoạt (mobility) đầu buổi.')
+        if rx.get("include_balance"):
+            rx_rules.append('- Thêm bài thăng bằng/ổn định (phòng té ngã cho người lớn tuổi).')
+        rx_rules.append(f'- Cường độ KHÔNG vượt {intensity_pct}% 1RM (đã cap theo hồ sơ).')
+        if edu_level == "detailed":
+            rx_rules.append('- adaptation_notes: 3–5 ghi chú NGẮN bằng TIẾNG VIỆT giải thích VÌ SAO kế hoạch phù hợp '
+                            '(cường độ, vùng cơ, an toàn). KHÔNG hứa "giảm mỡ điểm"/làm to vòng 1.')
+        else:
+            rx_rules.append('- adaptation_notes: 2–3 ghi chú ngắn tiếng Việt về trọng tâm & cách tiến bộ an toàn.')
+        rx_rules_str = "\n".join(rx_rules)
 
         # NSCA weekly volume targets per muscle group (sets/week for hypertrophy)
         volume_guideline = {
@@ -164,6 +210,9 @@ RULES:
 
 RECOVERY: upper_push & upper_pull → never consecutive. lower → not back-to-back.
 
+PERSONALIZATION (archetype={archetype}, risk_tier={rx.get("risk_tier", "A")}) — RÀNG BUỘC CỨNG:
+{rx_rules_str}
+
 OUTPUT:
 {{"goal":"...","weekly_pattern":[...],"exercise_pool":{{...}},"base_sets":{base_sets},"base_reps":{rep_range.split("-")[0]},"base_rest_seconds":{rest_rec},"progression_rate":0.05,"duration_minutes":{duration_minutes},"intensity":"{workout_intensity}","adaptation_notes":[]}}"""
 
@@ -172,7 +221,8 @@ Goal={goal_key} | Level={level_key} | Week={week_number}/{total_weeks} | Phase={
 Equipment: {json.dumps(available_equipment or ["bodyweight"])} | Injuries: {current_injuries or "none"}
 Duration: {duration_minutes}min | Rest: {rest_rec}s | Sets: {base_sets} | Reps: {rep_range}
 
-Use this weekly pattern for level={level_key}: {pattern_hint}
+Prescription: split={split_strategy or "auto"} | focus={focus_areas} | impact={impact_policy} | cap={intensity_pct}%1RM
+Use EXACTLY this weekly pattern: {pattern_hint}
 
 ALLOWED EXERCISES:
 {json.dumps(prompt_exercises, ensure_ascii=False)}

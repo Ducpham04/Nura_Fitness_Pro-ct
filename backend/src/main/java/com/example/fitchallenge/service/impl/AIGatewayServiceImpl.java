@@ -64,6 +64,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     private final PersonalizedPlanDetailRepository personalizedPlanDetailRepository;
     private final ExerciseRepository exerciseRepository;
     private final GoalRepository goalRepository;
+    private final com.example.fitchallenge.workout.PersonalizationResolver personalizationResolver;
     private final FoodRepository foodRepository;
     private final UserInventoryRepository userInventoryRepository;
     private final SmartMealPlanTransactionService smartMealPlanTransactionService;
@@ -440,6 +441,35 @@ public class AIGatewayServiceImpl implements AIGatewayService {
                 resolvedGoal = GoalMapper.toAiGoal(profile.getGoal());
             }
 
+            // ── Cá nhân hóa: đơn tập theo guideline (ACSM/NSCA/WHO) ──────────────
+            // Biến hồ sơ → ràng buộc tường minh: tầng rủi ro, cường độ trần, low-impact,
+            // trần độ khó, vùng cơ ưu tiên, chia buổi. Xem docs/ma-tran-doi-tuong-workout.md.
+            List<String> requestedFocus = toStringList(request.get("focusAreas"));
+            com.example.fitchallenge.workout.TrainingPrescription rx =
+                    personalizationResolver.resolve(profile, healthProfile, requestedFocus, resolvedGoal);
+
+            // Lọc bài theo đơn tập (loại high-impact & bài vượt trần độ khó cho nhóm thận trọng)
+            safeExercises = applyPrescriptionFilter(safeExercises, rx);
+            if (safeExercises.isEmpty()) {
+                return new NotificationResponse(false,
+                        "Chưa đủ bài tập an toàn phù hợp hồ sơ này (cần thêm bài low-impact/độ khó phù hợp). "
+                                + "Hãy bổ sung thiết bị hoặc liên hệ quản trị để mở rộng kho bài tập.");
+            }
+            // Cập nhật lại allowed_exercises sau khi lọc (đồng bộ với validate phía dưới)
+            aiRequest.put("allowed_exercises", safeExercises.stream().map(this::toAiExerciseCatalog).toList());
+
+            // Đẩy ràng buộc đơn tập xuống AI planner (ràng buộc cứng — AI không tự đoán)
+            aiRequest.put("risk_tier", rx.getRiskTier().name());
+            aiRequest.put("archetype", rx.getArchetype());
+            aiRequest.put("intensity_cap_pct", rx.getIntensityCapPct());
+            aiRequest.put("rep_range_hint", rx.getRepRangeHint());
+            aiRequest.put("impact_policy", rx.isLowImpactOnly() ? "low_impact_only" : "mixed");
+            aiRequest.put("split_strategy", rx.getSplitStrategy());
+            aiRequest.put("focus_areas", rx.getFocusAreas());
+            aiRequest.put("include_mobility", rx.isIncludeMobility());
+            aiRequest.put("include_balance", rx.isIncludeBalance());
+            aiRequest.put("education_level", rx.getEducationLevel());
+
             Map<String, Object> userProfile = new HashMap<>();
             userProfile.put("weight", profile.getWeight());
             userProfile.put("height", profile.getHeight());
@@ -490,6 +520,17 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             aiResponse.put("totalProgramDays", totalProgramDays);
             aiResponse.put("totalWeeks", totalWeeks);
             aiResponse.put("currentWeek", currentWeek);
+
+            // Minh bạch cá nhân hóa + an toàn y khoa
+            aiResponse.put("riskTier", rx.getRiskTier().name());
+            aiResponse.put("archetype", rx.getArchetype());
+            aiResponse.put("prescriptionRationale", rx.getRationale());
+            aiResponse.put("requiresMedicalClearance", rx.isRequiresMedicalClearance());
+            if (rx.isRequiresMedicalClearance()) {
+                aiResponse.put("medicalDisclaimer",
+                        "Hồ sơ của bạn có dấu hiệu cần thận trọng. Hãy tham khảo ý kiến bác sĩ trước khi "
+                                + "tập với cường độ cao. Kế hoạch này chỉ mang tính tham khảo, không thay thế tư vấn y tế.");
+            }
 
             saveWorkoutPlan(userId, aiResponse, programTemplate, profile, totalWeeks, programId, totalProgramDays);
             return new NotificationResponse(true, "Workout plan generated successfully", aiResponse);
@@ -977,6 +1018,26 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             throw new IllegalStateException("Exercise " + exerciseId + " missing medically valid " + field);
         }
         return value;
+    }
+
+    /**
+     * Lọc danh sách bài tập an toàn theo "đơn tập":
+     *  - low-impact: loại bài high_impact (người lớn tuổi/rủi ro/khớp yếu),
+     *  - trần độ khó: loại bài vượt maxDifficulty (EASY<MEDIUM<HARD).
+     * Tier A (khỏe mạnh, lowImpact=false, maxDiff=HARD) → không loại gì.
+     */
+    private List<Exercise> applyPrescriptionFilter(
+            List<Exercise> exercises, com.example.fitchallenge.workout.TrainingPrescription rx) {
+        int maxDiffOrdinal = rx.getMaxDifficulty() != null
+                ? rx.getMaxDifficulty().ordinal()
+                : Exercise.DifficultyLevel.HARD.ordinal();
+        return exercises.stream()
+                .filter(e -> !(rx.isLowImpactOnly() && Boolean.TRUE.equals(e.getHighImpact())))
+                .filter(e -> {
+                    Exercise.DifficultyLevel d = e.getDifficultyLevel();
+                    return d == null || d.ordinal() <= maxDiffOrdinal;
+                })
+                .toList();
     }
 
     private List<Exercise> findSafeExercisesForAi(HealthProfile healthProfile, List<String> equipment) {

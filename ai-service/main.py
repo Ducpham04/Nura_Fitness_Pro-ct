@@ -439,7 +439,19 @@ async def generate_workout_plan(request: FullPlanRequest):
             progression_phase=request.progression_phase,
             preferences=request.preferences,
             allowed_exercises=[item.model_dump() for item in request.allowed_exercises],
-            current_injuries=request.current_injuries or ""
+            current_injuries=request.current_injuries or "",
+            prescription={
+                "risk_tier": request.risk_tier or "A",
+                "archetype": request.archetype or "general",
+                "intensity_cap_pct": request.intensity_cap_pct or 85,
+                "rep_range_hint": request.rep_range_hint or "",
+                "impact_policy": request.impact_policy or "mixed",
+                "split_strategy": request.split_strategy or "",
+                "focus_areas": request.focus_areas or [],
+                "include_mobility": bool(request.include_mobility),
+                "include_balance": bool(request.include_balance),
+                "education_level": request.education_level or "basic",
+            },
         )
         return template
     except Exception as e:
