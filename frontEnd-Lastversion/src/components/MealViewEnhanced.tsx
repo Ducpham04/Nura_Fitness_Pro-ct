@@ -2,7 +2,7 @@ import { useState, useEffect, memo, useCallback } from 'react';
 import {
   Brain, Loader2, Camera, Utensils, ShoppingCart, X,
   Check, RefreshCw, Flame, Wallet, ChevronLeft, ChevronRight,
-  Beef, Wheat, Droplets, Shuffle,
+  Beef, Wheat, Droplets, Shuffle, CalendarDays,
 } from 'lucide-react';
 import {
   type Meal, type MealIngredient, type DailyMealPlan, type WeeklyNutritionPlan,
@@ -589,102 +589,138 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
   return (
     <div className="max-w-3xl mx-auto space-y-4 py-4 animate-fade-in">
 
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-lime mb-1">
-            <Utensils className="w-3.5 h-3.5" /> Thực đơn
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/[0.06]">
+        <img
+          src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1400&q=80"
+          alt="" aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-tr from-black via-black/85 to-black/45" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
+
+        <div className="relative p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.28em] text-lime mb-2">
+                <Utensils className="w-3.5 h-3.5" /> Dinh dưỡng
+              </div>
+              <h2 className="font-grotesk font-bold italic uppercase text-2xl sm:text-[2.1rem] text-white leading-[0.9] tracking-tight">
+                {isToday ? 'Thực đơn hôm nay' : selectedDate
+                  ? `${VI_DAYS_FULL[selectedDate.getDay()]}, ${selectedDate.getDate()}/${selectedDate.getMonth()+1}`
+                  : `Ngày ${selectedDay}`}
+              </h2>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setShoppingOpen(true)}
+                className="w-9 h-9 rounded-xl border border-white/15 bg-white/10 backdrop-blur text-neutral-200 hover:text-white flex items-center justify-center transition-colors"
+              >
+                <ShoppingCart className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setScannerOpen(true)}
+                className="w-9 h-9 rounded-xl border border-white/15 bg-white/10 backdrop-blur text-neutral-200 hover:text-white flex items-center justify-center transition-colors"
+              >
+                <Camera className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setCyberpunkModalOpen(true)}
+                className="btn-lime px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
+              >
+                <Brain className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Cập nhật</span>
+              </button>
+            </div>
           </div>
-          <h2 className="font-grotesk font-bold italic uppercase text-xl text-white leading-none tracking-tight">
-            {isToday ? 'Hôm nay' : selectedDate
-              ? `${VI_DAYS_FULL[selectedDate.getDay()]}, ${selectedDate.getDate()}/${selectedDate.getMonth()+1}`
-              : `Ngày ${selectedDay}`}
-          </h2>
-          <p className="text-neutral-500 text-xs mt-0.5">
-            {totalEatenToday}/{totalMealsToday} bữa đã ăn
-            {currentKcal > 0 && ` · ${currentKcal} kcal`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShoppingOpen(true)}
-            className="w-9 h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] text-neutral-400 hover:text-white flex items-center justify-center transition-colors"
-          >
-            <ShoppingCart className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setScannerOpen(true)}
-            className="w-9 h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] text-neutral-400 hover:text-white flex items-center justify-center transition-colors"
-          >
-            <Camera className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setCyberpunkModalOpen(true)}
-            className="btn-lime px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
-          >
-            <Brain className="w-3.5 h-3.5" /> Cập nhật
-          </button>
+
+          {/* Stat badges */}
+          <div className="flex flex-wrap items-center gap-2.5 mt-4">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur border border-white/15 px-3 py-1.5 text-xs text-neutral-200">
+              <Check className="w-3.5 h-3.5 text-lime" />
+              <span className="text-white font-bold">{totalEatenToday}/{totalMealsToday}</span> bữa đã ăn
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur border border-white/15 px-3 py-1.5 text-xs text-neutral-200">
+              <Flame className="w-3.5 h-3.5 text-orange-400" />
+              <span className="text-white font-bold">{currentKcal}</span>/{targetKcal} kcal
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-lime/15 backdrop-blur border border-lime/30 px-3 py-1.5 text-xs text-lime font-bold">
+              <Wallet className="w-3.5 h-3.5" />
+              Còn {((dailyBudget - currentSpent)/1000).toFixed(0)}k
+            </span>
+          </div>
         </div>
       </div>
 
       {naturalLogPanel}
 
-      {/* ── Week navigator ── */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { setWeekStart(w => Math.max(1, w - 7)); }}
-            disabled={weekStart <= 1}
-            className="w-7 h-7 rounded-lg border border-white/[0.08] flex items-center justify-center text-neutral-500 hover:text-white disabled:opacity-25 transition-colors shrink-0"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-
-          <div className="flex-1 grid grid-cols-7 gap-1">
-            {weekDays.map(dayNum => {
-              const date = getDayDate(dayNum);
-              const dow = date ? VI_DAYS[date.getDay()] : `N${dayNum}`;
-              const dateNum = date ? date.getDate() : dayNum;
-              const isSelected = selectedDay === dayNum;
-              const isTodayDay = date ? date.toDateString() === todayDate.toDateString() : dayNum === todayPlanDay;
-
-              return (
-                <button
-                  key={dayNum}
-                  onClick={() => setSelectedDay(dayNum)}
-                  className={`relative rounded-xl py-2 text-center transition-all ${
-                    isSelected
-                      ? 'bg-lime/15 border border-lime/30'
-                      : 'border border-transparent hover:bg-white/[0.05] hover:border-white/[0.08]'
-                  }`}
-                >
-                  {isTodayDay && (
-                    <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-lime" />
-                  )}
-                  <div className={`text-[11px] font-bold leading-none ${isSelected ? 'text-lime' : 'text-neutral-400'}`}>
-                    {dow}
-                  </div>
-                  <div className={`text-[13px] font-grotesk font-bold mt-0.5 leading-none ${
-                    isSelected ? 'text-lime' : isTodayDay ? 'text-white' : 'text-neutral-500'
-                  }`}>
-                    {dateNum}
-                  </div>
-                  {/* Completion dot */}
-                  <div className={`w-1 h-1 rounded-full mx-auto mt-1 ${
-                    isSelected ? 'bg-lime' : 'bg-white/[0.1]'
-                  }`} />
-                </button>
-              );
-            })}
+      {/* ── Day selector — nổi bật ── */}
+      <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-b from-white/[0.05] to-white/[0.02] p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-lime/15 border border-lime/25 flex items-center justify-center shrink-0">
+              <CalendarDays className="w-4 h-4 text-lime" />
+            </div>
+            <p className="font-grotesk font-bold uppercase text-white text-sm tracking-wide leading-none">Chọn ngày</p>
           </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => { setWeekStart(w => Math.max(1, w - 7)); }}
+              disabled={weekStart <= 1}
+              className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.03] flex items-center justify-center text-neutral-400 hover:text-white hover:border-white/20 disabled:opacity-25 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => { setWeekStart(w => Math.min(totalDays - 6, w + 7)); }}
+              disabled={weekEnd >= totalDays}
+              className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.03] flex items-center justify-center text-neutral-400 hover:text-white hover:border-white/20 disabled:opacity-25 transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
 
-          <button
-            onClick={() => { setWeekStart(w => Math.min(totalDays - 6, w + 7)); }}
-            disabled={weekEnd >= totalDays}
-            className="w-7 h-7 rounded-lg border border-white/[0.08] flex items-center justify-center text-neutral-500 hover:text-white disabled:opacity-25 transition-colors shrink-0"
-          >
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+          {weekDays.map(dayNum => {
+            const date = getDayDate(dayNum);
+            const dow = date ? VI_DAYS[date.getDay()] : `N${dayNum}`;
+            const dateNum = date ? date.getDate() : dayNum;
+            const isSelected = selectedDay === dayNum;
+            const isTodayDay = date ? date.toDateString() === todayDate.toDateString() : dayNum === todayPlanDay;
+
+            return (
+              <button
+                key={dayNum}
+                onClick={() => setSelectedDay(dayNum)}
+                className={`relative rounded-2xl py-3 px-1 flex flex-col items-center justify-center gap-1 transition-all ${
+                  isSelected
+                    ? 'bg-lime text-black shadow-[0_6px_24px_-6px_rgba(204,255,0,0.5)]'
+                    : isTodayDay
+                    ? 'border border-lime/40 bg-lime/[0.06] hover:bg-lime/10'
+                    : 'border border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.07]'
+                }`}
+              >
+                {isTodayDay && !isSelected && (
+                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[7px] font-bold uppercase tracking-wider text-lime bg-charcoal border border-lime/30 px-1.5 py-px rounded-full">
+                    Nay
+                  </span>
+                )}
+                <div className={`text-xs font-bold leading-none ${
+                  isSelected ? 'text-black' : isTodayDay ? 'text-lime' : 'text-neutral-400'
+                }`}>
+                  {dow}
+                </div>
+                <div className={`text-base font-grotesk font-bold leading-none ${
+                  isSelected ? 'text-black' : isTodayDay ? 'text-white' : 'text-neutral-300'
+                }`}>
+                  {dateNum}
+                </div>
+                <div className={`w-1.5 h-1.5 rounded-full ${
+                  isSelected ? 'bg-black/40' : 'bg-white/[0.12]'
+                }`} />
+              </button>
+            );
+          })}
         </div>
       </div>
 

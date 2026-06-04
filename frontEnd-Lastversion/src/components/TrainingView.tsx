@@ -1345,94 +1345,99 @@ function TrainingView() {
         </div>
       )}
 
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-1.5 text-lime text-[11px] font-bold uppercase tracking-widest mb-2">
-            <Activity className="w-3.5 h-3.5" />
-            Personal workout
-          </div>
-          <h2 className="font-grotesk font-bold italic uppercase text-white text-2xl sm:text-[1.9rem] leading-[0.92] tracking-tight">Lịch tập cá nhân</h2>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-neutral-400">
-            <span className="flex items-center gap-1.5">
-              <Check className="w-3.5 h-3.5 text-lime" />
-              <span className="text-white font-semibold">{completedCount}/{scheduleExercises.length}</span> bài hoàn thành
-            </span>
-            <span className="hidden sm:block text-neutral-600">·</span>
-            <span className="flex items-center gap-1.5">
-              <Flame className="w-3.5 h-3.5 text-orange-400" />
-              <span className="text-white font-semibold">{totalCalories}</span> kcal hôm nay
-            </span>
-            {activePlan?.name && (
-              <>
-                <span className="hidden sm:block text-neutral-600">·</span>
-                <span className="text-neutral-500 truncate max-w-[200px]">{displayPlanName(activePlan.name)}</span>
-              </>
-            )}
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            onClick={() => setAiPlanModalOpen(true)}
-            className="rounded-xl bg-lime/10 border border-lime/25 px-3 py-2 text-lime text-xs font-bold hover:bg-lime/20 transition-colors flex items-center gap-1.5"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            {activePlan ? 'Tạo lại bằng AI' : 'Tạo kế hoạch AI'}
-          </button>
-          <button
-            onClick={() => window.location.reload()}
-            className="rounded-xl border border-white/10 px-3 py-2 text-neutral-400 text-xs font-medium hover:text-white hover:border-white/20 transition-colors flex items-center gap-1.5"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Tải lại</span>
-          </button>
-        </div>
-      </div>
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/[0.06]">
+        <img
+          src="https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1400&q=80"
+          alt="" aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-tr from-black via-black/85 to-black/45" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
 
-      {/* ── Progress strip ── */}
-      {activePlan && (
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.04] px-4 py-3 flex items-center gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-neutral-400 text-xs truncate">
-                {displayPlanName(activePlan.name)} · Tuần {activePlan.weekNumber || currentWeekNum}/{activePlan.totalWeeks || totalWeeksCount}
-              </span>
-              <span className="text-white text-xs font-semibold shrink-0 ml-3">
-                {progressPercent}%
-                {completedCount === scheduleExercises.length && scheduleExercises.length > 0 && (
-                  <Check className="w-3 h-3 text-lime inline ml-1.5" />
-                )}
-              </span>
+        <div className="relative p-6 sm:p-7">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-lime text-[11px] font-bold uppercase tracking-[0.28em] mb-2">
+                <Activity className="w-3.5 h-3.5" /> Tập luyện
+              </div>
+              <h2 className="font-grotesk font-bold italic uppercase text-white text-3xl sm:text-[2.4rem] leading-[0.9] tracking-tight">
+                Lịch tập cá nhân
+              </h2>
+              {activePlan?.name && (
+                <p className="text-neutral-300 text-sm mt-2 truncate max-w-md">
+                  {displayPlanName(activePlan.name)} · Tuần {activePlan.weekNumber || currentWeekNum}/{activePlan.totalWeeks || totalWeeksCount}
+                </p>
+              )}
             </div>
-            <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-lime rounded-full transition-all duration-700"
-                style={{ width: `${activePlan.completionPercentage ?? progressPercent}%` }}
-              />
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                onClick={() => setAiPlanModalOpen(true)}
+                className="rounded-xl bg-lime border border-lime px-3.5 py-2 text-black text-xs font-bold hover:bg-lime/90 transition-colors flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{activePlan ? 'Tạo lại bằng AI' : 'Tạo kế hoạch AI'}</span>
+                <span className="sm:hidden">AI</span>
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="rounded-xl border border-white/15 bg-white/5 backdrop-blur px-3 py-2 text-neutral-200 text-xs font-medium hover:text-white hover:border-white/30 transition-colors flex items-center gap-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Tải lại</span>
+              </button>
             </div>
           </div>
-          {canGenerateNextWeek && (
-            <div className="flex shrink-0 flex-wrap gap-2">
-              <button
-                onClick={autoRegulateNextWeek}
-                disabled={adaptingNextWeek || generatingNextWeek}
-                className="rounded-xl border border-lime/20 bg-lime/10 px-3 py-2 text-lime text-xs font-medium hover:text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-colors"
-              >
-                {adaptingNextWeek ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                AI thích ứng
-              </button>
-              <button
-                onClick={generateNextWeek}
-                disabled={generatingNextWeek || adaptingNextWeek}
-                className="rounded-xl border border-white/10 px-3 py-2 text-neutral-300 text-xs font-medium hover:text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-colors"
-              >
-                {generatingNextWeek ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CalendarDays className="w-3.5 h-3.5" />}
-                Tuần tiếp theo
-              </button>
+
+          {/* Stat badges */}
+          <div className="flex flex-wrap items-center gap-2.5 mt-5">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur border border-white/15 px-3 py-1.5 text-xs text-neutral-200">
+              <Check className="w-3.5 h-3.5 text-lime" />
+              <span className="text-white font-bold">{completedCount}/{scheduleExercises.length}</span> bài hoàn thành
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur border border-white/15 px-3 py-1.5 text-xs text-neutral-200">
+              <Flame className="w-3.5 h-3.5 text-orange-400" />
+              <span className="text-white font-bold">{totalCalories}</span> kcal hôm nay
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-lime/15 backdrop-blur border border-lime/30 px-3 py-1.5 text-xs text-lime font-bold">
+              <Target className="w-3.5 h-3.5" />
+              {progressPercent}% tiến độ
+            </span>
+          </div>
+
+          {/* Progress bar + next-week actions */}
+          {activePlan && (
+            <div className="mt-4">
+              <div className="h-1.5 bg-white/15 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-lime rounded-full transition-all duration-700"
+                  style={{ width: `${activePlan.completionPercentage ?? progressPercent}%` }}
+                />
+              </div>
+              {canGenerateNextWeek && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <button
+                    onClick={autoRegulateNextWeek}
+                    disabled={adaptingNextWeek || generatingNextWeek}
+                    className="rounded-xl border border-lime/30 bg-lime/15 backdrop-blur px-3 py-2 text-lime text-xs font-semibold hover:bg-lime/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-colors"
+                  >
+                    {adaptingNextWeek ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    AI thích ứng
+                  </button>
+                  <button
+                    onClick={generateNextWeek}
+                    disabled={generatingNextWeek || adaptingNextWeek}
+                    className="rounded-xl border border-white/15 bg-white/5 backdrop-blur px-3 py-2 text-neutral-200 text-xs font-semibold hover:text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-colors"
+                  >
+                    {generatingNextWeek ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CalendarDays className="w-3.5 h-3.5" />}
+                    Tuần tiếp theo
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
+      </div>
 
       {/* ── Error ── */}
       {saveError && (
@@ -1458,81 +1463,96 @@ function TrainingView() {
       {!loading && scheduleExercises.length > 0 && (
         <div className="space-y-4">
 
-          {/* Week navigator */}
-          <div className="rounded-2xl border border-white/[0.07] bg-white/[0.04] p-3">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => jumpToDay(Math.max(1, currentWeekStart - weekSize))}
-                disabled={!canPrevWeek || currentWeekStart <= 1}
-                className="w-8 h-8 shrink-0 rounded-xl border border-white/10 flex items-center justify-center text-neutral-400 hover:text-white hover:border-white/20 disabled:opacity-25 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-
-              <div className="flex-1 grid grid-cols-7 gap-1">
-                {weekDays.map(day => {
-                  const dayExercises = scheduleExercises.filter(ex => (ex.dayNumber || 1) === day);
-                  const dayDone = dayExercises.filter(ex => ex.done).length;
-                  const isRest = dayExercises.length === 0;
-                  const isActive = selectedDay === day;
-                  const isToday = todayDayNumber === day;
-                  const allDone = !isRest && dayDone === dayExercises.length;
-                  const pill = formatDayPill(day);
-                  return (
-                    <button
-                      key={day}
-                      onClick={() => jumpToDay(day)}
-                      className={`relative rounded-xl py-2 px-0.5 text-center transition-all ${
-                        isActive
-                          ? 'bg-lime/15 border border-lime/30'
-                          : isRest
-                          ? 'border border-dashed border-white/[0.08] hover:border-white/20 hover:bg-white/[0.03]'
-                          : 'border border-transparent hover:bg-white/[0.06] hover:border-white/[0.06]'
-                      }`}
-                    >
-                      {/* "Hôm nay" dot indicator */}
-                      {isToday && (
-                        <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-lime" />
-                      )}
-
-                      {/* Weekday */}
-                      <div className={`text-[11px] font-bold leading-none ${
-                        isActive ? 'text-lime' : isRest ? 'text-neutral-600' : 'text-neutral-300'
-                      }`}>
-                        {pill.weekday}
-                      </div>
-
-                      {/* Date */}
-                      {pill.date && (
-                        <div className={`text-[9px] mt-0.5 leading-none ${
-                          isActive ? 'text-lime/70' : 'text-neutral-600'
-                        }`}>
-                          {pill.date}
-                        </div>
-                      )}
-
-                      {/* Status: rest / done / progress */}
-                      <div className={`text-[9px] mt-1 leading-none font-semibold flex items-center justify-center ${
-                        allDone ? 'text-lime' : isActive ? 'text-lime/60' : isRest ? 'text-neutral-700' : 'text-neutral-600'
-                      }`}>
-                        {isRest ? <Moon className="w-2.5 h-2.5" /> : allDone ? <Check className="w-2.5 h-2.5" /> : `${dayDone}/${dayExercises.length}`}
-                      </div>
-                    </button>
-                  );
-                })}
+          {/* Week navigator — lịch tuần nổi bật */}
+          <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-b from-white/[0.05] to-white/[0.02] p-4 sm:p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-lime/15 border border-lime/25 flex items-center justify-center shrink-0">
+                  <CalendarDays className="w-4 h-4 text-lime" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-grotesk font-bold uppercase text-white text-sm tracking-wide leading-none">Lịch tuần</p>
+                  <p className="text-neutral-500 text-[11px] mt-1 truncate">{formatWeekRange()}</p>
+                </div>
               </div>
-
-              <button
-                onClick={() => jumpToDay(Math.min(totalScheduleDays, currentWeekStart + weekSize))}
-                disabled={!canNextWeek}
-                className="w-8 h-8 shrink-0 rounded-xl border border-white/10 flex items-center justify-center text-neutral-400 hover:text-white hover:border-white/20 disabled:opacity-25 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => jumpToDay(Math.max(1, currentWeekStart - weekSize))}
+                  disabled={!canPrevWeek || currentWeekStart <= 1}
+                  className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.03] flex items-center justify-center text-neutral-400 hover:text-white hover:border-white/20 disabled:opacity-25 transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => jumpToDay(Math.min(totalScheduleDays, currentWeekStart + weekSize))}
+                  disabled={!canNextWeek}
+                  className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.03] flex items-center justify-center text-neutral-400 hover:text-white hover:border-white/20 disabled:opacity-25 transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            <p className="text-[11px] text-neutral-600 text-center mt-2">
-              {formatWeekRange()}
-            </p>
+
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+              {weekDays.map(day => {
+                const dayExercises = scheduleExercises.filter(ex => (ex.dayNumber || 1) === day);
+                const dayDone = dayExercises.filter(ex => ex.done).length;
+                const isRest = dayExercises.length === 0;
+                const isActive = selectedDay === day;
+                const isToday = todayDayNumber === day;
+                const allDone = !isRest && dayDone === dayExercises.length;
+                const pill = formatDayPill(day);
+                return (
+                  <button
+                    key={day}
+                    onClick={() => jumpToDay(day)}
+                    className={`relative rounded-2xl py-3 px-1 flex flex-col items-center justify-center gap-1 transition-all ${
+                      isActive
+                        ? 'bg-lime text-black shadow-[0_6px_24px_-6px_rgba(204,255,0,0.5)]'
+                        : isToday
+                        ? 'border border-lime/40 bg-lime/[0.06] hover:bg-lime/10'
+                        : isRest
+                        ? 'border border-dashed border-white/[0.1] hover:bg-white/[0.04]'
+                        : 'border border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.07]'
+                    }`}
+                  >
+                    {/* "Hôm nay" badge */}
+                    {isToday && !isActive && (
+                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[7px] font-bold uppercase tracking-wider text-lime bg-charcoal border border-lime/30 px-1.5 py-px rounded-full">
+                        Nay
+                      </span>
+                    )}
+
+                    {/* Weekday */}
+                    <div className={`text-xs font-bold leading-none ${
+                      isActive ? 'text-black' : isToday ? 'text-lime' : isRest ? 'text-neutral-600' : 'text-neutral-200'
+                    }`}>
+                      {pill.weekday}
+                    </div>
+
+                    {/* Date */}
+                    {pill.date && (
+                      <div className={`text-[10px] leading-none ${
+                        isActive ? 'text-black/60' : 'text-neutral-600'
+                      }`}>
+                        {pill.date}
+                      </div>
+                    )}
+
+                    {/* Status: rest / done / progress */}
+                    <div className={`mt-0.5 leading-none font-bold flex items-center justify-center ${
+                      isActive ? 'text-black' : allDone ? 'text-lime' : isRest ? 'text-neutral-700' : 'text-neutral-500'
+                    }`}>
+                      {isRest
+                        ? <Moon className="w-3 h-3" />
+                        : allDone
+                        ? <Check className="w-3.5 h-3.5" />
+                        : <span className="text-[10px]">{dayDone}/{dayExercises.length}</span>}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Exercise list + detail panel */}
