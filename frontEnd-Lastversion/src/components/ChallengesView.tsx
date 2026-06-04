@@ -1,8 +1,11 @@
-import { useState, useEffect, memo } from 'react';
-import { Search, Trophy, Clock, Users, Play, CheckCircle, ChevronRight, Video, Zap, Award, Loader2 } from 'lucide-react';
+import { useState, useEffect, useMemo, memo } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Search, Trophy, Clock, Users, Play, CheckCircle, ChevronRight,
+  Video, Zap, Award, Loader2, Flame, Target, ArrowLeft, Crown,
+} from 'lucide-react';
 import { challengeService, type Challenge } from '../services/challengeService';
-import { userService } from '../services/userService';
-import NikeHeader from './NikeHeader';
+import { containerStagger, fadeUp, fadeScale, CountUp } from '../lib/motion';
 
 interface ChallengeUI {
   id: number;
@@ -25,16 +28,127 @@ interface ChallengeUI {
   ends_at: string;
 }
 
+// Ảnh dự phòng kiểu "athletic" (Unsplash) — xoay vòng theo id để mỗi card khác nhau
+const FALLBACK_IMAGES = [
+  'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1599058917212-d750089bc07e?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=900&q=80',
+  'https://images.unsplash.com/photo-1546483875-ad9014c88eba?auto=format&fit=crop&w=900&q=80',
+];
+const imgFor = (id: number, url?: string) =>
+  url && url.length > 5 ? url : FALLBACK_IMAGES[Math.abs(id) % FALLBACK_IMAGES.length];
+
+const pad = (n: number) => String(Math.max(0, n)).padStart(2, '0');
+
+/** Tính thời gian còn lại tới mốc `target`, cập nhật mỗi giây. */
+function useCountdown(target?: string) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const end = target ? new Date(target).getTime() : 0;
+  const diff = Math.max(0, end - now);
+  const ended = !!target && end > 0 && diff <= 0;
+  return {
+    ended,
+    valid: !!target && !Number.isNaN(end) && end > 0,
+    days: Math.floor(diff / 86400000),
+    hours: Math.floor((diff % 86400000) / 3600000),
+    minutes: Math.floor((diff % 3600000) / 60000),
+    seconds: Math.floor((diff % 60000) / 1000),
+  };
+}
+
+/** Khối đếm ngược kiểu "đấu trường". */
+function Countdown({ target, size = 'md' }: { target?: string; size?: 'sm' | 'md' }) {
+  const c = useCountdown(target);
+  if (!c.valid) return null;
+  if (c.ended) {
+    return <span className="text-red-400 text-xs font-bold uppercase tracking-wider">Đã kết thúc</span>;
+  }
+  const cells: [string, number][] = [
+    ['Ngày', c.days], ['Giờ', c.hours], ['Phút', c.minutes], ['Giây', c.seconds],
+  ];
+  const sm = size === 'sm';
+  return (
+    <div className={`flex ${sm ? 'gap-1' : 'gap-1.5'}`}>
+      {cells.map(([label, v]) => (
+        <div
+          key={label}
+          className={`rounded-lg bg-black/45 backdrop-blur border border-white/10 text-center ${
+            sm ? 'px-1.5 py-1 min-w-[34px]' : 'px-2.5 py-1.5 min-w-[46px]'
+          }`}
+        >
+          <div className={`font-grotesk font-bold text-white tabular-nums leading-none ${sm ? 'text-sm' : 'text-lg'}`}>
+            {pad(v)}
+          </div>
+          <div className={`uppercase tracking-wider text-neutral-400 ${sm ? 'text-[8px] mt-0.5' : 'text-[9px] mt-1'}`}>
+            {label}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Stack avatar ẩn danh thể hiện số người tham gia. */
+function AvatarStack({ count }: { count: number }) {
+  const shown = Math.min(4, Math.max(0, count));
+  const grads = [
+    'from-lime/60 to-emerald-600',
+    'from-electric/60 to-blue-600',
+    'from-orange-400/60 to-red-600',
+    'from-fuchsia-500/60 to-purple-700',
+  ];
+  if (count <= 0) return null;
+  return (
+    <div className="flex items-center">
+      <div className="flex -space-x-2">
+        {Array.from({ length: shown }).map((_, i) => (
+          <div
+            key={i}
+            className={`w-6 h-6 rounded-full bg-gradient-to-br ${grads[i % grads.length]} border-2 border-charcoal flex items-center justify-center`}
+          >
+            <Users className="w-3 h-3 text-white/80" />
+          </div>
+        ))}
+      </div>
+      <span className="ml-2 text-neutral-300 text-xs font-medium">
+        {count.toLocaleString('vi-VN')} đang đua
+      </span>
+    </div>
+  );
+}
+
+const difficultyColors: Record<string, string> = {
+  beginner: 'text-lime',
+  intermediate: 'text-electric',
+  advanced: 'text-warning',
+};
+const difficultyDot: Record<string, string> = {
+  beginner: 'bg-lime',
+  intermediate: 'bg-electric',
+  advanced: 'bg-warning',
+};
+const difficultyLabels: Record<string, string> = {
+  beginner: 'Người mới',
+  intermediate: 'Trung cấp',
+  advanced: 'Nâng cao',
+};
+
+type StatusFilter = 'all' | 'active' | 'joined' | 'upcoming';
+
 function ChallengesView() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [filterDifficulty, setFilterDifficulty] = useState('all');
-  const [filterGoal, setFilterGoal] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
   const [selectedChallenge, setSelectedChallenge] = useState<ChallengeUI | null>(null);
-
-  const [backendGoals, setBackendGoals] = useState<any[]>([]);
 
   const mapDifficulty = (difficulty?: string): ChallengeUI['difficulty'] => {
     if (difficulty === 'EASY') return 'beginner';
@@ -42,22 +156,7 @@ function ChallengesView() {
     return 'intermediate';
   };
 
-  useEffect(() => {
-    loadChallenges();
-    fetchGoals();
-  }, []);
-
-  const fetchGoals = async () => {
-    try {
-      const response = await userService.getGoals();
-      if (response.success && response.data) {
-        const data = (response.data as any).data || response.data;
-        if (Array.isArray(data)) setBackendGoals(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch goals:", err);
-    }
-  };
+  useEffect(() => { loadChallenges(); }, []);
 
   const loadChallenges = async () => {
     try {
@@ -65,99 +164,89 @@ function ChallengesView() {
       const response = await challengeService.getAll();
       if (response.success && response.data) {
         setChallenges(response.data);
+        setError(null);
       } else {
-        setError(response.error?.message || 'Failed to load challenges');
+        setError(response.error?.message || 'Không tải được thử thách');
       }
-    } catch (err) {
-      setError('Failed to load challenges');
+    } catch {
+      setError('Không tải được thử thách');
     } finally {
       setLoading(false);
     }
   };
 
-  // Convert API data to UI format
-  const displayChallenges = challenges.length > 0 ? challenges.map(challenge => ({
+  const displayChallenges: ChallengeUI[] = challenges.map(challenge => ({
     id: challenge.id,
     name: challenge.title,
     description: challenge.description,
-    goal: 'endurance' as 'lose' | 'muscle' | 'maintain' | 'endurance',
+    goal: 'endurance',
     difficulty: mapDifficulty(challenge.difficulty),
     duration: challenge.durationDays ? `${challenge.durationDays} ngày` : (challenge.duration || ''),
     participants: challenge.participants || 0,
     reward_points: challenge.rewardPoints || 0,
     prize_usd: challenge.prizeUsd,
-    image: challenge.imageUrl || 'https://images.pexels.com/photos/4162583/pexels-photo-4162583.jpeg?auto=compress&cs=tinysrgb&w=400',
-    exercise: challenge.exercise || (challenge.exerciseIds?.length ? `${challenge.exerciseIds.length} exercises` : 'Challenge event'),
+    image: imgFor(challenge.id, challenge.imageUrl),
+    exercise: challenge.exercise || (challenge.exerciseIds?.length ? `${challenge.exerciseIds.length} bài tập` : 'Sự kiện'),
     minReps: challenge.minReps || 0,
     passingScore: challenge.passingScore || 85,
-    status: (challenge.status === 'ACTIVE' ? 'active' : challenge.status === 'INACTIVE' ? 'ended' : 'upcoming') as 'active' | 'ended' | 'upcoming',
+    status: (challenge.status === 'ACTIVE' ? 'active' : challenge.status === 'INACTIVE' ? 'ended' : 'upcoming'),
     joined: challenge.joined || false,
     submitted: challenge.submitted || false,
     userScore: challenge.userScore,
-    ends_at: challenge.endsAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  })) : [];
+    ends_at: challenge.endsAt || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+  }));
 
-  // Fallback data if API fails
+  // Dữ liệu mẫu nếu API trống (vẫn việt hoá)
   const fallbackChallenges: ChallengeUI[] = [
     {
-      id: 1,
-      name: '100 Push-up Challenge',
-      description: 'Complete 100 push-ups in one session with proper form tracking.',
-      goal: 'muscle',
-      difficulty: 'intermediate',
-      duration: '1 week',
-      participants: 342,
-      reward_points: 500,
-      prize_usd: 50,
-      image: 'https://images.pexels.com/photos/4162583/pexels-photo-4162583.jpeg?auto=compress&cs=tinysrgb&w=400',
-      exercise: 'Push-ups',
-      minReps: 100,
-      passingScore: 85,
-      status: 'active',
-      joined: true,
-      submitted: false,
-      ends_at: '2026-05-17',
+      id: 1, name: '100 Hít đất', description: 'Hoàn thành 100 lần hít đất trong một buổi, AI chấm form chuẩn.',
+      goal: 'muscle', difficulty: 'intermediate', duration: '7 ngày', participants: 342,
+      reward_points: 500, prize_usd: 50, image: imgFor(1), exercise: 'Hít đất', minReps: 100,
+      passingScore: 85, status: 'active', joined: true, submitted: false,
+      ends_at: new Date(Date.now() + 3 * 86400000).toISOString(),
     },
     {
-      id: 2,
-      name: 'Squat Marathon',
-      description: 'Complete 200 squats with proper form in under 10 minutes.',
-      goal: 'muscle',
-      difficulty: 'advanced',
-      duration: '2 weeks',
-      participants: 128,
-      reward_points: 750,
-      prize_usd: 75,
-      image: 'https://images.pexels.com/photos/1552252/pexels-photo-1552252.jpeg?auto=compress&cs=tinysrgb&w=400',
-      exercise: 'Squats',
-      minReps: 200,
-      passingScore: 90,
-      status: 'active',
-      joined: false,
-      submitted: false,
-      ends_at: '2026-05-24',
+      id: 2, name: 'Marathon Squat', description: 'Hoàn thành 200 squat đúng form trong dưới 10 phút.',
+      goal: 'muscle', difficulty: 'advanced', duration: '14 ngày', participants: 128,
+      reward_points: 750, prize_usd: 75, image: imgFor(2), exercise: 'Squat', minReps: 200,
+      passingScore: 90, status: 'active', joined: false, submitted: false,
+      ends_at: new Date(Date.now() + 6 * 86400000).toISOString(),
     },
   ];
 
-  const challengesToShow = challenges.length > 0 ? displayChallenges : fallbackChallenges;
+  const all = challenges.length > 0 ? displayChallenges : fallbackChallenges;
 
-  const difficultyColors: Record<string, string> = {
-    beginner: 'text-lime',
-    intermediate: 'text-electric',
-    advanced: 'text-warning',
-  };
-  const difficultyLabels: Record<string, string> = {
-    beginner: 'Người mới',
-    intermediate: 'Trung cấp',
-    advanced: 'Nâng cao',
-  };
+  // ── Thống kê cá nhân (từ dữ liệu thật) ──
+  const joinedCount = all.filter(c => c.joined && !c.submitted).length;
+  const doneCount = all.filter(c => c.submitted).length;
+  const pointsAtStake = all
+    .filter(c => c.joined && !c.submitted && c.status === 'active')
+    .reduce((s, c) => s + c.reward_points, 0);
 
-  const filtered = challengesToShow.filter(challenge =>
-    (filterDifficulty === 'all' || challenge.difficulty === filterDifficulty) &&
-    (filterGoal === 'all' || challenge.goal === filterGoal) &&
-    challenge.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // ── Thử thách nổi bật (hero): ưu tiên active, chưa tham gia, thưởng cao nhất ──
+  const featured = useMemo(() => {
+    const active = all.filter(c => c.status === 'active');
+    const pool = active.length ? active : all;
+    if (!pool.length) return null;
+    return [...pool].sort((a, b) => {
+      // chưa tham gia lên trước, rồi thưởng cao hơn
+      if (a.joined !== b.joined) return a.joined ? 1 : -1;
+      return b.reward_points - a.reward_points;
+    })[0];
+  }, [all]);
 
+  const filtered = all.filter(c => {
+    const matchSearch = c.name.toLowerCase().includes(search.toLowerCase());
+    const matchDiff = difficultyFilter === 'all' || c.difficulty === difficultyFilter;
+    const matchStatus =
+      statusFilter === 'all' ? true :
+      statusFilter === 'joined' ? c.joined :
+      statusFilter === 'active' ? c.status === 'active' :
+      c.status === 'upcoming';
+    return matchSearch && matchDiff && matchStatus;
+  });
+
+  // ====== LOADING / ERROR ======
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -165,42 +254,49 @@ function ChallengesView() {
       </div>
     );
   }
-
   if (error && challenges.length === 0) {
     return (
-      <div className="text-center py-8">
+      <div className="text-center py-16">
+        <Trophy className="w-10 h-10 text-neutral-700 mx-auto mb-4" />
         <p className="text-neutral-400 mb-4">{error}</p>
-        <button onClick={loadChallenges} className="btn-lime px-4 py-2 text-xs">
-          Retry
-        </button>
+        <button onClick={loadChallenges} className="btn-lime px-5 py-2 text-sm font-bold">Thử lại</button>
       </div>
     );
   }
 
+  // ====== DETAIL VIEW ======
   if (selectedChallenge) {
+    const c = selectedChallenge;
     return (
       <div className="space-y-6 animate-fade-in">
-        <button onClick={() => setSelectedChallenge(null)} className="sticky top-0 text-lime font-grotesk font-semibold text-sm flex items-center gap-1 hover:gap-2 transition-all bg-charcoal/50 backdrop-blur py-2 z-10">
-          ← Back to challenges
+        <button
+          onClick={() => setSelectedChallenge(null)}
+          className="sticky top-0 z-10 text-lime font-grotesk font-semibold text-sm flex items-center gap-1.5 hover:gap-2.5 transition-all bg-charcoal/60 backdrop-blur py-2"
+        >
+          <ArrowLeft className="w-4 h-4" /> Tất cả thử thách
         </button>
 
         <div className="grid lg:grid-cols-3 gap-6 pb-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="relative h-80 rounded-3xl overflow-hidden">
-              <img src={selectedChallenge.image} alt={selectedChallenge.name} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-charcoal to-transparent" />
+              <img src={c.image} alt={c.name} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/40 to-transparent" />
+              <div className="absolute top-5 right-5">
+                {c.status === 'active' && <Countdown target={c.ends_at} size="sm" />}
+              </div>
               <div className="absolute bottom-6 left-6 right-6">
-                <h1 className="font-grotesk font-bold text-3xl text-white mb-2">{selectedChallenge.name}</h1>
-                <div className="flex items-center gap-4">
-                  <span className="glass-lime rounded-full px-4 py-1.5 text-lime text-sm font-grotesk font-bold">
-                    {difficultyLabels[selectedChallenge.difficulty] ?? selectedChallenge.difficulty}
+                <h1 className="font-grotesk font-bold italic uppercase text-3xl text-white mb-3 leading-[0.95]">{c.name}</h1>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`glass rounded-full px-3 py-1.5 text-xs font-grotesk font-bold flex items-center gap-1.5 ${difficultyColors[c.difficulty]}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${difficultyDot[c.difficulty]}`} />
+                    {difficultyLabels[c.difficulty]}
                   </span>
-                  <span className="glass rounded-full px-4 py-1.5 text-neutral-300 text-sm font-grotesk">
-                    {selectedChallenge.duration}
+                  <span className="glass rounded-full px-3 py-1.5 text-neutral-300 text-xs font-grotesk flex items-center gap-1.5">
+                    <Clock className="w-3 h-3" />{c.duration}
                   </span>
-                  {selectedChallenge.status === 'active' && (
-                    <span className="glass-electric rounded-full px-4 py-1.5 text-electric text-sm font-grotesk">
-                      Đang diễn ra
+                  {c.status === 'active' && (
+                    <span className="glass-electric rounded-full px-3 py-1.5 text-electric text-xs font-grotesk font-bold flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-electric animate-pulse" /> Đang diễn ra
                     </span>
                   )}
                 </div>
@@ -209,46 +305,39 @@ function ChallengesView() {
 
             <div className="glass rounded-3xl p-6 border border-white/5">
               <h2 className="font-grotesk font-bold text-xl text-white mb-4">Chi tiết thử thách</h2>
-              <p className="text-neutral-200 leading-relaxed mb-6">{selectedChallenge.description}</p>
-              
+              <p className="text-neutral-200 leading-relaxed mb-6">{c.description}</p>
+
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="glass rounded-2xl p-4 border border-white/5">
                   <div className="flex items-center gap-2 mb-2">
                     <Trophy className="w-4 h-4 text-lime" />
                     <span className="text-neutral-400 text-xs">Phần thưởng</span>
                   </div>
-                  <div className="font-grotesk font-bold text-white text-lg">{selectedChallenge.reward_points} điểm</div>
-                  {selectedChallenge.prize_usd && (
-                    <div className="text-neutral-400 text-xs">${selectedChallenge.prize_usd}</div>
-                  )}
+                  <div className="font-grotesk font-bold text-white text-lg">{c.reward_points} điểm</div>
+                  {c.prize_usd && <div className="text-neutral-400 text-xs">${c.prize_usd}</div>}
                 </div>
                 <div className="glass rounded-2xl p-4 border border-white/5">
                   <div className="flex items-center gap-2 mb-2">
                     <Users className="w-4 h-4 text-electric" />
                     <span className="text-neutral-400 text-xs">Người tham gia</span>
                   </div>
-                  <div className="font-grotesk font-bold text-white text-lg">{selectedChallenge.participants}</div>
+                  <div className="font-grotesk font-bold text-white text-lg">{c.participants}</div>
                 </div>
               </div>
 
               <h3 className="font-grotesk font-semibold text-white mb-3">Yêu cầu</h3>
               <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-neutral-400 text-sm">Bài tập</span>
-                  <span className="text-white text-sm font-medium">{selectedChallenge.exercise}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-400 text-sm">Số lần tối thiểu</span>
-                  <span className="text-white text-sm font-medium">{selectedChallenge.minReps}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-400 text-sm">Điểm đạt</span>
-                  <span className="text-white text-sm font-medium">{selectedChallenge.passingScore}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-400 text-sm">Kết thúc</span>
-                  <span className="text-white text-sm font-medium">{new Date(selectedChallenge.ends_at).toLocaleDateString()}</span>
-                </div>
+                {[
+                  ['Bài tập', c.exercise],
+                  ['Số lần tối thiểu', String(c.minReps)],
+                  ['Điểm đạt', `${c.passingScore}%`],
+                  ['Kết thúc', new Date(c.ends_at).toLocaleDateString('vi-VN')],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between border-b border-white/[0.04] pb-2 last:border-0">
+                    <span className="text-neutral-400 text-sm">{k}</span>
+                    <span className="text-white text-sm font-medium">{v}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -256,29 +345,26 @@ function ChallengesView() {
           <div className="space-y-6">
             <div className="glass rounded-3xl p-6 border border-white/5">
               <h3 className="font-grotesk font-bold text-white mb-4">Tiến độ của bạn</h3>
-              {selectedChallenge.joined ? (
-                <div className="space-y-4">
-                  {selectedChallenge.submitted ? (
-                    <div className="text-center py-4">
-                      <CheckCircle className="w-12 h-12 text-lime mx-auto mb-2" />
-                      <p className="text-white font-grotesk font-semibold">Đã nộp!</p>
-                      <p className="text-neutral-400 text-sm">Điểm: {selectedChallenge.userScore || 0}%</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-neutral-200 text-sm mb-4">Bạn đã tham gia thử thách này. Quay video để hoàn thành.</p>
-                      <button className="w-full btn-electric py-3 text-sm font-grotesk font-semibold active:scale-[0.98] transition-transform duration-150 ease-out flex items-center justify-center gap-2">
-                        <Video className="w-4 h-4" />
-                        Quay video dự thi
-                      </button>
-                    </div>
-                  )}
-                </div>
+              {c.joined ? (
+                c.submitted ? (
+                  <div className="text-center py-4">
+                    <CheckCircle className="w-12 h-12 text-lime mx-auto mb-2" />
+                    <p className="text-white font-grotesk font-semibold">Đã nộp!</p>
+                    <p className="text-neutral-400 text-sm">Điểm: {c.userScore || 0}%</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-neutral-200 text-sm mb-4">Bạn đã tham gia. Quay video để hoàn thành thử thách.</p>
+                    <button className="w-full btn-electric py-3 text-sm font-grotesk font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+                      <Video className="w-4 h-4" /> Quay video dự thi
+                    </button>
+                  </div>
+                )
               ) : (
                 <div>
-                  <p className="text-neutral-200 text-sm mb-4">Tham gia thử thách để bắt đầu thi đua.</p>
-                  <button className="w-full btn-lime py-3 text-sm font-grotesk font-semibold active:scale-[0.98] transition-transform duration-150 ease-out">
-                    Tham gia thử thách
+                  <p className="text-neutral-200 text-sm mb-4">Tham gia thử thách để bắt đầu thi đua giành thưởng.</p>
+                  <button className="w-full btn-lime py-3 text-sm font-grotesk font-semibold active:scale-[0.98] transition-transform">
+                    Tham gia ngay
                   </button>
                 </div>
               )}
@@ -287,21 +373,19 @@ function ChallengesView() {
             <div className="glass-electric rounded-3xl p-5 border-glow-electric">
               <div className="flex items-center gap-3 mb-3">
                 <Zap className="w-5 h-5 text-electric" />
-                <span className="font-grotesk font-bold text-white text-sm">Mẹo hay</span>
+                <span className="font-grotesk font-bold text-white text-sm">Mẹo ăn điểm</span>
               </div>
               <ul className="space-y-2">
-                <li className="flex items-start gap-2 text-neutral-200 text-sm">
-                  <Award className="w-4 h-4 text-electric mt-0.5 flex-shrink-0" />
-                  <span>Ưu tiên đúng form hơn tốc độ để được điểm cao</span>
-                </li>
-                <li className="flex items-start gap-2 text-neutral-200 text-sm">
-                  <Award className="w-4 h-4 text-electric mt-0.5 flex-shrink-0" />
-                  <span>Quay ở nơi đủ sáng để AI phân tích chính xác</span>
-                </li>
-                <li className="flex items-start gap-2 text-neutral-200 text-sm">
-                  <Award className="w-4 h-4 text-electric mt-0.5 flex-shrink-0" />
-                  <span>Khởi động kỹ để tránh chấn thương</span>
-                </li>
+                {[
+                  'Ưu tiên đúng form hơn tốc độ để được điểm cao',
+                  'Quay ở nơi đủ sáng để AI phân tích chính xác',
+                  'Khởi động kỹ để tránh chấn thương',
+                ].map(tip => (
+                  <li key={tip} className="flex items-start gap-2 text-neutral-200 text-sm">
+                    <Award className="w-4 h-4 text-electric mt-0.5 shrink-0" />
+                    <span>{tip}</span>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
@@ -310,120 +394,217 @@ function ChallengesView() {
     );
   }
 
-  const getGoalLabel = (goalName: string) => {
-    const goal = backendGoals.find(g => g.name === goalName);
-    return goal ? goal.name : goalName;
-  };
-
-
+  // ====== ARENA LIST VIEW ======
   return (
-    <div className="space-y-6 animate-fade-in">
-      <NikeHeader eyebrow="Đấu trường" title="Thử thách" subtitle="Thi đua & nhận phần thưởng" />
+    <motion.div variants={containerStagger} initial="hidden" animate="show" className="space-y-7 animate-fade-in">
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+      {/* Eyebrow */}
+      <motion.div variants={fadeUp} className="relative pl-4">
+        <div className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-lime" />
+        <p className="text-lime text-[10px] font-bold uppercase tracking-[0.28em] mb-1.5">Đấu trường</p>
+        <h1 className="font-grotesk font-bold italic uppercase text-white text-2xl sm:text-[2rem] leading-[0.92] tracking-tight">
+          Thử thách
+        </h1>
+        <p className="text-neutral-400 text-sm mt-2">Thi đua cùng cộng đồng — chứng minh phong độ, giành phần thưởng.</p>
+      </motion.div>
+
+      {/* Stats strip cá nhân */}
+      <motion.div variants={fadeUp} className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Đang tham gia', value: joinedCount, icon: Flame, color: 'text-orange-400', ring: 'bg-orange-400/10 border-orange-400/20' },
+          { label: 'Đã hoàn thành', value: doneCount, icon: CheckCircle, color: 'text-lime', ring: 'bg-lime/10 border-lime/20' },
+          { label: 'Điểm đang đua', value: pointsAtStake, icon: Trophy, color: 'text-electric', ring: 'bg-electric/10 border-electric/20' },
+        ].map(({ label, value, icon: Icon, color, ring }) => (
+          <div key={label} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 flex flex-col items-center text-center">
+            <div className={`w-9 h-9 rounded-xl border flex items-center justify-center mb-2 ${ring}`}>
+              <Icon className={`w-4 h-4 ${color}`} />
+            </div>
+            <CountUp value={value} className="font-grotesk font-bold text-2xl text-white leading-none" />
+            <div className="text-neutral-600 text-[10px] uppercase tracking-wider mt-1">{label}</div>
+          </div>
+        ))}
+      </motion.div>
+
+      {/* HERO featured */}
+      {featured && (
+        <motion.button
+          variants={fadeScale}
+          onClick={() => setSelectedChallenge(featured)}
+          className="relative w-full text-left rounded-3xl overflow-hidden group h-[300px] sm:h-[340px]"
+        >
+          <img
+            src={featured.image} alt={featured.name}
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
+
+          {/* Top row */}
+          <div className="absolute top-5 left-5 right-5 flex items-start justify-between gap-3">
+            <span className="glass-lime rounded-full px-3 py-1.5 text-lime text-[11px] font-grotesk font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <Crown className="w-3.5 h-3.5" /> Nổi bật
+            </span>
+            {featured.status === 'active' && <Countdown target={featured.ends_at} size="sm" />}
+          </div>
+
+          {/* Bottom content */}
+          <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-7">
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${difficultyColors[featured.difficulty]}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${difficultyDot[featured.difficulty]}`} />
+                {difficultyLabels[featured.difficulty]}
+              </span>
+              <span className="text-neutral-400 text-[11px] flex items-center gap-1">
+                <Clock className="w-3 h-3" />{featured.duration}
+              </span>
+            </div>
+            <h2 className="font-grotesk font-bold italic uppercase text-white text-3xl sm:text-4xl leading-[0.9] tracking-tight mb-3 max-w-lg">
+              {featured.name}
+            </h2>
+            <p className="text-neutral-300 text-sm mb-4 max-w-md line-clamp-2">{featured.description}</p>
+
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-4">
+                <AvatarStack count={featured.participants} />
+                <div className="flex items-center gap-1.5 text-lime font-bold text-sm">
+                  <Trophy className="w-4 h-4" />{featured.reward_points} điểm
+                  {featured.prize_usd ? <span className="text-electric ml-1">· ${featured.prize_usd}</span> : null}
+                </div>
+              </div>
+              <span className="btn-lime px-6 py-2.5 text-sm font-grotesk font-bold rounded-full inline-flex items-center gap-2 group-hover:gap-3 transition-all">
+                {featured.joined ? 'Tiếp tục' : 'Tham gia'} <ChevronRight className="w-4 h-4" />
+              </span>
+            </div>
+          </div>
+        </motion.button>
+      )}
+
+      {/* Filter pills + search */}
+      <motion.div variants={fadeUp} className="space-y-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+          {([
+            ['all', 'Tất cả'],
+            ['active', 'Đang diễn ra'],
+            ['joined', 'Đã tham gia'],
+            ['upcoming', 'Sắp tới'],
+          ] as [StatusFilter, string][]).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setStatusFilter(key)}
+              className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                statusFilter === key
+                  ? 'bg-lime text-black border-lime'
+                  : 'border-white/[0.08] text-neutral-400 hover:text-white bg-white/[0.03]'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          <div className="w-px h-5 bg-white/10 mx-1 shrink-0" />
+          {([
+            ['all', 'Mọi cấp độ'],
+            ['beginner', 'Người mới'],
+            ['intermediate', 'Trung cấp'],
+            ['advanced', 'Nâng cao'],
+          ] as [string, string][]).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setDifficultyFilter(key)}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                difficultyFilter === key
+                  ? 'bg-white/10 text-white border-white/20'
+                  : 'border-white/[0.06] text-neutral-500 hover:text-neutral-300 bg-transparent'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
           <input
             type="text"
             placeholder="Tìm thử thách..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-charcoal border border-white/5 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:border-lime/20 transition-all"
+            className="w-full pl-10 pr-4 py-2.5 bg-white/[0.03] border border-white/[0.07] rounded-xl text-white placeholder-neutral-500 text-sm focus:outline-none focus:border-lime/30 transition-all"
           />
         </div>
-        <select
-          value={filterDifficulty}
-          onChange={(e) => setFilterDifficulty(e.target.value)}
-          className="px-4 py-2 bg-charcoal border border-white/5 rounded-xl text-white focus:outline-none focus:border-lime/20 transition-all"
-        >
-          <option value="all">Tất cả cấp độ</option>
-          <option value="beginner">Người mới</option>
-          <option value="intermediate">Trung cấp</option>
-          <option value="advanced">Nâng cao</option>
-        </select>
-        <select
-          value={filterGoal}
-          onChange={(e) => setFilterGoal(e.target.value)}
-          className="px-4 py-2 bg-charcoal border border-white/5 rounded-xl text-white focus:outline-none focus:border-lime/20 transition-all"
-        >
-          <option value="all">Tất cả mục tiêu</option>
-          {backendGoals.map(g => (
-            <option key={g.id} value={g.name}>{g.name}</option>
-          ))}
-        </select>
-      </div>
+      </motion.div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filtered.map(challenge => (
-          <button
-            key={challenge.id}
-            onClick={() => setSelectedChallenge(challenge)}
-            className="text-left group transition-all duration-300 hover:-translate-y-1"
-          >
-            <div className="glass rounded-3xl overflow-hidden border border-white/5 hover:border-lime/20 transition-all h-full">
-              <div className="relative h-48">
-                <img src={challenge.image} alt={challenge.name} className="w-full h-full object-cover" loading="lazy" />
-                <div className="absolute inset-0 bg-gradient-to-t from-charcoal to-transparent" />
-                <div className="absolute top-4 right-4">
-                  <span className={`glass rounded-full px-3 py-1 text-xs font-grotesk font-bold ${difficultyColors[challenge.difficulty]}`}>
-                    {difficultyLabels[challenge.difficulty] ?? challenge.difficulty}
+      {/* Grid */}
+      {filtered.length === 0 ? (
+        <motion.div variants={fadeUp} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-12 text-center">
+          <Target className="w-10 h-10 text-neutral-700 mx-auto mb-4" />
+          <h3 className="text-white font-semibold mb-1">Không có thử thách phù hợp</h3>
+          <p className="text-neutral-500 text-sm">Thử đổi bộ lọc hoặc từ khoá tìm kiếm.</p>
+        </motion.div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filtered.map(c => (
+            <motion.button
+              key={c.id}
+              variants={fadeScale}
+              onClick={() => setSelectedChallenge(c)}
+              className="text-left group rounded-3xl overflow-hidden border border-white/[0.07] bg-white/[0.03] hover:border-lime/25 transition-all duration-300 hover:-translate-y-1 flex flex-col"
+            >
+              <div className="relative h-44">
+                <img src={c.image} alt={c.name} loading="lazy"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/30 to-transparent" />
+
+                {/* difficulty top-right */}
+                <span className={`absolute top-3 right-3 glass rounded-full px-2.5 py-1 text-[10px] font-grotesk font-bold flex items-center gap-1 ${difficultyColors[c.difficulty]}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${difficultyDot[c.difficulty]}`} />
+                  {difficultyLabels[c.difficulty]}
+                </span>
+
+                {/* joined badge */}
+                {c.joined && (
+                  <span className="absolute top-3 left-3 glass-lime rounded-full px-2.5 py-1 text-[10px] font-grotesk font-bold text-lime flex items-center gap-1">
+                    <Play className="w-2.5 h-2.5" /> Đã tham gia
                   </span>
+                )}
+
+                {/* countdown / status bottom-left */}
+                <div className="absolute bottom-3 left-3">
+                  {c.status === 'active'
+                    ? <Countdown target={c.ends_at} size="sm" />
+                    : c.status === 'upcoming'
+                      ? <span className="glass rounded-full px-2.5 py-1 text-[10px] font-bold text-neutral-300">Sắp diễn ra</span>
+                      : <span className="glass rounded-full px-2.5 py-1 text-[10px] font-bold text-neutral-500">Đã kết thúc</span>}
                 </div>
-                {challenge.joined && (
-                  <div className="absolute top-4 left-4">
-                    <div className="glass-lime rounded-full px-3 py-1 text-xs font-grotesk font-bold text-lime flex items-center gap-1">
-                      <Play className="w-3 h-3" />
-                      Joined
-                    </div>
-                  </div>
-                )}
-                {challenge.status === 'active' && (
-                  <div className="absolute bottom-4 left-4">
-                    <div className="glass-electric rounded-full px-3 py-1 text-xs font-grotesk font-bold text-electric flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      Đang diễn ra
-                    </div>
-                  </div>
-                )}
               </div>
-              
-              <div className="p-6">
-                <h3 className="font-grotesk font-bold text-lg text-white mb-2 group-hover:text-lime transition-colors">
-                  {challenge.name}
+
+              <div className="p-5 flex flex-col flex-1">
+                <h3 className="font-grotesk font-bold italic uppercase text-lg text-white leading-tight mb-1.5 group-hover:text-lime transition-colors line-clamp-1">
+                  {c.name}
                 </h3>
-                <p className="text-neutral-400 text-sm mb-4 line-clamp-2">{challenge.description}</p>
-                
-                <div className="flex items-center gap-4 mb-4 text-xs">
-                  <div className="flex items-center gap-1">
-                    <Users className="w-3 h-3 text-neutral-500" />
-                    <span className="text-neutral-400">{challenge.participants}</span>
+                <p className="text-neutral-400 text-sm mb-4 line-clamp-2 flex-1">{c.description}</p>
+
+                <div className="flex items-center justify-between mb-3">
+                  <AvatarStack count={c.participants} />
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-white/[0.06]">
+                  <div className="flex items-center gap-1.5 text-lime text-sm font-bold">
+                    <Trophy className="w-3.5 h-3.5" />{c.reward_points} điểm
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Trophy className="w-3 h-3 text-lime" />
-                    <span className="text-white font-medium">{challenge.reward_points} điểm</span>
-                  </div>
-                  {challenge.prize_usd && (
-                    <div className="flex items-center gap-1">
-                      <Zap className="w-3 h-3 text-electric" />
-                      <span className="text-electric font-medium">${challenge.prize_usd}</span>
+                  {c.prize_usd ? (
+                    <div className="flex items-center gap-1 text-electric text-xs font-bold">
+                      <Zap className="w-3 h-3" />${c.prize_usd}
                     </div>
+                  ) : (
+                    <span className="text-neutral-500 text-xs">{c.duration}</span>
                   )}
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="glass rounded-full px-2 py-1 text-neutral-400 text-xs">{getGoalLabel(challenge.goal)}</span>
-                  <span className="text-neutral-500 text-xs">{challenge.duration}</span>
-                </div>
-
-                <button className="w-full mt-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.06] text-white text-xs font-grotesk font-semibold transition-all flex items-center justify-center gap-1">
-                  Xem chi tiết <ChevronRight className="w-3 h-3" />
-                </button>
               </div>
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
+            </motion.button>
+          ))}
+        </div>
+      )}
+    </motion.div>
   );
 }
 
