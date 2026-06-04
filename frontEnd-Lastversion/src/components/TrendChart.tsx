@@ -33,7 +33,7 @@ export default function TrendChart({ userId }: { userId: number }) {
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    const load = async () => {
       setLoading(true);
       const [w, trainings] = await Promise.all([
         userService.getBodyMetricHistory(),
@@ -55,8 +55,11 @@ export default function TrendChart({ userId }: { userId: number }) {
       setWeights(w);
       setCalLogs(logs.map((l: any) => ({ date: l.trainingDate, kcal: Number(l.caloriesBurned) || 0 })));
       setLoading(false);
-    })();
-    return () => { alive = false; };
+    };
+    load();
+    const onUpdate = () => load();
+    window.addEventListener('body-metric-updated', onUpdate);
+    return () => { alive = false; window.removeEventListener('body-metric-updated', onUpdate); };
   }, [userId]);
 
   // ── Series cân nặng (tối đa 12 mốc gần nhất) ──

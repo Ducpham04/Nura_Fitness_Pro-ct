@@ -4,14 +4,16 @@ import {
   Dumbbell, Brain,
   ChevronRight, Check, ShoppingCart,
   Wallet, Moon, Beef, Wheat, Apple,
-  Star, Flame, Play, History, Target, TrendingUp, Zap, Compass, X,
+  Star, Flame, Play, History, Target, TrendingUp, Zap, Compass, X, Scale,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProgressRing from '../components/ProgressRing';
 import { useDashboard } from '../hooks/useDashboard';
 import { useAuthContext } from '../context/AuthContext';
 import SetupWizard from '../components/SetupWizard';
+import BodyCheckInModal from '../components/BodyCheckInModal';
 import { nutritionService } from '../services/nutritionService';
+import { userService } from '../services/userService';
 import { CountUp, containerStagger, fadeUp, fadeScale, premiumEase } from '../lib/motion';
 // Lazy-load để tách recharts (~140kb) khỏi bundle chính
 const MacroRadial = lazy(() => import('../components/MacroRadial'));
@@ -70,6 +72,8 @@ export default function HomePage() {
   const [aiBudgetTotal, setAiBudgetTotal] = useState<number | null>(null);
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [hasActiveMealPlan, setHasActiveMealPlan] = useState(false);
+  const [showCheckIn, setShowCheckIn] = useState(false);
+  const [metric, setMetric] = useState<{ days: number | null; previousWeight?: number }>({ days: null });
   const { user } = useAuthContext();
   const [guideDismissed, setGuideDismissed] = useState(() => {
     try { return localStorage.getItem('home_guide_dismissed') === '1'; } catch { return false; }
@@ -164,6 +168,26 @@ export default function HomePage() {
     };
     check();
     return () => { mounted = false; };
+  }, [user?.id]);
+
+  // Lần đo thể trạng gần nhất → nhắc check-in + prefill cân nặng cho modal
+  useEffect(() => {
+    if (!user?.id) return;
+    let mounted = true;
+    const load = async () => {
+      const hist = await userService.getBodyMetricHistory();
+      if (!mounted) return;
+      if (hist.length === 0) { setMetric({ days: null }); return; }
+      const last = hist[hist.length - 1];
+      const days = last.recordedAt
+        ? Math.floor((Date.now() - new Date(last.recordedAt).getTime()) / 86400000)
+        : null;
+      setMetric({ days, previousWeight: last.weightKg });
+    };
+    load();
+    const onUpdate = () => load();
+    window.addEventListener('body-metric-updated', onUpdate);
+    return () => { mounted = false; window.removeEventListener('body-metric-updated', onUpdate); };
   }, [user?.id]);
 
   const isSetupIncomplete = !hasActiveMealPlan && (!data || stats.budgetLimit === 80000 || todayWorkouts.length === 0);
@@ -296,6 +320,30 @@ export default function HomePage() {
             Thiết lập
           </button>
         </div>
+      )}
+
+      {/* ── Nhắc check-in thể trạng (≥7 ngày hoặc chưa đo) ── */}
+      {(metric.days === null || metric.days >= 7) && (
+        <motion.div variants={fadeUp}
+          className="rounded-2xl border border-blue-400/20 bg-blue-400/[0.05] px-4 py-3.5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-400/10 border border-blue-400/20 flex items-center justify-center shrink-0">
+              <Scale className="w-4 h-4 text-blue-400" />
+            </div>
+            <div>
+              <p className="text-white font-semibold text-sm">Cập nhật thể trạng tuần này</p>
+              <p className="text-neutral-400 text-xs mt-0.5">
+                {metric.days === null
+                  ? 'Ghi lần đo đầu tiên để bắt đầu theo dõi xu hướng.'
+                  : `Đã ${metric.days} ngày kể từ lần đo gần nhất — đo lại để cập nhật tiến độ.`}
+              </p>
+            </div>
+          </div>
+          <button onClick={() => setShowCheckIn(true)}
+            className="shrink-0 rounded-xl bg-blue-400/15 border border-blue-400/30 px-4 py-2 text-xs font-bold text-blue-300 hover:bg-blue-400/25 transition-all">
+            Cập nhật
+          </button>
+        </motion.div>
       )}
 
       {/* ── 3 stats cards ── */}
@@ -698,6 +746,14 @@ export default function HomePage() {
             ))}
           </div>
         </motion.div>
+      )}
+
+      {showCheckIn && (
+        <BodyCheckInModal
+          previousWeight={metric.previousWeight}
+          onClose={() => setShowCheckIn(false)}
+          onSaved={() => refresh()}
+        />
       )}
 
       {showSetupWizard && user && (

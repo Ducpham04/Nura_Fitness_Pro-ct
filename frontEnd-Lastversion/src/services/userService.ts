@@ -456,6 +456,22 @@ class UserService {
       return [];
     }
   }
+
+  /**
+   * Ghi 1 bản đo thể trạng mới (check-in). Backend tự tính BMI/BMR/TDEE và set recordedAt.
+   * Chỉ `weightKg` là bắt buộc; chiều cao/tuổi/giới lấy từ hồ sơ.
+   */
+  async createBodyMetric(payload: {
+    weightKg: number; bodyFatPct?: number; waistCm?: number; hipCm?: number; heightCm?: number;
+  }): Promise<boolean> {
+    try {
+      const res = await apiClient.post<any>(API_ENDPOINTS.HEALTH.BODY_METRIC, payload);
+      const body = res.data as any;
+      return res.success && body?.success !== false;
+    } catch {
+      return false;
+    }
+  }
 }
 
 export const userService = new UserService();
