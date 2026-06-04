@@ -307,11 +307,14 @@ function InventoryView() {
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="text-right hidden sm:block">
-                    <p className="text-neutral-600 text-[10px]">Hết hạn</p>
+                    <p className="text-neutral-600 text-[10px]">Hạn dùng</p>
                     <p className={`text-xs font-semibold ${
-                      item.daysToExpiry !== undefined && item.daysToExpiry <= 3 ? 'text-orange-400' : 'text-neutral-400'
+                      item.daysToExpiry !== undefined && item.daysToExpiry < 0 ? 'text-red-400'
+                        : item.daysToExpiry !== undefined && item.daysToExpiry <= 3 ? 'text-orange-400' : 'text-neutral-400'
                     }`}>
-                      {item.daysToExpiry !== undefined ? `${item.daysToExpiry} ngày` : item.expiryDate}
+                      {item.daysToExpiry !== undefined
+                        ? (item.daysToExpiry < 0 ? `Quá ${Math.abs(item.daysToExpiry)} ngày` : `Còn ${item.daysToExpiry} ngày`)
+                        : item.expiryDate}
                     </p>
                   </div>
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${cfg.bg} ${cfg.color}`}>
