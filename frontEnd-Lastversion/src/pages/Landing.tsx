@@ -16,17 +16,21 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import Lenis from 'lenis';
 import LanguageSelector from '../components/LanguageSelector';
 import { useAuthContext } from '../context/AuthContext';
 import { useReveal } from '../hooks/useReveal';
 
-// 3D tilt theo con trỏ — depth tự nhiên khi hover card
+// 3D tilt + spotlight theo con trỏ — depth tự nhiên khi hover card
 function tiltMove(e: React.MouseEvent<HTMLElement>) {
   const el = e.currentTarget;
   const r = el.getBoundingClientRect();
   const px = (e.clientX - r.left) / r.width - 0.5;
   const py = (e.clientY - r.top) / r.height - 0.5;
   el.style.transform = `perspective(800px) rotateY(${px * 8}deg) rotateX(${-py * 8}deg) translateZ(6px)`;
+  // Vị trí spotlight (đọc bởi .spotlight qua biến CSS kế thừa)
+  el.style.setProperty('--mx', `${e.clientX - r.left}px`);
+  el.style.setProperty('--my', `${e.clientY - r.top}px`);
 }
 function tiltReset(e: React.MouseEvent<HTMLElement>) {
   e.currentTarget.style.transform = '';
@@ -45,6 +49,33 @@ export default function Landing() {
     const handler = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', handler);
     return () => window.removeEventListener('scroll', handler);
+  }, []);
+
+  // Lenis smooth scroll — cuộn mượt "cao cấp" + neo anchor mượt theo
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const lenis = new Lenis({
+      duration: 1.1,
+      easing: (x: number) => Math.min(1, 1.001 - Math.pow(2, -10 * x)),
+    });
+    let rafId = 0;
+    const loop = (time: number) => { lenis.raf(time); rafId = requestAnimationFrame(loop); };
+    rafId = requestAnimationFrame(loop);
+
+    const onAnchorClick = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement).closest('a[href^="#"]') as HTMLAnchorElement | null;
+      const href = link?.getAttribute('href');
+      if (!href || href === '#') return;
+      const target = document.querySelector(href);
+      if (target) { e.preventDefault(); lenis.scrollTo(target as HTMLElement, { offset: -80 }); }
+    };
+    document.addEventListener('click', onAnchorClick);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      document.removeEventListener('click', onAnchorClick);
+      lenis.destroy();
+    };
   }, []);
 
   const onEnter = () => navigate(user ? '/dashboard' : '/login');
@@ -279,8 +310,9 @@ export default function Landing() {
           <article
             onMouseMove={tiltMove}
             onMouseLeave={tiltReset}
-            className="tilt-card md:col-start-1 md:col-span-3 md:row-start-1 md:row-span-2 rounded-2xl border border-lime/20 bg-gradient-to-br from-lime/[0.07] via-transparent to-transparent overflow-hidden relative flex flex-col p-6 md:p-8"
+            className="tilt-card spotlight-card md:col-start-1 md:col-span-3 md:row-start-1 md:row-span-2 rounded-2xl border border-lime/20 bg-gradient-to-br from-lime/[0.07] via-transparent to-transparent overflow-hidden relative flex flex-col p-6 md:p-8"
           >
+            <div className="spotlight" />
             {/* subtle dot grid */}
             <div className="absolute inset-0 pointer-events-none"
               style={{backgroundImage: 'radial-gradient(circle, rgba(204,255,0,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px'}} />
@@ -348,8 +380,9 @@ export default function Landing() {
           <article
             onMouseMove={tiltMove}
             onMouseLeave={tiltReset}
-            className="tilt-card md:col-start-4 md:col-span-2 md:row-start-1 rounded-2xl border border-blue-400/20 bg-gradient-to-br from-blue-500/[0.08] to-transparent overflow-hidden relative flex flex-col p-6"
+            className="tilt-card spotlight-card md:col-start-4 md:col-span-2 md:row-start-1 rounded-2xl border border-blue-400/20 bg-gradient-to-br from-blue-500/[0.08] to-transparent overflow-hidden relative flex flex-col p-6"
           >
+            <div className="spotlight" />
             <div className="flex items-start gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-blue-400/10 border border-blue-400/20 flex items-center justify-center shrink-0">
                 <Utensils className="w-4.5 h-4.5 text-blue-400" />
@@ -402,8 +435,9 @@ export default function Landing() {
           <article
             onMouseMove={tiltMove}
             onMouseLeave={tiltReset}
-            className="tilt-card md:col-start-4 md:col-span-2 md:row-start-2 rounded-2xl border border-orange-400/20 bg-gradient-to-br from-orange-500/[0.08] to-transparent overflow-hidden relative flex flex-col p-6"
+            className="tilt-card spotlight-card md:col-start-4 md:col-span-2 md:row-start-2 rounded-2xl border border-orange-400/20 bg-gradient-to-br from-orange-500/[0.08] to-transparent overflow-hidden relative flex flex-col p-6"
           >
+            <div className="spotlight" />
             <div className="flex items-start gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-orange-400/10 border border-orange-400/20 flex items-center justify-center shrink-0">
                 <Trophy className="w-4.5 h-4.5 text-orange-400" />

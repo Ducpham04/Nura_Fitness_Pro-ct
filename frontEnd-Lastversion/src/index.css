@@ -585,7 +585,33 @@
 }
 .float-y { animation: floatY 6s ease-in-out infinite; }
 
+/* Spotlight — vầng sáng bám theo con trỏ (kiểu Linear/Vercel) */
+.spotlight-card { position: relative; }
+.spotlight {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 20;
+  mix-blend-mode: screen;
+  transition: opacity 0.35s ease;
+  background: radial-gradient(
+    300px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(204, 255, 0, 0.14),
+    transparent 62%
+  );
+}
+.spotlight-card:hover .spotlight { opacity: 1; }
+
+/* Lenis smooth scroll */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+
 @media (prefers-reduced-motion: reduce) {
   .orb-1, .orb-2, .orb-3, .aurora-bg, .glow-pulse, .text-shine, .float-y { animation: none; }
   .reveal, .reveal-stagger > * { opacity: 1; transform: none; transition: none; }
+  .spotlight { display: none; }
 }
