@@ -643,10 +643,18 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
               <Flame className="w-3.5 h-3.5 text-orange-400" />
               <span className="text-white font-bold">{currentKcal}</span>/{targetKcal} kcal
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-lime/15 backdrop-blur border border-lime/30 px-3 py-1.5 text-xs text-lime font-bold">
-              <Wallet className="w-3.5 h-3.5" />
-              Còn {((dailyBudget - currentSpent)/1000).toFixed(0)}k
-            </span>
+            {(() => {
+              const leftK = Math.round((dailyBudget - currentSpent) / 1000);
+              const over = leftK < 0;
+              return (
+                <span className={`inline-flex items-center gap-1.5 rounded-full backdrop-blur border px-3 py-1.5 text-xs font-bold ${
+                  over ? 'bg-red-500/15 border-red-500/30 text-red-300' : 'bg-lime/15 border-lime/30 text-lime'
+                }`}>
+                  <Wallet className="w-3.5 h-3.5" />
+                  {over ? `Vượt ${Math.abs(leftK)}k` : `Còn ${leftK}k`}
+                </span>
+              );
+            })()}
           </div>
         </div>
       </div>
