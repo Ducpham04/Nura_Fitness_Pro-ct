@@ -317,8 +317,11 @@ Return ONLY the ProgramTemplate JSON."""
 
     def _validate_template(self, template: ProgramTemplate, allowed_exercises: List[Dict]) -> None:
         allowed_ids = {int(e["exercise_id"]) for e in allowed_exercises}
-        if template.weekly_pattern.count("rest") < 2:
-            raise ValueError("weekly_pattern must include at least 2 rest days")
+        # Backend (PersonalizationResolver) đã quyết số ngày nghỉ đúng theo tầng:
+        # người mới/lớn tuổi → full-body nhiều ngày nghỉ; trung cấp+ 6 buổi → 1 nghỉ (hợp lệ).
+        # Chỉ cần sàn an toàn ≥1 ngày nghỉ.
+        if template.weekly_pattern.count("rest") < 1:
+            raise ValueError("weekly_pattern must include at least 1 rest day")
 
         for s in template.weekly_pattern:
             if s != "rest" and s not in self.MIN_POOL_SIZE:
