@@ -447,6 +447,7 @@ async def generate_workout_plan(request: FullPlanRequest):
                 "rep_range_hint": request.rep_range_hint or "",
                 "impact_policy": request.impact_policy or "mixed",
                 "split_strategy": request.split_strategy or "",
+                "weekly_pattern": request.weekly_pattern or [],
                 "focus_areas": request.focus_areas or [],
                 "include_mobility": bool(request.include_mobility),
                 "include_balance": bool(request.include_balance),

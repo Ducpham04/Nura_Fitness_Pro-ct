@@ -445,8 +445,10 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             // Biến hồ sơ → ràng buộc tường minh: tầng rủi ro, cường độ trần, low-impact,
             // trần độ khó, vùng cơ ưu tiên, chia buổi. Xem docs/ma-tran-doi-tuong-workout.md.
             List<String> requestedFocus = toStringList(request.get("focusAreas"));
+            int daysPerWeek = request.get("daysPerWeek") instanceof Number dn ? dn.intValue() : 0;
+            String preferSplit = Objects.toString(request.get("preferSplit"), "");
             com.example.fitchallenge.workout.TrainingPrescription rx =
-                    personalizationResolver.resolve(profile, healthProfile, requestedFocus, resolvedGoal);
+                    personalizationResolver.resolve(profile, healthProfile, requestedFocus, resolvedGoal, daysPerWeek, preferSplit);
 
             // Lọc bài theo đơn tập (loại high-impact & bài vượt trần độ khó cho nhóm thận trọng)
             safeExercises = applyPrescriptionFilter(safeExercises, rx);
@@ -465,6 +467,8 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             aiRequest.put("rep_range_hint", rx.getRepRangeHint());
             aiRequest.put("impact_policy", rx.isLowImpactOnly() ? "low_impact_only" : "mixed");
             aiRequest.put("split_strategy", rx.getSplitStrategy());
+            aiRequest.put("weekly_pattern", rx.getWeeklyPattern());
+            aiRequest.put("days_per_week", rx.getDaysPerWeek());
             aiRequest.put("focus_areas", rx.getFocusAreas());
             aiRequest.put("include_mobility", rx.isIncludeMobility());
             aiRequest.put("include_balance", rx.isIncludeBalance());

@@ -75,7 +75,9 @@ class FullPlanRequest(BaseModel):
     intensity_cap_pct: Optional[int] = Field(default=85, description="Trần cường độ %1RM")
     rep_range_hint: Optional[str] = Field(default="", description="vd '12-15'")
     impact_policy: Optional[str] = Field(default="mixed", description="mixed | low_impact_only")
-    split_strategy: Optional[str] = Field(default="", description="full_body_lowimpact|lower_focus|core_focus|upper_lower|full_body|light_general")
+    split_strategy: Optional[str] = Field(default="", description="full_body|upper_lower|upper_lower_6|push_pull_legs|full_body_lowimpact|light_general")
+    weekly_pattern: Optional[List[str]] = Field(default_factory=list, description="Lịch 7 ngày do backend quyết định (AI dùng nguyên)")
+    days_per_week: Optional[int] = Field(default=0)
     focus_areas: Optional[List[str]] = Field(default_factory=list, description="Vùng cơ ưu tiên (primary muscle)")
     include_mobility: Optional[bool] = False
     include_balance: Optional[bool] = False

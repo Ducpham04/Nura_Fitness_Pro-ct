@@ -17,7 +17,11 @@ class WorkoutPlanner:
     MIN_POOL_SIZE = {
         "upper_push": 5,
         "upper_pull": 5,
+        "upper": 6,          # thân trên = đẩy + kéo (cân bằng)
         "lower": 5,
+        "push": 5,
+        "pull": 5,
+        "core": 4,
         "full_body": 6,
         "cardio_core": 5,
     }
@@ -161,8 +165,11 @@ class WorkoutPlanner:
         archetype      = rx.get("archetype") or "general"
         edu_level      = rx.get("education_level") or "basic"
 
-        # Pattern: ưu tiên split_strategy của đơn tập → KHÔNG ép full-body
-        if split_strategy in self._SPLIT_PATTERNS:
+        # Pattern: ưu tiên lịch 7 ngày backend đã quyết → KHÔNG ép full-body
+        rx_pattern = rx.get("weekly_pattern") or []
+        if isinstance(rx_pattern, list) and len(rx_pattern) == 7:
+            pattern_hint = json.dumps(rx_pattern)
+        elif split_strategy in self._SPLIT_PATTERNS:
             pattern_hint = json.dumps(self._SPLIT_PATTERNS[split_strategy])
         else:
             pattern_hint = json.dumps(
@@ -207,6 +214,8 @@ RULES:
 4. Pool sizes: 1×/week→≥5 IDs, 2×/week→≥10 IDs (first 5=Session-A, next 5=Session-B).
 5. full_body pool MUST cover: push + pull + lower + core (at least 1 each).
 6. COMPOUND exercises (press, row, deadlift, squat) listed BEFORE isolation in pool.
+7. Session types: upper = MUST include BOTH PUSH and PULL (ngực+lưng+vai+tay, cân bằng đẩy/kéo);
+   lower = LEGS (squat/hinge/lunge + glutes/calves); push=PUSH; pull=PULL; core=CORE; cardio_core=CARDIO/CORE.
 
 RECOVERY: upper_push & upper_pull → never consecutive. lower → not back-to-back.
 
@@ -228,7 +237,8 @@ ALLOWED EXERCISES:
 {json.dumps(prompt_exercises, ensure_ascii=False)}
 
 Catalog fields: id=exercise_id, n=name, t=exercise_type, m=primary_muscle, eq=equipment, ft=force_type, cat=exercise_category, met=MET.
-Use ft first for grouping: PUSH→upper_push, PULL→upper_pull, LEGS→lower, CORE→core/full_body/cardio_core, CARDIO→cardio_core.
+Use ft for grouping: PUSH→push/upper/full_body, PULL→pull/upper/full_body, LEGS→lower/full_body, CORE→core/cardio_core/full_body, CARDIO→cardio_core.
+For "upper" sessions you MUST mix PUSH and PULL exercises (balance đẩy/kéo).
 
 Return ONLY the ProgramTemplate JSON."""
 
@@ -318,12 +328,13 @@ Return ONLY the ProgramTemplate JSON."""
         type_frequency = Counter(s for s in template.weekly_pattern if s != "rest")
         for session_type, freq in type_frequency.items():
             base_min = self.MIN_POOL_SIZE.get(session_type, 0)
-            min_count = base_min * freq
+            # Pool dùng lại qua các buổi cùng loại → cần đa dạng (base_min), thêm chút khi tập 2×/tuần
+            # (Session A/B). KHÔNG nhân theo số buổi (split lặp lại không cần N× số bài.)
+            min_count = base_min if freq <= 1 else base_min + 2
             ids = template.exercise_pool.get(session_type, [])
             if min_count > 0 and len(ids) < min_count:
                 raise ValueError(
-                    f"exercise_pool.{session_type} needs ≥{min_count} IDs "
-                    f"({freq}×/week × {base_min})"
+                    f"exercise_pool.{session_type} needs ≥{min_count} IDs (variety for {freq}×/week)"
                 )
             unknown = [i for i in ids if int(i) not in allowed_ids]
             if unknown:

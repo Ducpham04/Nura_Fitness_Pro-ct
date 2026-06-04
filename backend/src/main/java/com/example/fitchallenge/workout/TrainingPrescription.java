@@ -41,8 +41,14 @@ public class TrainingPrescription {
     /** Trần độ khó bài tập (EASY/MEDIUM/HARD). */
     private Exercise.DifficultyLevel maxDifficulty;
 
-    /** Chiến lược chia buổi: full_body_lowimpact | lower_focus | core_focus | upper_lower | full_body | light_general */
+    /** Chiến lược chia buổi: full_body | upper_lower | upper_lower_6 | full_body_lowimpact | lower_focus | core_focus | light_general */
     private String splitStrategy;
+
+    /** Số buổi tập/tuần (2–6). */
+    private int daysPerWeek;
+
+    /** Lịch tuần 7 ngày đã quyết định ở backend (AI chỉ lấp bài vào, không tự chia). */
+    private List<String> weeklyPattern;
 
     /** Vùng cơ ưu tiên (primary muscle, vd glutes, quadriceps, core...). */
     private List<String> focusAreas;

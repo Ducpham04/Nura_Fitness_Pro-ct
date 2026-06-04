@@ -36,7 +36,9 @@ public class PersonalizationResolver {
     public TrainingPrescription resolve(UserBodyProfile body,
                                         HealthProfile health,
                                         List<String> requestedFocusAreas,
-                                        String resolvedGoal) {
+                                        String resolvedGoal,
+                                        int daysPerWeek,
+                                        String preferSplit) {
         int age = body != null && body.getAge() != null ? body.getAge() : 30;
         String gender = norm(body != null ? body.getGender() : "");
         boolean female = gender.startsWith("f") || gender.contains("nu");
@@ -110,21 +112,37 @@ public class PersonalizationResolver {
             focus.add("glutes"); focus.add("quadriceps"); focus.add("hamstrings"); focus.add("core");
         }
 
-        // ── Chiến lược chia buổi ────────────────────────────────────────────────────
+        // ── Chọn split + sinh lịch tuần (logic ③ — lan can theo trình độ/tầng) ──────
+        boolean advanced = containsAny(exp, "inter", "trung", "adv", "cao");
+        boolean older = archetype.startsWith("older");
+        boolean preferPerArea = preferSplit != null && containsAny(norm(preferSplit), "per_area", "split", "vung");
+        int reqDays = daysPerWeek > 0 ? daysPerWeek : (advanced ? 4 : 3);
+
+        // Lan can: người mới/thận trọng/lớn tuổi tối đa 4 buổi/tuần
+        boolean conservative = !advanced || older || tier == TrainingPrescription.RiskTier.B;
+        int effectiveDays = Math.max(2, Math.min(reqDays, conservative ? 4 : 6));
+
+        List<String> weeklyPattern;
         String split;
         if (tier == TrainingPrescription.RiskTier.C) {
+            weeklyPattern = List.of("full_body", "rest", "cardio_core", "rest", "full_body", "rest", "rest");
             split = "light_general";
-        } else if (tier == TrainingPrescription.RiskTier.B || age >= 55) {
-            split = "full_body_lowimpact";
-        } else if (focus.stream().anyMatch(f -> containsAny(f, "glute", "mong", "thigh", "dui", "quad", "hamstring", "leg", "chan"))) {
-            split = "lower_focus";
-        } else if (focus.stream().anyMatch(f -> containsAny(f, "core", "abs", "bung", "eo", "oblique"))) {
-            split = "core_focus";
-        } else if (containsAny(exp, "inter", "trung", "adv", "cao")
-                && containsAny(archetype, "athletic")) {
-            split = "upper_lower";
-        } else {
+        } else if (conservative || effectiveDays <= 3) {
+            weeklyPattern = fullBodySpread(effectiveDays);
             split = "full_body";
+        } else if (preferPerArea && effectiveDays == 6) {
+            // "Mỗi ngày một vùng" kiểu Push/Pull/Legs ×2 → mỗi nhóm vẫn 2 lần/tuần (chuẩn KH)
+            weeklyPattern = List.of("push", "pull", "lower", "push", "pull", "lower", "rest");
+            split = "push_pull_legs";
+        } else if (effectiveDays == 4) {
+            weeklyPattern = List.of("upper", "lower", "rest", "upper", "lower", "rest", "rest");
+            split = "upper_lower";
+        } else if (effectiveDays == 5) {
+            weeklyPattern = List.of("upper", "lower", "rest", "upper", "lower", "full_body", "rest");
+            split = "upper_lower";
+        } else { // 6 ngày — đúng kiểu 2-4-6 / 3-5-7
+            weeklyPattern = List.of("upper", "lower", "upper", "lower", "upper", "lower", "rest");
+            split = "upper_lower_6";
         }
 
         boolean includeMobility = tier != TrainingPrescription.RiskTier.A || age >= 50 || limitedMobility;
@@ -141,18 +159,43 @@ public class PersonalizationResolver {
                 .lowImpactOnly(lowImpact)
                 .maxDifficulty(maxDiff)
                 .splitStrategy(split)
+                .daysPerWeek(effectiveDays)
+                .weeklyPattern(weeklyPattern)
                 .focusAreas(focus)
                 .includeMobility(includeMobility)
                 .includeBalance(includeBalance)
                 .requiresMedicalClearance(tier == TrainingPrescription.RiskTier.C)
                 .educationLevel(edu)
-                .rationale(buildRationale(tier, archetype, age, female, lowImpact, intensityCap, focus))
+                .rationale(buildRationale(tier, age, lowImpact, intensityCap, focus,
+                        split, effectiveDays, reqDays, preferPerArea && !"push_pull_legs".equals(split)))
                 .build();
     }
 
-    private String buildRationale(TrainingPrescription.RiskTier tier, String archetype, int age,
-                                  boolean female, boolean lowImpact, int cap, List<String> focus) {
+    /** Rải `days` buổi full-body đều trong 7 ngày, xen ngày nghỉ. */
+    private static List<String> fullBodySpread(int days) {
+        return switch (days) {
+            case 2 -> List.of("full_body", "rest", "rest", "full_body", "rest", "rest", "rest");
+            case 4 -> List.of("full_body", "rest", "full_body", "rest", "full_body", "rest", "full_body");
+            default -> List.of("full_body", "rest", "full_body", "rest", "full_body", "rest", "rest"); // 3 (mặc định)
+        };
+    }
+
+    private String buildRationale(TrainingPrescription.RiskTier tier, int age,
+                                  boolean lowImpact, int cap, List<String> focus,
+                                  String split, int days, int reqDays, boolean splitDowngraded) {
         StringBuilder sb = new StringBuilder();
+        String splitVi = switch (split) {
+            case "upper_lower", "upper_lower_6" -> "chia thân trên / thân dưới";
+            case "push_pull_legs" -> "Đẩy / Kéo / Chân (mỗi nhóm 2 buổi/tuần)";
+            case "light_general" -> "vận động nhẹ tổng quát";
+            default -> "chia đều toàn thân (full-body)";
+        };
+        sb.append("Lịch ").append(days).append(" buổi/tuần, ").append(splitVi).append(". ");
+        if (days < reqDays) sb.append("Đã giảm từ ").append(reqDays).append(" xuống ").append(days)
+                .append(" buổi để hồi phục kịp & an toàn cho trình độ hiện tại. ");
+        if (splitDowngraded) sb.append("Chưa mở kiểu 'mỗi ngày một vùng' (cần trung cấp+ và ≥5 buổi). ");
+        if (split.startsWith("upper_lower"))
+            sb.append("Ngày thân trên gồm cả đẩy & kéo (lưng) để cân bằng cơ. ");
         switch (tier) {
             case C -> sb.append("Hồ sơ có dấu hiệu bệnh lý → ưu tiên vận động nhẹ & khuyến cáo khám bác sĩ trước khi tập nặng. ");
             case B -> sb.append("Thuộc nhóm cần thận trọng → cường độ vừa (≤").append(cap).append("% 1RM), ");
