@@ -1,7 +1,18 @@
 import { useState } from 'react';
-import { Zap, X, Dumbbell, Timer, Activity } from 'lucide-react';
+import { Zap, X, Dumbbell, Timer, Activity, CalendarDays, Target, Check } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { trainingService } from '../services/trainingService';
+
+// Vùng cơ ưu tiên → keyword nhóm cơ (primary_muscle) backend hiểu
+const focusOptions: { label: string; muscles: string[] }[] = [
+  { label: 'Mông',     muscles: ['glutes'] },
+  { label: 'Đùi',      muscles: ['quadriceps', 'hamstrings'] },
+  { label: 'Eo/Bụng',  muscles: ['core'] },
+  { label: 'Lưng',     muscles: ['back'] },
+  { label: 'Ngực',     muscles: ['chest'] },
+  { label: 'Vai/Tay',  muscles: ['shoulders', 'biceps', 'triceps'] },
+];
+const dayOptions = [2, 3, 4, 5, 6];
 
 interface Props {
   onClose: () => void;
@@ -39,8 +50,14 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess }: Props) {
   const [intensity, setIntensity] = useState('moderate');
   const [duration, setDuration] = useState('45');
   const [goal, setGoal] = useState('weight_loss');
+  const [daysPerWeek, setDaysPerWeek] = useState(4);
+  const [focusLabels, setFocusLabels] = useState<string[]>([]);
+  const [preferSplit, setPreferSplit] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const toggleFocus = (label: string) =>
+    setFocusLabels(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]);
 
   const handleGenerate = async () => {
     if (!user) return;
@@ -65,6 +82,9 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess }: Props) {
         duration: parseInt(duration, 10),
         preferences: [],
         goal: goal,
+        daysPerWeek: daysPerWeek,
+        focusAreas: focusLabels.flatMap(l => focusOptions.find(o => o.label === l)?.muscles || []),
+        preferSplit: preferSplit ? 'per_area' : 'balanced',
       });
 
       if (response.success) {
@@ -196,6 +216,70 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess }: Props) {
                     ))}
                   </div>
                 </div>
+
+                {/* Số buổi/tuần */}
+                <div>
+                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5">
+                    <CalendarDays className="w-3.5 h-3.5" /> Số buổi / tuần
+                  </label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {dayOptions.map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setDaysPerWeek(d)}
+                        className={`py-3 rounded-xl font-bold font-grotesk text-sm transition-all ${
+                          daysPerWeek === d ? 'bg-lime text-black' : 'bg-white/[0.06] text-neutral-400 hover:bg-white/[0.1]'
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-neutral-600 mt-2">Hệ thống tự chọn cách chia phù hợp trình độ & số ngày của bạn.</p>
+                </div>
+
+                {/* Vùng cơ ưu tiên */}
+                <div>
+                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5">
+                    <Target className="w-3.5 h-3.5" /> Vùng cơ ưu tiên <span className="text-neutral-600 normal-case tracking-normal">(tùy chọn)</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {focusOptions.map((opt) => {
+                      const on = focusLabels.includes(opt.label);
+                      return (
+                        <button
+                          key={opt.label}
+                          type="button"
+                          onClick={() => toggleFocus(opt.label)}
+                          className={`py-2.5 rounded-xl font-grotesk text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 ${
+                            on ? 'bg-lime/10 border-lime/40 text-lime' : 'bg-white/[0.06] border-white/10 text-neutral-400 hover:bg-white/[0.1]'
+                          }`}
+                        >
+                          {on && <Check className="w-3 h-3" />}{opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-neutral-600 mt-2">Ưu tiên thêm khối lượng cho vùng đã chọn — vẫn giữ cân bằng cơ.</p>
+                </div>
+
+                {/* Toggle: mỗi ngày một vùng */}
+                <button
+                  type="button"
+                  onClick={() => setPreferSplit(s => !s)}
+                  className={`w-full flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-all ${
+                    preferSplit ? 'border-lime/40 bg-lime/[0.06]' : 'border-white/10 bg-white/[0.04]'
+                  }`}
+                >
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-white">Chia "mỗi ngày một vùng"</p>
+                    <p className="text-[10px] text-neutral-500 mt-0.5">Kiểu Đẩy/Kéo/Chân — cần trung cấp+ & ≥5 buổi (nếu không hệ thống sẽ tự chỉnh).</p>
+                  </div>
+                  <span className={`shrink-0 w-10 h-6 rounded-full transition-colors relative ${preferSplit ? 'bg-lime' : 'bg-white/15'}`}>
+                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${preferSplit ? 'left-[18px]' : 'left-0.5'}`} />
+                  </span>
+                </button>
 
                 <div>
                   <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-3 block">

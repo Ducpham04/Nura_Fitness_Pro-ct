@@ -25,6 +25,8 @@ import {
   X as XIcon,
   Scale,
   Moon,
+  Lightbulb,
+  ShieldAlert,
 } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { trainingService, type DailyTrainingLog, type PersonalizedWorkoutExercise, type AlternativeExercise } from '../services/trainingService';
@@ -408,6 +410,8 @@ function TrainingView() {
   const [checkIn, setCheckIn] = useState<{ fatigue: number; rpe: number; sleep: string }>({ fatigue: 0, rpe: 0, sleep: '' });
   // Modal tạo kế hoạch AI (gộp từ tab "Kế Hoạch Tập" cũ)
   const [aiPlanModalOpen, setAiPlanModalOpen] = useState(false);
+  // Thông tin cá nhân hóa hiển thị sau khi tạo plan (kiến thức + cảnh báo y khoa)
+  const [planInsight, setPlanInsight] = useState<{ rationale: string; disclaimer: string; riskTier: string; notes: string[] } | null>(null);
 
   const loadTrainingSchedule = useCallback(async () => {
     if (!user) return;
@@ -468,6 +472,15 @@ function TrainingView() {
   // Sau khi tạo kế hoạch AI mới → đóng modal, sinh personalization nếu cần, tải lại lịch
   const handleAiPlanSuccess = async (data: any) => {
     setAiPlanModalOpen(false);
+    // Bắt thông tin cá nhân hóa từ phản hồi để hiển thị "kiến thức" + cảnh báo y khoa
+    const notes: string[] = Array.isArray(data?.programTemplate?.adaptation_notes)
+      ? data.programTemplate.adaptation_notes : [];
+    setPlanInsight({
+      rationale: data?.prescriptionRationale || '',
+      disclaimer: data?.requiresMedicalClearance ? (data?.medicalDisclaimer || '') : '',
+      riskTier: data?.riskTier || '',
+      notes,
+    });
     if (data?.userTrainingId && !data?.personalized) {
       try {
         const token = localStorage.getItem('token') || localStorage.getItem('authToken') || '';
@@ -1438,6 +1451,44 @@ function TrainingView() {
           )}
         </div>
       </div>
+
+      {/* ── Kiến thức buổi tập + cảnh báo y khoa (sau khi tạo plan) ── */}
+      {planInsight && (planInsight.rationale || planInsight.disclaimer || planInsight.notes.length > 0) && (
+        <div className="space-y-3">
+          {planInsight.disclaimer && (
+            <div className="rounded-2xl border border-orange-400/30 bg-orange-400/[0.07] p-4 flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-orange-300 font-semibold text-sm">Lưu ý sức khỏe</p>
+                <p className="text-neutral-300 text-xs mt-1 leading-relaxed">{planInsight.disclaimer}</p>
+              </div>
+              <button onClick={() => setPlanInsight(null)} className="text-neutral-500 hover:text-white shrink-0"><X className="w-4 h-4" /></button>
+            </div>
+          )}
+          {(planInsight.rationale || planInsight.notes.length > 0) && (
+            <div className="rounded-2xl border border-lime/20 bg-lime/[0.05] p-4">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="w-4 h-4 text-lime" />
+                  <span className="font-grotesk font-bold uppercase text-white text-sm tracking-wide">Vì sao kế hoạch này</span>
+                </div>
+                <button onClick={() => setPlanInsight(null)} className="text-neutral-500 hover:text-white shrink-0"><X className="w-4 h-4" /></button>
+              </div>
+              {planInsight.rationale && <p className="text-neutral-300 text-xs leading-relaxed mb-2">{planInsight.rationale}</p>}
+              {planInsight.notes.length > 0 && (
+                <ul className="space-y-1.5">
+                  {planInsight.notes.slice(0, 6).map((n, i) => (
+                    <li key={i} className="flex items-start gap-2 text-neutral-300 text-xs">
+                      <Check className="w-3.5 h-3.5 text-lime mt-0.5 shrink-0" />
+                      <span>{n}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Error ── */}
       {saveError && (

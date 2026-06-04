@@ -296,6 +296,9 @@ class TrainingService {
     duration: number;
     preferences: string[];
     goal?: string;
+    daysPerWeek?: number;
+    focusAreas?: string[];
+    preferSplit?: string;
   }): Promise<ApiResponse<any>> {
     return await apiClient.post<any>(
       `${API_ENDPOINTS.AI.GENERATE_WORKOUT}`,
