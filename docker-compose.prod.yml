@@ -1,0 +1,115 @@
+# =====================================================================
+# Fitnit Challenge — Production stack
+#
+# Cách chạy:
+#   cp .env.prod.example .env.prod   # rồi điền secret thật
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+#
+# Kiến trúc: frontend (nginx) là điểm vào public duy nhất (cổng 80/443).
+# nginx phục vụ SPA + proxy /api -> backend. db/backend/ai-service chỉ
+# nội bộ trong mạng docker (không expose ra host).
+# =====================================================================
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: fit-prod-db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fit_challenge}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD là bắt buộc}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-fit_challenge}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - fit-network
+
+  # ── Spring Boot backend (profile prod, Flyway tự migrate) ───────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: fit-prod-backend
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-fit_challenge}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD là bắt buộc}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET là bắt buộc (tối thiểu 32 ký tự)}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      AI_SERVICE_URL: http://ai-service:8001
+      # Same-origin qua nginx nên CORS không bị kích hoạt, nhưng prod profile
+      # vẫn yêu cầu giá trị này -> đặt = domain public.
+      CORS_ALLOWED_ORIGINS: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN là bắt buộc (vd https://fitnit.com)}
+      APP_PUBLIC_BASE_URL: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN là bắt buộc}
+      UPLOAD_PATH: /app/uploads/
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_logs:/app/logs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - fit-network
+
+  # ── Python FastAPI AI service ───────────────────────────────────────
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: fit-prod-ai
+    restart: always
+    env_file:
+      - ./ai-service/.env        # GROQ_API_KEY, ...
+    environment:
+      HOST: 0.0.0.0
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - fit-network
+
+  # ── Frontend (nginx: SPA + reverse proxy) — điểm vào public ─────────
+  frontend:
+    build:
+      context: ./frontEnd-Lastversion
+      dockerfile: Dockerfile
+      args:
+        # Trống = gọi /api tương đối (same-origin). Đổi nếu tách subdomain API.
+        VITE_API_URL: "${VITE_API_URL-}"
+    container_name: fit-prod-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      # - "443:443"   # bật khi đã gắn TLS (xem DEPLOY.md)
+    networks:
+      - fit-network
+
+networks:
+  fit-network:
+    driver: bridge
+
+volumes:
+  db_data:
+  backend_uploads:
+  backend_logs:

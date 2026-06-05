@@ -1,5 +1,9 @@
 // API Configuration for Java Backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+// Dùng `??` (không phải `||`) để VITE_API_URL='' (chuỗi rỗng) vẫn được giữ nguyên:
+//   - Dev: VITE_API_URL không set (undefined) -> fallback localhost:8080
+//   - Prod (nginx 1 origin): VITE_API_URL='' -> baseUrl = '/api' tương đối,
+//     nginx proxy /api -> backend, tránh CORS hoàn toàn.
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
 
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,
