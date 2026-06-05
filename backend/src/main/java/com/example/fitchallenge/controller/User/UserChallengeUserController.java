@@ -81,6 +81,33 @@ public class UserChallengeUserController {
     }
 
     /**
+     * POST /api/user/challenges/{id}/submit-result
+     * Ghi nhận kết quả buổi thi REALTIME (fitness-ai-service / MediaPipe).
+     * Body JSON: { reps, qualityScore, exerciseType }
+     */
+    @PostMapping("/{id}/submit-result")
+    public ResponseEntity<NotificationResponse> submitResult(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Object> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body(new NotificationResponse(false, "Unauthorized"));
+        }
+        try {
+            Long userId = userService.getUserByEmail(userDetails.getUsername()).getId();
+            Integer reps = body.get("reps") instanceof Number n ? n.intValue() : null;
+            Double quality = body.get("qualityScore") instanceof Number q ? q.doubleValue() : null;
+            String exerciseType = body.get("exerciseType") != null ? body.get("exerciseType").toString() : null;
+            NotificationResponse response = userChallengeService.submitChallengeResult(id, userId, reps, quality, exerciseType);
+            return response.isSuccess() ? ResponseEntity.ok(response)
+                                        : ResponseEntity.status(400).body(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new NotificationResponse(false, "Error: " + e.getMessage()));
+        }
+    }
+
+    /**
      * GET /api/user/challenges/my
      * Lấy danh sách challenges của user hiện tại
      */

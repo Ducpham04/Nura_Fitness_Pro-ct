@@ -1,12 +1,30 @@
-import { useState, useEffect, useMemo, memo, useRef } from 'react';
+import { useState, useEffect, useMemo, memo, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import {
   Search, Trophy, Clock, Users, Play, CheckCircle, ChevronRight,
-  Zap, Award, Loader2, Flame, Target, ArrowLeft, Crown,
+  Zap, Award, Loader2, Flame, Target, ArrowLeft, Crown, Camera,
 } from 'lucide-react';
 import { challengeService, type Challenge, type UserChallenge, type ChallengeAttemptResult } from '../services/challengeService';
 import { API_CONFIG } from '../config/api';
 import { useAuthContext } from '../context/AuthContext';
+
+const ChallengeCameraModal = lazy(() => import('./ChallengeCameraModal'));
+
+// Map challenge -> exercise_type của fitness-ai-service (push-up|squat|pull-up|sit-up|plank)
+function exerciseTypeFor(c: { name: string; exercise: string }): string {
+  const s = `${c.name} ${c.exercise}`.toLowerCase();
+  if (/squat|gánh|đùi/.test(s)) return 'squat';
+  if (/plank|tấm ván/.test(s)) return 'plank';
+  if (/hít xà|kéo xà|xà đơn|pull/.test(s)) return 'pull-up';
+  if (/gập bụng|sit-?up|cuốn bụng/.test(s)) return 'sit-up';
+  return 'push-up'; // mặc định: hít đất/chống đẩy
+}
+// Mục tiêu số lần (hiển thị) — lấy số trong tiêu đề nếu có
+function targetRepsFor(name: string): number {
+  const m = name.match(/(\d+)/);
+  const n = m ? parseInt(m[1], 10) : 0;
+  return n > 0 && n <= 500 ? n : 0;
+}
 import { containerStagger, fadeUp, fadeScale, CountUp } from '../lib/motion';
 
 interface ChallengeUI {
@@ -163,10 +181,8 @@ function ChallengesView() {
   const [selectedChallenge, setSelectedChallenge] = useState<ChallengeUI | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null); // challengeId đang xử lý
   const [actionMsg, setActionMsg] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [attemptResult, setAttemptResult] = useState<ChallengeAttemptResult | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const pendingUcId = useRef<number | null>(null);
+  const [cameraTarget, setCameraTarget] = useState<ChallengeUI | null>(null); // challenge đang thi realtime
 
   const mapDifficulty = (difficulty?: string): ChallengeUI['difficulty'] => {
     if (difficulty === 'EASY') return 'beginner';
@@ -239,37 +255,20 @@ function ChallengesView() {
     }
   };
 
-  // Mở file picker để nộp bài thi (AI chấm điểm)
-  const handlePickFile = (ucId: number | undefined) => {
-    if (!ucId) { setActionMsg('Bạn cần tham gia trước khi nộp bài.'); return; }
-    pendingUcId.current = ucId;
+  // Mở camera thi đấu realtime (AI MediaPipe chấm form live)
+  const openCamera = (c: ChallengeUI) => {
+    if (!c.ucId) { setActionMsg('Bạn cần tham gia trước khi thi.'); return; }
     setAttemptResult(null);
-    fileInputRef.current?.click();
+    setActionMsg(null);
+    setCameraTarget(c);
   };
 
-  // Sau khi chọn ảnh → upload → AI chấm điểm
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = ''; // cho phép chọn lại cùng file
-    const ucId = pendingUcId.current;
-    if (!file || !ucId) return;
-    setSubmitting(true);
-    setActionMsg(null);
-    setAttemptResult(null);
-    try {
-      const res = await challengeService.submitAttempt(ucId, file);
-      if (res.success && res.data) {
-        setAttemptResult(res.data);
-        setActionMsg(res.data.passed ? 'Đạt! 🏆' : 'Chưa đạt ngưỡng — xem góp ý và thử lại.');
-        await loadChallenges();
-      } else {
-        setActionMsg(res.error?.message || 'AI chấm điểm thất bại. Thử lại sau.');
-      }
-    } catch {
-      setActionMsg('AI chấm điểm thất bại. Thử lại sau.');
-    } finally {
-      setSubmitting(false);
-    }
+  // Nhận kết quả từ modal camera → cập nhật UI + reload
+  const handleCameraResult = async (result: ChallengeAttemptResult) => {
+    setCameraTarget(null);
+    setAttemptResult(result);
+    setActionMsg(result.passed ? 'Đạt! 🏆' : 'Chưa đạt ngưỡng — luyện thêm và thử lại.');
+    await loadChallenges();
   };
 
   // Map challengeId -> UserChallenge của user hiện tại (để xác định joined/submitted)
@@ -465,19 +464,16 @@ function ChallengesView() {
                   </div>
                 ) : (
                   <div>
-                    <p className="text-neutral-200 text-sm mb-4">Bạn đã tham gia. Chụp ảnh đang tập đúng tư thế — AI sẽ chấm điểm form của bạn.</p>
+                    <p className="text-neutral-200 text-sm mb-4">Bạn đã tham gia. Bật camera để AI phân tích form & đếm reps real-time khi bạn thực hiện.</p>
                     <button
-                      onClick={() => handlePickFile(c.ucId)}
-                      disabled={submitting}
-                      className="w-full btn-electric py-3 text-sm font-grotesk font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60"
+                      onClick={() => openCamera(c)}
+                      className="w-full btn-electric py-3 text-sm font-grotesk font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
                     >
-                      {submitting
-                        ? <><Loader2 className="w-4 h-4 animate-spin" /> AI đang chấm điểm…</>
-                        : <><Zap className="w-4 h-4" /> Nộp bài thi (AI chấm điểm)</>}
+                      <Camera className="w-4 h-4" /> Bắt đầu thi (Camera AI)
                     </button>
                     <button
                       onClick={() => handleComplete(c.ucId, c.id)}
-                      disabled={actionLoading === c.id || submitting}
+                      disabled={actionLoading === c.id}
                       className="w-full mt-2 py-2.5 text-xs font-grotesk text-neutral-400 hover:text-neutral-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
                     >
                       {actionLoading === c.id
@@ -501,9 +497,6 @@ function ChallengesView() {
                 </div>
               )}
               {actionMsg && <p className="text-center text-xs text-neutral-300 mt-3">{actionMsg}</p>}
-
-              {/* Input ảnh ẩn — kích hoạt bởi nút Nộp bài thi */}
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
               {/* Kết quả AI chấm điểm */}
               {attemptResult && (
@@ -567,6 +560,19 @@ function ChallengesView() {
             </div>
           </div>
         </div>
+
+        {cameraTarget && (
+          <Suspense fallback={null}>
+            <ChallengeCameraModal
+              ucId={cameraTarget.ucId!}
+              exerciseType={exerciseTypeFor(cameraTarget)}
+              challengeName={cameraTarget.name}
+              targetReps={targetRepsFor(cameraTarget.name)}
+              onClose={() => setCameraTarget(null)}
+              onResult={handleCameraResult}
+            />
+          </Suspense>
+        )}
       </div>
     );
   }

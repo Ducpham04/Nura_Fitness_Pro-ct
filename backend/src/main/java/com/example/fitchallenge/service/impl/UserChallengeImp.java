@@ -313,6 +313,59 @@ public class UserChallengeImp implements UserChallengeService {
                 data);
     }
 
+    @Override
+    @Transactional
+    public NotificationResponse submitChallengeResult(Long ucId, Long userId,
+                                                      Integer reps, Double qualityScore, String exerciseType) {
+        Optional<UserChallenge> optional = userChallengeRepository.findById(ucId);
+        if (optional.isEmpty()) {
+            return new NotificationResponse(false, "Không tìm thấy thử thách đã tham gia.");
+        }
+        UserChallenge uc = optional.get();
+        if (uc.getUser() == null || !uc.getUser().getId().equals(userId)) {
+            return new NotificationResponse(false, "Bạn không có quyền nộp bài cho thử thách này.");
+        }
+        Challenges challenge = uc.getChallenge();
+
+        int score = qualityScore != null ? clamp((int) Math.round(qualityScore), 0, 100) : 0;
+        double minQuality = readThreshold(challenge.getAiRulesJson(), "min_quality_score", 0.7);
+        int passScore = (int) Math.round(minQuality * 100);
+        // target_reps tuỳ chọn trong aiRulesJson (0 = không yêu cầu số lần)
+        int targetReps = (int) readThreshold(challenge.getAiRulesJson(), "target_reps", 0);
+        boolean repsOk = targetReps <= 0 || (reps != null && reps >= targetReps);
+        boolean passed = score >= passScore && repsOk;
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("reps", reps);
+        payload.put("quality_score", score);
+        payload.put("exercise_type", exerciseType);
+        payload.put("source", "realtime-mediapipe");
+
+        uc.setScore(score);
+        uc.setKeypointsPayload(safeJson(payload));
+        uc.setSubmittedAt(ZonedDateTime.now());
+        uc.setStatus(passed ? UserChallenge.UserChallengeStatus.SUCCESS : UserChallenge.UserChallengeStatus.FAILED);
+        if (passed) {
+            uc.setCompletedAt(ZonedDateTime.now());
+        }
+        userChallengeRepository.save(uc);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("ucId", uc.getUcId());
+        data.put("challengeId", challenge.getId());
+        data.put("status", uc.getStatus().name());
+        data.put("score", score);
+        data.put("reps", reps);
+        data.put("passScore", passScore);
+        data.put("targetReps", targetReps);
+        data.put("passed", passed);
+        data.put("rewardPoints", passed ? challenge.getRewardPoints() : 0);
+        return new NotificationResponse(true,
+                passed ? "Chúc mừng! Bạn đã vượt qua thử thách 🏆"
+                       : "Chưa đạt ngưỡng. Tập thêm và thử lại nhé!",
+                data);
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────
     private double readThreshold(String aiRulesJson, String key, double fallback) {
         if (aiRulesJson == null || aiRulesJson.isBlank()) return fallback;

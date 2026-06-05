@@ -5,6 +5,10 @@
 //     nginx proxy /api -> backend, tránh CORS hoàn toàn.
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
 
+// fitness-ai-service (MediaPipe pose) — WebSocket realtime cho chấm điểm thử thách.
+// Dev: ws://localhost:5001 ; Prod: đặt VITE_POSE_WS_URL (vd wss://domain/pose-ws qua nginx).
+export const POSE_WS_BASE = import.meta.env.VITE_POSE_WS_URL ?? 'ws://localhost:5001';
+
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,
   API_PREFIX: '/api',

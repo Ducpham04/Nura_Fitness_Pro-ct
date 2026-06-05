@@ -183,7 +183,24 @@ class ChallengeService {
     return await apiClient.put<any>(`/user/challenges/${userChallengeId}/complete`, {});
   }
 
-  // Nộp ảnh bài thi → AI (Groq Vision) chấm điểm form
+  // Ghi nhận kết quả buổi thi REALTIME (fitness-ai-service / MediaPipe)
+  // BE: POST /api/user/challenges/{ucId}/submit-result  (JSON: reps, qualityScore, exerciseType)
+  async submitResult(
+    userChallengeId: number,
+    result: { reps: number; qualityScore: number; exerciseType: string },
+  ): Promise<ApiResponse<ChallengeAttemptResult>> {
+    const res = await apiClient.post<any>(`/user/challenges/${userChallengeId}/submit-result`, result);
+    if (res.success && res.data) {
+      const data = (res.data as any).data ?? res.data;
+      return { success: true, data: data as ChallengeAttemptResult };
+    }
+    return {
+      success: false,
+      error: res.error || { code: 'SUBMIT_ERROR', message: 'Không ghi nhận được kết quả', timestamp: new Date().toISOString() },
+    };
+  }
+
+  // Nộp ảnh bài thi → AI (Groq Vision) chấm điểm form — phương án dự phòng
   // BE: POST /api/user/challenges/{ucId}/submit  (multipart: image)
   async submitAttempt(userChallengeId: number, image: File): Promise<ApiResponse<ChallengeAttemptResult>> {
     const formData = new FormData();

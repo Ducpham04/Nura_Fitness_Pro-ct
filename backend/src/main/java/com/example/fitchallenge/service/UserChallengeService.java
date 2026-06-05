@@ -22,4 +22,12 @@ public interface UserChallengeService {
      * so với ngưỡng trong aiRulesJson → set SUCCESS/FAILED + lưu điểm/ảnh/phân tích.
      */
     NotificationResponse submitChallengeAttempt(Long ucId, Long userId, MultipartFile image);
+
+    /**
+     * Ghi nhận kết quả buổi thi REALTIME (fitness-ai-service / MediaPipe):
+     * FE chấm điểm live qua WebSocket rồi gửi kết quả cuối (reps + quality_score).
+     * So ngưỡng aiRulesJson → set SUCCESS/FAILED + lưu điểm.
+     */
+    NotificationResponse submitChallengeResult(Long ucId, Long userId,
+                                               Integer reps, Double qualityScore, String exerciseType);
 }
