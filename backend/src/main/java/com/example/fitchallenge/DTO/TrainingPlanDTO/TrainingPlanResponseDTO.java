@@ -21,6 +21,7 @@ public class TrainingPlanResponseDTO {
     private String description;
     private String difficulty; // Beginner, Intermediate, Advanced
     private Integer duration; // in weeks
+    private Integer workoutsPerWeek; // số buổi tập mỗi tuần
     private List<ExerciseDTO> exercises;
     private String status; // Active, Completed, Paused
     private Integer progress; // Percentage 0-100
@@ -72,9 +73,17 @@ public class TrainingPlanResponseDTO {
     public Integer getDuration() {
         return duration;
     }
-    
+
     public void setDuration(Integer duration) {
         this.duration = duration;
+    }
+
+    public Integer getWorkoutsPerWeek() {
+        return workoutsPerWeek;
+    }
+
+    public void setWorkoutsPerWeek(Integer workoutsPerWeek) {
+        this.workoutsPerWeek = workoutsPerWeek;
     }
     
     public List<ExerciseDTO> getExercises() {
@@ -185,6 +194,7 @@ public class TrainingPlanResponseDTO {
         public TrainingPlanResponseDTOBuilder description(String description) { instance.setDescription(description); return this; }
         public TrainingPlanResponseDTOBuilder difficulty(String difficulty) { instance.setDifficulty(difficulty); return this; }
         public TrainingPlanResponseDTOBuilder duration(Integer duration) { instance.setDuration(duration); return this; }
+        public TrainingPlanResponseDTOBuilder workoutsPerWeek(Integer workoutsPerWeek) { instance.setWorkoutsPerWeek(workoutsPerWeek); return this; }
         public TrainingPlanResponseDTOBuilder exercises(List<ExerciseDTO> exercises) { instance.setExercises(exercises); return this; }
         public TrainingPlanResponseDTOBuilder status(String status) { instance.setStatus(status); return this; }
         public TrainingPlanResponseDTOBuilder progress(Integer progress) { instance.setProgress(progress); return this; }

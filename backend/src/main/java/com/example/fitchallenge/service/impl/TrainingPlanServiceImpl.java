@@ -226,6 +226,7 @@ public class TrainingPlanServiceImpl implements TrainingPlanService {
                 .description(plan.getDescription())
                 .difficulty(difficulty)
                 .duration(plan.getDurationWeeks())
+                .workoutsPerWeek(plan.getWorkoutsPerWeek())
                 .exercises(exercises)
                 .status("Active") // Default status, can be calculated from UserTraining
                 .progress(0) // Default, can be calculated from UserTraining
