@@ -210,9 +210,15 @@ public class UserChallengeImp implements UserChallengeService {
         // Đánh dấu hoàn thành
         userChallenge.setStatus(UserChallenge.UserChallengeStatus.SUCCESS);
         userChallenge.setCompletedAt(ZonedDateTime.now());
-        
-        userChallengeRepository.save(userChallenge);
-        
-        return new NotificationResponse(true, "Đã đánh dấu challenge hoàn thành", userChallenge);
+
+        UserChallenge saved = userChallengeRepository.save(userChallenge);
+
+        // Trả DTO gọn (không trả raw entity → tránh lazy serialization crash → 500)
+        java.util.Map<String, Object> data = new java.util.LinkedHashMap<>();
+        data.put("ucId", saved.getUcId());
+        data.put("challengeId", saved.getChallenge() != null ? saved.getChallenge().getId() : null);
+        data.put("status", saved.getStatus() != null ? saved.getStatus().name() : "SUCCESS");
+        data.put("completedAt", saved.getCompletedAt());
+        return new NotificationResponse(true, "Đã đánh dấu challenge hoàn thành", data);
     }
 }

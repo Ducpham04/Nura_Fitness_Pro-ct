@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo, memo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Search, Trophy, Clock, Users, Play, CheckCircle, ChevronRight,
-  Video, Zap, Award, Loader2, Flame, Target, ArrowLeft, Crown,
+  Zap, Award, Loader2, Flame, Target, ArrowLeft, Crown,
 } from 'lucide-react';
-import { challengeService, type Challenge } from '../services/challengeService';
+import { challengeService, type Challenge, type UserChallenge } from '../services/challengeService';
+import { useAuthContext } from '../context/AuthContext';
 import { containerStagger, fadeUp, fadeScale, CountUp } from '../lib/motion';
 
 interface ChallengeUI {
@@ -26,6 +27,7 @@ interface ChallengeUI {
   submitted?: boolean;
   userScore?: number;
   ends_at: string;
+  ucId?: number; // id của UserChallenge (cần để gọi complete)
 }
 
 // Ảnh dự phòng kiểu "athletic" (Unsplash) — xoay vòng theo id để mỗi card khác nhau
@@ -142,13 +144,17 @@ const difficultyLabels: Record<string, string> = {
 type StatusFilter = 'all' | 'active' | 'joined' | 'upcoming';
 
 function ChallengesView() {
+  const { user } = useAuthContext();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [myChallenges, setMyChallenges] = useState<UserChallenge[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
   const [selectedChallenge, setSelectedChallenge] = useState<ChallengeUI | null>(null);
+  const [actionLoading, setActionLoading] = useState<number | null>(null); // challengeId đang xử lý
+  const [actionMsg, setActionMsg] = useState<string | null>(null);
 
   const mapDifficulty = (difficulty?: string): ChallengeUI['difficulty'] => {
     if (difficulty === 'EASY') return 'beginner';
@@ -156,18 +162,24 @@ function ChallengesView() {
     return 'intermediate';
   };
 
-  useEffect(() => { loadChallenges(); }, []);
+  useEffect(() => { loadChallenges(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
 
   const loadChallenges = async () => {
     try {
       setLoading(true);
-      const response = await challengeService.getAll();
-      if (response.success && response.data) {
-        setChallenges(response.data);
+      // Tải song song: danh sách challenge + challenge của user (để biết joined/submitted)
+      const [listRes, myRes] = await Promise.all([
+        challengeService.getAll(),
+        user?.id ? challengeService.getMyChallenges() : Promise.resolve(null),
+      ]);
+
+      if (listRes.success && listRes.data) {
+        setChallenges(listRes.data);
         setError(null);
       } else {
-        setError(response.error?.message || 'Không tải được thử thách');
+        setError(listRes.error?.message || 'Không tải được thử thách');
       }
+      setMyChallenges(myRes && myRes.success && myRes.data ? myRes.data : []);
     } catch {
       setError('Không tải được thử thách');
     } finally {
@@ -175,26 +187,79 @@ function ChallengesView() {
     }
   };
 
-  const displayChallenges: ChallengeUI[] = challenges.map(challenge => ({
-    id: challenge.id,
-    name: challenge.title,
-    description: challenge.description,
-    goal: 'endurance',
-    difficulty: mapDifficulty(challenge.difficulty),
-    duration: challenge.durationDays ? `${challenge.durationDays} ngày` : (challenge.duration || ''),
-    participants: challenge.participants || 0,
-    reward_points: challenge.rewardPoints || 0,
-    prize_usd: challenge.prizeUsd,
-    image: imgFor(challenge.id, challenge.imageUrl),
-    exercise: challenge.exercise || (challenge.exerciseIds?.length ? `${challenge.exerciseIds.length} bài tập` : 'Sự kiện'),
-    minReps: challenge.minReps || 0,
-    passingScore: challenge.passingScore || 85,
-    status: (challenge.status === 'ACTIVE' ? 'active' : challenge.status === 'INACTIVE' ? 'ended' : 'upcoming'),
-    joined: challenge.joined || false,
-    submitted: challenge.submitted || false,
-    userScore: challenge.userScore,
-    ends_at: challenge.endsAt || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-  }));
+  // Tham gia thử thách
+  const handleJoin = async (challengeId: number) => {
+    if (!user?.id) { setActionMsg('Vui lòng đăng nhập để tham gia.'); return; }
+    setActionLoading(challengeId);
+    setActionMsg(null);
+    try {
+      const res = await challengeService.join(challengeId, user.id);
+      if (res.success) {
+        setActionMsg('Đã tham gia thử thách! 🔥');
+        await loadChallenges();
+      } else {
+        setActionMsg(res.error?.message || 'Không tham gia được. Thử lại sau.');
+      }
+    } catch {
+      setActionMsg('Không tham gia được. Thử lại sau.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Đánh dấu hoàn thành (MVP — chưa có AI chấm điểm)
+  const handleComplete = async (ucId: number | undefined, challengeId: number) => {
+    if (!ucId) { setActionMsg('Bạn cần tham gia trước khi hoàn thành.'); return; }
+    setActionLoading(challengeId);
+    setActionMsg(null);
+    try {
+      const res = await challengeService.complete(ucId);
+      if (res.success) {
+        setActionMsg('Đã đánh dấu hoàn thành! 🏆');
+        await loadChallenges();
+      } else {
+        setActionMsg(res.error?.message || 'Không cập nhật được. Thử lại sau.');
+      }
+    } catch {
+      setActionMsg('Không cập nhật được. Thử lại sau.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Map challengeId -> UserChallenge của user hiện tại (để xác định joined/submitted)
+  const myByChallenge = useMemo(() => {
+    const m = new Map<number, UserChallenge>();
+    myChallenges.forEach(uc => { if (uc.challengeId != null) m.set(uc.challengeId, uc); });
+    return m;
+  }, [myChallenges]);
+
+  const displayChallenges: ChallengeUI[] = challenges.map(challenge => {
+    const uc = myByChallenge.get(challenge.id);
+    const joined = !!uc;
+    const submitted = uc?.status === 'SUCCESS';
+    return {
+      id: challenge.id,
+      name: challenge.title,
+      description: challenge.description,
+      goal: 'endurance',
+      difficulty: mapDifficulty(challenge.difficulty),
+      duration: challenge.durationDays ? `${challenge.durationDays} ngày` : (challenge.duration || ''),
+      participants: challenge.participants || 0,
+      reward_points: challenge.rewardPoints || 0,
+      prize_usd: challenge.prizeUsd,
+      image: imgFor(challenge.id, challenge.imageUrl),
+      exercise: challenge.exercise || (challenge.exerciseIds?.length ? `${challenge.exerciseIds.length} bài tập` : 'Sự kiện'),
+      minReps: challenge.minReps || 0,
+      passingScore: challenge.passingScore || 85,
+      status: (challenge.status === 'ACTIVE' ? 'active' : challenge.status === 'INACTIVE' ? 'ended' : 'upcoming'),
+      joined,
+      submitted,
+      userScore: uc?.score ?? challenge.userScore,
+      ucId: uc?.id,
+      ends_at: challenge.endsAt || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+    };
+  });
 
   // Dữ liệu mẫu nếu API trống (vẫn việt hoá)
   const fallbackChallenges: ChallengeUI[] = [
@@ -266,7 +331,8 @@ function ChallengesView() {
 
   // ====== DETAIL VIEW ======
   if (selectedChallenge) {
-    const c = selectedChallenge;
+    // Lấy bản mới nhất từ `all` để phản ánh trạng thái sau khi join/complete
+    const c = all.find(x => x.id === selectedChallenge.id) ?? selectedChallenge;
     return (
       <div className="space-y-6 animate-fade-in">
         <button
@@ -349,25 +415,39 @@ function ChallengesView() {
                 c.submitted ? (
                   <div className="text-center py-4">
                     <CheckCircle className="w-12 h-12 text-lime mx-auto mb-2" />
-                    <p className="text-white font-grotesk font-semibold">Đã nộp!</p>
-                    <p className="text-neutral-400 text-sm">Điểm: {c.userScore || 0}%</p>
+                    <p className="text-white font-grotesk font-semibold">Đã hoàn thành!</p>
+                    {c.userScore ? <p className="text-neutral-400 text-sm">Điểm: {c.userScore}%</p> : null}
                   </div>
                 ) : (
                   <div>
-                    <p className="text-neutral-200 text-sm mb-4">Bạn đã tham gia. Quay video để hoàn thành thử thách.</p>
-                    <button className="w-full btn-electric py-3 text-sm font-grotesk font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
-                      <Video className="w-4 h-4" /> Quay video dự thi
+                    <p className="text-neutral-200 text-sm mb-4">Bạn đã tham gia. Hoàn thành bài tập rồi đánh dấu để nhận thưởng.</p>
+                    <button
+                      onClick={() => handleComplete(c.ucId, c.id)}
+                      disabled={actionLoading === c.id}
+                      className="w-full btn-electric py-3 text-sm font-grotesk font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                      {actionLoading === c.id
+                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang xử lý…</>
+                        : <><CheckCircle className="w-4 h-4" /> Đánh dấu hoàn thành</>}
                     </button>
+                    <p className="text-neutral-500 text-xs mt-2 text-center">Quay video dự thi (AI chấm điểm) sẽ sớm ra mắt.</p>
                   </div>
                 )
               ) : (
                 <div>
                   <p className="text-neutral-200 text-sm mb-4">Tham gia thử thách để bắt đầu thi đua giành thưởng.</p>
-                  <button className="w-full btn-lime py-3 text-sm font-grotesk font-semibold active:scale-[0.98] transition-transform">
-                    Tham gia ngay
+                  <button
+                    onClick={() => handleJoin(c.id)}
+                    disabled={actionLoading === c.id}
+                    className="w-full btn-lime py-3 text-sm font-grotesk font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {actionLoading === c.id
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang tham gia…</>
+                      : 'Tham gia ngay'}
                   </button>
                 </div>
               )}
+              {actionMsg && <p className="text-center text-xs text-neutral-300 mt-3">{actionMsg}</p>}
             </div>
 
             <div className="glass-electric rounded-3xl p-5 border-glow-electric">

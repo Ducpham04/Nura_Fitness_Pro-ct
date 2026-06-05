@@ -123,7 +123,46 @@ class ChallengeService {
     };
   }
 
-  // Submit challenge attempt
+  // Join a challenge (tạo UserChallenge trạng thái PENDING)
+  // BE: POST /api/challenges/{id}/join  body { userId }
+  async join(challengeId: number, userId: number): Promise<ApiResponse<any>> {
+    return await apiClient.post<any>(`/challenges/${challengeId}/join`, { userId });
+  }
+
+  // Lấy danh sách challenge của user hiện tại (để biết đã tham gia / hoàn thành)
+  // BE: GET /api/user/challenges/my -> NotificationResponse { data: UserChallenge[] }
+  async getMyChallenges(): Promise<ApiResponse<UserChallenge[]>> {
+    const response = await apiClient.get<any>('/user/challenges/my');
+    if (response.success && response.data) {
+      const raw = response.data;
+      const list = Array.isArray(raw) ? raw : (raw.data ?? raw.content ?? []);
+      return {
+        success: true,
+        data: (Array.isArray(list) ? list : []).map((uc: any) => ({
+          id: uc.ucId ?? uc.id,
+          challengeId: uc.challengeId,
+          status: uc.status,
+          score: uc.score ?? null,
+          confidence: uc.confidence ?? null,
+          submittedAt: uc.submittedAt ?? null,
+          completedAt: uc.completedAt ?? null,
+          videoUrl: uc.videoUrl ?? null,
+        })),
+      };
+    }
+    return {
+      success: false,
+      error: response.error || { code: 'FETCH_ERROR', message: 'Không tải được thử thách của bạn', timestamp: new Date().toISOString() },
+    };
+  }
+
+  // Đánh dấu hoàn thành (MVP — chưa có AI chấm điểm video)
+  // BE: PUT /api/user/challenges/{ucId}/complete  (id = ucId của UserChallenge)
+  async complete(userChallengeId: number): Promise<ApiResponse<any>> {
+    return await apiClient.put<any>(`/user/challenges/${userChallengeId}/complete`, {});
+  }
+
+  // Submit challenge attempt (giữ cho phần AI chấm điểm về sau)
   async submit(data: ChallengeSubmitRequest): Promise<ApiResponse<UserChallenge>> {
     return await apiClient.post<UserChallenge>('/challenges/submit', data);
   }
