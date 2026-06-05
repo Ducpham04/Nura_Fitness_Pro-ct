@@ -6,8 +6,14 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
 
 // fitness-ai-service (MediaPipe pose) — WebSocket realtime cho chấm điểm thử thách.
-// Dev: ws://localhost:5001 ; Prod: đặt VITE_POSE_WS_URL (vd wss://domain/pose-ws qua nginx).
-export const POSE_WS_BASE = import.meta.env.VITE_POSE_WS_URL ?? 'ws://localhost:5001';
+// - VITE_POSE_WS_URL nếu được set (ưu tiên).
+// - Prod (https, same-origin qua nginx): wss://<host>/pose  → nginx proxy tới fitness-ai:5001.
+// - Dev: ws://localhost:5001 (kết nối trực tiếp service).
+export const POSE_WS_BASE: string =
+  (import.meta.env.VITE_POSE_WS_URL as string | undefined) ??
+  (typeof window !== 'undefined' && window.location.protocol === 'https:'
+    ? `wss://${window.location.host}/pose`
+    : 'ws://localhost:5001');
 
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,

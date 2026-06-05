@@ -87,6 +87,26 @@ services:
     networks:
       - fit-network
 
+  # ── Fitness AI: MediaPipe pose realtime (chấm điểm thử thách) ───────
+  fitness-ai:
+    build:
+      context: ./fitness-ai-service
+      dockerfile: Dockerfile
+    container_name: fit-prod-pose-ai
+    restart: always
+    environment:
+      HOST: 0.0.0.0
+      PORT: 5001
+      MEDIAPIPE_MODEL_COMPLEXITY: 1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - fit-network
+
   # ── Frontend (nginx: SPA + reverse proxy) — điểm vào public ─────────
   frontend:
     build:
@@ -99,6 +119,7 @@ services:
     restart: always
     depends_on:
       - backend
+      - fitness-ai
     ports:
       - "80:80"
       # - "443:443"   # bật khi đã gắn TLS (xem DEPLOY.md)
