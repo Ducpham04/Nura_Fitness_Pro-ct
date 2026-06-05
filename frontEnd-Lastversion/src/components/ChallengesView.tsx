@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo, memo } from 'react';
+import { useState, useEffect, useMemo, memo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Search, Trophy, Clock, Users, Play, CheckCircle, ChevronRight,
   Zap, Award, Loader2, Flame, Target, ArrowLeft, Crown,
 } from 'lucide-react';
-import { challengeService, type Challenge, type UserChallenge } from '../services/challengeService';
+import { challengeService, type Challenge, type UserChallenge, type ChallengeAttemptResult } from '../services/challengeService';
 import { API_CONFIG } from '../config/api';
 import { useAuthContext } from '../context/AuthContext';
 import { containerStagger, fadeUp, fadeScale, CountUp } from '../lib/motion';
@@ -163,6 +163,10 @@ function ChallengesView() {
   const [selectedChallenge, setSelectedChallenge] = useState<ChallengeUI | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null); // challengeId đang xử lý
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [attemptResult, setAttemptResult] = useState<ChallengeAttemptResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingUcId = useRef<number | null>(null);
 
   const mapDifficulty = (difficulty?: string): ChallengeUI['difficulty'] => {
     if (difficulty === 'EASY') return 'beginner';
@@ -232,6 +236,39 @@ function ChallengesView() {
       setActionMsg('Không cập nhật được. Thử lại sau.');
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // Mở file picker để nộp bài thi (AI chấm điểm)
+  const handlePickFile = (ucId: number | undefined) => {
+    if (!ucId) { setActionMsg('Bạn cần tham gia trước khi nộp bài.'); return; }
+    pendingUcId.current = ucId;
+    setAttemptResult(null);
+    fileInputRef.current?.click();
+  };
+
+  // Sau khi chọn ảnh → upload → AI chấm điểm
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // cho phép chọn lại cùng file
+    const ucId = pendingUcId.current;
+    if (!file || !ucId) return;
+    setSubmitting(true);
+    setActionMsg(null);
+    setAttemptResult(null);
+    try {
+      const res = await challengeService.submitAttempt(ucId, file);
+      if (res.success && res.data) {
+        setAttemptResult(res.data);
+        setActionMsg(res.data.passed ? 'Đạt! 🏆' : 'Chưa đạt ngưỡng — xem góp ý và thử lại.');
+        await loadChallenges();
+      } else {
+        setActionMsg(res.error?.message || 'AI chấm điểm thất bại. Thử lại sau.');
+      }
+    } catch {
+      setActionMsg('AI chấm điểm thất bại. Thử lại sau.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -428,17 +465,25 @@ function ChallengesView() {
                   </div>
                 ) : (
                   <div>
-                    <p className="text-neutral-200 text-sm mb-4">Bạn đã tham gia. Hoàn thành bài tập rồi đánh dấu để nhận thưởng.</p>
+                    <p className="text-neutral-200 text-sm mb-4">Bạn đã tham gia. Chụp ảnh đang tập đúng tư thế — AI sẽ chấm điểm form của bạn.</p>
                     <button
-                      onClick={() => handleComplete(c.ucId, c.id)}
-                      disabled={actionLoading === c.id}
+                      onClick={() => handlePickFile(c.ucId)}
+                      disabled={submitting}
                       className="w-full btn-electric py-3 text-sm font-grotesk font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-60"
                     >
-                      {actionLoading === c.id
-                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang xử lý…</>
-                        : <><CheckCircle className="w-4 h-4" /> Đánh dấu hoàn thành</>}
+                      {submitting
+                        ? <><Loader2 className="w-4 h-4 animate-spin" /> AI đang chấm điểm…</>
+                        : <><Zap className="w-4 h-4" /> Nộp bài thi (AI chấm điểm)</>}
                     </button>
-                    <p className="text-neutral-500 text-xs mt-2 text-center">Quay video dự thi (AI chấm điểm) sẽ sớm ra mắt.</p>
+                    <button
+                      onClick={() => handleComplete(c.ucId, c.id)}
+                      disabled={actionLoading === c.id || submitting}
+                      className="w-full mt-2 py-2.5 text-xs font-grotesk text-neutral-400 hover:text-neutral-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                      {actionLoading === c.id
+                        ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang xử lý…</>
+                        : <><CheckCircle className="w-3.5 h-3.5" /> Đánh dấu hoàn thành thủ công</>}
+                    </button>
                   </div>
                 )
               ) : (
@@ -456,6 +501,50 @@ function ChallengesView() {
                 </div>
               )}
               {actionMsg && <p className="text-center text-xs text-neutral-300 mt-3">{actionMsg}</p>}
+
+              {/* Input ảnh ẩn — kích hoạt bởi nút Nộp bài thi */}
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+
+              {/* Kết quả AI chấm điểm */}
+              {attemptResult && (
+                <div className={`mt-4 rounded-2xl p-4 border ${attemptResult.passed ? 'border-lime/30 bg-lime/5' : 'border-orange-400/30 bg-orange-400/5'}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      {attemptResult.passed
+                        ? <Trophy className="w-5 h-5 text-lime" />
+                        : <Target className="w-5 h-5 text-orange-400" />}
+                      <span className="font-grotesk font-bold text-white text-sm">
+                        {attemptResult.passed ? 'Đạt thử thách!' : 'Chưa đạt'}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className={`font-grotesk font-bold text-2xl ${attemptResult.passed ? 'text-lime' : 'text-orange-400'}`}>
+                        {attemptResult.score}
+                      </span>
+                      <span className="text-neutral-500 text-xs">/100 · cần {attemptResult.passScore}</span>
+                    </div>
+                  </div>
+                  {typeof attemptResult.confidence === 'number' && (
+                    <p className="text-neutral-400 text-xs mb-2">Độ tin cậy AI: {Math.round(attemptResult.confidence * 100)}%</p>
+                  )}
+                  {attemptResult.analysis?.corrections && attemptResult.analysis.corrections.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-white font-grotesk font-semibold text-xs mb-1.5">Góp ý cải thiện form:</p>
+                      <ul className="space-y-1.5">
+                        {attemptResult.analysis.corrections.slice(0, 4).map((corr, i) => (
+                          <li key={i} className="flex items-start gap-2 text-neutral-200 text-xs">
+                            <Award className="w-3.5 h-3.5 text-electric mt-0.5 shrink-0" />
+                            <span><span className="text-neutral-400">{corr.issue}:</span> {corr.cue}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {attemptResult.analysis?.notes && (
+                    <p className="text-neutral-400 text-xs mt-2 italic">{attemptResult.analysis.notes}</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="glass-electric rounded-3xl p-5 border-glow-electric">

@@ -123,8 +123,9 @@ class AIVision:
                 api_key=api_key,
                 http_client=httpx.Client()
             )
-            # Use Llama 3.2 Vision model on Groq
-            self.model_name = "llama-3.2-11b-vision-preview"
+            # Groq vision model (llama-3.2-vision đã bị khai tử). Mặc định Llama 4 Scout
+            # (đa phương thức); có thể override bằng env GROQ_VISION_MODEL.
+            self.model_name = os.getenv("GROQ_VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
         except Exception as e:
             print(f"❌ Could not initialize Groq Vision client: {e}")
             raise e

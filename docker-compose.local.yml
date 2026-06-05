@@ -41,8 +41,9 @@ services:
       # JWT
       JWT_SECRET: ${JWT_SECRET:-du-an-safjhdskfjskjliuuasdhaos-2321}
       JWT_EXPIRATION: 86400000
-      # AI Service (inside Docker network, use service name)
-      AI_SERVICE_URL: http://python-ai:5001
+      # AI Service (inside Docker network, use service name).
+      # ⚠️ Port phải là 8001 — uvicorn trong container bind 8001 (xem ai-service/Dockerfile).
+      AI_SERVICE_URL: http://python-ai:8001
       # File Upload
       UPLOAD_PATH: ${UPLOAD_PATH:-/app/uploads/}
       APP_PUBLIC_BASE_URL: ${APP_PUBLIC_BASE_URL:-http://localhost:8080}

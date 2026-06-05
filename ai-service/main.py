@@ -526,7 +526,7 @@ User ID: {user_id}
 Analyze this snapshot and return strict JSON only."""
 
     try:
-        model_name = os.getenv("GROQ_VISION_MODEL", getattr(vision, "model_name", "llama-3.2-11b-vision-preview"))
+        model_name = os.getenv("GROQ_VISION_MODEL", getattr(vision, "model_name", "meta-llama/llama-4-scout-17b-16e-instruct"))
         response = vision.client.chat.completions.create(
             model=model_name,
             messages=[

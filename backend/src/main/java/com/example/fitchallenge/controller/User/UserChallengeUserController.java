@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Controller cho User Challenge APIs (user-facing)
@@ -52,6 +53,30 @@ public class UserChallengeUserController {
             return ResponseEntity.status(500).body(
                 new NotificationResponse(false, "Error: " + e.getMessage())
             );
+        }
+    }
+
+    /**
+     * POST /api/user/challenges/{id}/submit
+     * Nộp ảnh bài thi → AI (Groq Vision) chấm điểm form → SUCCESS/FAILED.
+     * id = ucId (UserChallenge của user).
+     */
+    @PostMapping(value = "/{id}/submit", consumes = {"multipart/form-data"})
+    public ResponseEntity<NotificationResponse> submitAttempt(
+            @PathVariable Long id,
+            @RequestPart("image") MultipartFile image,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body(new NotificationResponse(false, "Unauthorized"));
+        }
+        try {
+            Long userId = userService.getUserByEmail(userDetails.getUsername()).getId();
+            NotificationResponse response = userChallengeService.submitChallengeAttempt(id, userId, image);
+            return response.isSuccess() ? ResponseEntity.ok(response)
+                                        : ResponseEntity.status(400).body(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new NotificationResponse(false, "Error: " + e.getMessage()));
         }
     }
 

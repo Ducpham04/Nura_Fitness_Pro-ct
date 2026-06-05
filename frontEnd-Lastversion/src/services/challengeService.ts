@@ -1,7 +1,28 @@
 // Challenge Service - Java Backend API
 import { apiClient } from './apiClient';
-import { API_ENDPOINTS } from '../config/api';
+import { API_ENDPOINTS, API_CONFIG } from '../config/api';
 import type { ApiResponse } from '../types';
+
+// Kết quả AI chấm điểm bài thi thử thách
+export interface ChallengeAttemptResult {
+  ucId: number;
+  challengeId: number;
+  status: 'SUCCESS' | 'FAILED' | 'PENDING' | 'DISPUTED';
+  score: number;        // 0-100
+  confidence: number;   // 0-1
+  passScore: number;    // ngưỡng đậu
+  passed: boolean;
+  imageUrl?: string;
+  rewardPoints?: number;
+  analysis?: {
+    overall_score?: number;
+    risk_level?: 'low' | 'medium' | 'high';
+    key_findings?: string[];
+    corrections?: { issue: string; cue: string; severity: string }[];
+    notes?: string;
+    confidence?: number;
+  };
+}
 
 export interface Challenge {
   id: number;
@@ -156,10 +177,37 @@ class ChallengeService {
     };
   }
 
-  // Đánh dấu hoàn thành (MVP — chưa có AI chấm điểm video)
+  // Đánh dấu hoàn thành (thủ công — không qua AI)
   // BE: PUT /api/user/challenges/{ucId}/complete  (id = ucId của UserChallenge)
   async complete(userChallengeId: number): Promise<ApiResponse<any>> {
     return await apiClient.put<any>(`/user/challenges/${userChallengeId}/complete`, {});
+  }
+
+  // Nộp ảnh bài thi → AI (Groq Vision) chấm điểm form
+  // BE: POST /api/user/challenges/{ucId}/submit  (multipart: image)
+  async submitAttempt(userChallengeId: number, image: File): Promise<ApiResponse<ChallengeAttemptResult>> {
+    const formData = new FormData();
+    formData.append('image', image);
+    try {
+      const res = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/user/challenges/${userChallengeId}/submit`, {
+        method: 'POST',
+        body: formData,
+        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
+      });
+      const payload = await res.json().catch(() => undefined);
+      if (!res.ok || !payload?.success) {
+        return {
+          success: false,
+          error: { code: `HTTP_${res.status}`, message: payload?.message || 'AI chấm điểm thất bại', timestamp: new Date().toISOString() },
+        };
+      }
+      return { success: true, data: payload.data as ChallengeAttemptResult };
+    } catch {
+      return {
+        success: false,
+        error: { code: 'NETWORK_ERROR', message: 'Không kết nối được máy chủ', timestamp: new Date().toISOString() },
+      };
+    }
   }
 
   // Submit challenge attempt (giữ cho phần AI chấm điểm về sau)
