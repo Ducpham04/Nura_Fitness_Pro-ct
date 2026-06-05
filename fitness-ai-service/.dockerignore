@@ -1,0 +1,73 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments (CRITICAL - rất nặng!)
+venv/
+env/
+ENV/
+.venv
+venv*/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+README.md
+*.md
+
+# MediaPipe cache
+.mediapipe/
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Docker build artifacts (rất nặng!)
+*.tar
+*.tar.gz
+*.zip
+fit-ai-service.tar
+fitness-ai-service.tar
+
+# Documentation (không cần trong image)
+*.md
+docs/
+HUONG_DAN_*.md
+QUICK_*.md
+FIX_*.md
+README.md
+
+
+
+
+

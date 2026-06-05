@@ -28,11 +28,13 @@ __pycache__/
 *$py.class
 .pytest_cache/
 
-# Stale duplicate AI service folder (~14GB venv/models/data) — never track.
-# TODO: có thể xóa khỏi đĩa, bản đang dùng là ai-service/
-fitness-ai-service/
+# fitness-ai-service: MediaPipe pose model (chấm điểm thử thách realtime).
+# Track SOURCE, chỉ bỏ qua artifact nặng (venv, image export, cache).
+fitness-ai-service/venv/
 fitness-ai-service/**/__pycache__/
 fitness-ai-service/.pytest_cache/
+fitness-ai-service/*.tar
+fitness-ai-service/*.tar.gz
 
 # Archives / build exports
 *.tar

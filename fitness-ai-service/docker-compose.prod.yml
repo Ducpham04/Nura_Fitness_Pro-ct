@@ -1,0 +1,39 @@
+services:
+  fitness-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fitness-ai-service-prod
+    ports:
+      - "5001:5001"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5001
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:8080}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - MEDIAPIPE_MODEL_COMPLEXITY=${MEDIAPIPE_MODEL_COMPLEXITY:-1}
+      - MEDIAPIPE_MIN_DETECTION_CONFIDENCE=${MEDIAPIPE_MIN_DETECTION_CONFIDENCE:-0.5}
+      - MEDIAPIPE_MIN_TRACKING_CONFIDENCE=${MEDIAPIPE_MIN_TRACKING_CONFIDENCE:-0.5}
+    restart: always
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - fitness-network
+    # Remove volumes for production (code is baked into image)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+networks:
+  fitness-network:
+    driver: bridge
+
