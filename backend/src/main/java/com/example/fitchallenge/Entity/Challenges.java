@@ -29,6 +29,10 @@ public class Challenges {
     @Column(name = "title", length = 200)
     private String title;
 
+    // 🖼️ Ảnh bìa thử thách (đường dẫn tương đối, vd "uploads/img/abc.jpg")
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 

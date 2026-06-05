@@ -23,17 +23,13 @@ public class ChallengeControllerAdmin {
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<NotificationResponse> createChallenge(
             @RequestPart (value= "data") String dtoJson,
-            @RequestPart(value = "video", required = false) MultipartFile video) throws JsonProcessingException {
-
-
+            @RequestPart(value = "image", required = false) MultipartFile image) throws JsonProcessingException {
 
         ObjectMapper objectMapper = new ObjectMapper();
 
         ChallengeDTOPayload dto = objectMapper.readValue(dtoJson,ChallengeDTOPayload.class) ;
 
-
-
-        return ResponseEntity.ok(challengeService.createChallenge(dto, video));
+        return ResponseEntity.ok(challengeService.createChallenge(dto, image));
     }
 
 
@@ -51,11 +47,10 @@ public class ChallengeControllerAdmin {
     public ResponseEntity<NotificationResponse> updateChallenge(
             @PathVariable Long id,
             @RequestPart("data") String dtoJson,
-
-            @RequestPart(value = "video", required = false) MultipartFile video) throws JsonProcessingException {
+            @RequestPart(value = "image", required = false) MultipartFile image) throws JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
         ChallengeDTOPayload dto = objectMapper.readValue(dtoJson,ChallengeDTOPayload.class) ;
-        return ResponseEntity.ok(challengeService.updateChallenge(id, dto, video));
+        return ResponseEntity.ok(challengeService.updateChallenge(id, dto, image));
     }
 
     @DeleteMapping("/{id}")

@@ -5,6 +5,7 @@ import {
   Zap, Award, Loader2, Flame, Target, ArrowLeft, Crown,
 } from 'lucide-react';
 import { challengeService, type Challenge, type UserChallenge } from '../services/challengeService';
+import { API_CONFIG } from '../config/api';
 import { useAuthContext } from '../context/AuthContext';
 import { containerStagger, fadeUp, fadeScale, CountUp } from '../lib/motion';
 
@@ -39,8 +40,15 @@ const FALLBACK_IMAGES = [
   'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=900&q=80',
   'https://images.unsplash.com/photo-1546483875-ad9014c88eba?auto=format&fit=crop&w=900&q=80',
 ];
-const imgFor = (id: number, url?: string) =>
-  url && url.length > 5 ? url : FALLBACK_IMAGES[Math.abs(id) % FALLBACK_IMAGES.length];
+const imgFor = (id: number, url?: string) => {
+  if (url && url.length > 5) {
+    // URL tuyệt đối -> dùng nguyên; path tương đối "uploads/..." -> ghép base backend
+    if (/^(https?:|blob:|data:)/.test(url)) return url;
+    const clean = url.startsWith('/') ? url.slice(1) : url;
+    return `${API_CONFIG.BASE_URL}/${clean}`;
+  }
+  return FALLBACK_IMAGES[Math.abs(id) % FALLBACK_IMAGES.length];
+};
 
 const pad = (n: number) => String(Math.max(0, n)).padStart(2, '0');
 

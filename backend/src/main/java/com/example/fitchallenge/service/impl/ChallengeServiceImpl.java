@@ -35,10 +35,11 @@ public class ChallengeServiceImpl implements ChallengeService {
     private final GoalRepository goalRepository;
     private final UserChallengeRepository userChallengeRepository;
     private final UserRepository userRepository;
+    private final FileStorageService fileStorageService;
 
     @Override
     @Transactional
-    public NotificationResponse createChallenge(ChallengeDTOPayload dto, MultipartFile video) {
+    public NotificationResponse createChallenge(ChallengeDTOPayload dto, MultipartFile image) {
         try {
             if (dto.getTitle() == null || dto.getTitle().trim().isEmpty()) {
                 return new NotificationResponse(false, "Challenge title cannot be empty");
@@ -69,9 +70,16 @@ public class ChallengeServiceImpl implements ChallengeService {
             if (dto.getExerciseIds() != null && !dto.getExerciseIds().isEmpty()) {
                 challenge.setExercises(new java.util.LinkedHashSet<>(exerciseRepository.findAllById(dto.getExerciseIds())));
             }
+            // Ảnh bìa: ưu tiên file upload, fallback URL trong dto
+            if (image != null && !image.isEmpty()) {
+                challenge.setImageUrl(fileStorageService.uploadFile(image));
+            } else if (dto.getImageUrl() != null && !dto.getImageUrl().isBlank()) {
+                challenge.setImageUrl(dto.getImageUrl().trim());
+            }
 
             challengeRepository.save(challenge);
-            return new NotificationResponse(true, "Challenge created successfully", challenge);
+            // Trả DTO (không trả raw entity -> tránh lazy serialization crash 500)
+            return new NotificationResponse(true, "Challenge created successfully", mapToChallengeResponseDTO(challenge));
 
         } catch (Exception e) {
             return new NotificationResponse(false, "Error creating challenge: " + e.getMessage());
@@ -99,7 +107,7 @@ public class ChallengeServiceImpl implements ChallengeService {
 
     @Override
     @Transactional
-    public NotificationResponse updateChallenge(Long id, ChallengeDTOPayload dto,  MultipartFile video) {
+    public NotificationResponse updateChallenge(Long id, ChallengeDTOPayload dto,  MultipartFile image) {
         try {
             Challenges challenge = challengeRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Challenge not found"));
@@ -118,9 +126,16 @@ public class ChallengeServiceImpl implements ChallengeService {
             if (dto.getExerciseIds() != null) {
                 challenge.setExercises(new java.util.LinkedHashSet<>(exerciseRepository.findAllById(dto.getExerciseIds())));
             }
+            // Ảnh bìa: ưu tiên file upload mới, nếu không có thì cho phép cập nhật bằng URL
+            if (image != null && !image.isEmpty()) {
+                challenge.setImageUrl(fileStorageService.uploadFile(image));
+            } else if (dto.getImageUrl() != null && !dto.getImageUrl().isBlank()) {
+                challenge.setImageUrl(dto.getImageUrl().trim());
+            }
 
             challengeRepository.save(challenge);
-            return new NotificationResponse(true, "Challenge updated successfully", challenge);
+            // Trả DTO (không trả raw entity -> tránh lazy serialization crash 500)
+            return new NotificationResponse(true, "Challenge updated successfully", mapToChallengeResponseDTO(challenge));
 
         } catch (Exception e) {
             return new NotificationResponse(false, "Error updating challenge: " + e.getMessage());
@@ -255,6 +270,7 @@ public class ChallengeServiceImpl implements ChallengeService {
         return ChallengeResponseDTO.builder()
                 .id(challenge.getId())
                 .title(challenge.getTitle())
+                .imageUrl(challenge.getImageUrl())
                 .description(challenge.getDescription())
                 .participants((int) participantsCount)
                 .reward(challenge.getReward())

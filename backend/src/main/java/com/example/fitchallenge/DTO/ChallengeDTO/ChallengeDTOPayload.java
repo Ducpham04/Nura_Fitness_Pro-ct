@@ -11,6 +11,7 @@ public class  ChallengeDTOPayload {
 
         private Long goalId;
     private String title;
+    private String imageUrl;
     private String description;
     private Integer durationDays;
     private Integer rewardPoints;

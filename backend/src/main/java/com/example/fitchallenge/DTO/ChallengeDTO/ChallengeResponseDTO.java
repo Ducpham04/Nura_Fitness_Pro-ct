@@ -18,6 +18,7 @@ import java.util.List;
 public class ChallengeResponseDTO {
     private Long id;
     private String title;
+    private String imageUrl; // Ảnh bìa thử thách
     private String description;
     private Integer participants; // Count of participants
     private String reward; // Reward description
@@ -44,9 +45,17 @@ public class ChallengeResponseDTO {
     public String getTitle() {
         return title;
     }
-    
+
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
     
     public String getDescription() {
@@ -123,6 +132,7 @@ public class ChallengeResponseDTO {
     public static class Builder {
         private Long id;
         private String title;
+        private String imageUrl;
         private String description;
         private Integer participants;
         private String reward;
@@ -144,7 +154,12 @@ public class ChallengeResponseDTO {
             this.title = title;
             return this;
         }
-        
+
+        public Builder imageUrl(String imageUrl) {
+            this.imageUrl = imageUrl;
+            return this;
+        }
+
         public Builder description(String description) {
             this.description = description;
             return this;
@@ -190,6 +205,7 @@ public class ChallengeResponseDTO {
             ChallengeResponseDTO response = new ChallengeResponseDTO();
             response.id = this.id;
             response.title = this.title;
+            response.imageUrl = this.imageUrl;
             response.description = this.description;
             response.participants = this.participants;
             response.reward = this.reward;

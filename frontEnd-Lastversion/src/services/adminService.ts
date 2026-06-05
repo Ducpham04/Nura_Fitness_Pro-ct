@@ -210,10 +210,9 @@ function toFormData(
   const formData = new FormData();
   if (mode === 'goalMultipart' || mode === 'challengeMultipart') {
     formData.append('data', JSON.stringify(clean));
-    // Goals: file field name is 'image'
+    // Goals & Challenges: file field name is 'image'
     if (files?.imageLink) formData.append('image', files.imageLink);
-    // Challenges: file field name is 'video'
-    if (files?.videoUrl) formData.append('video', files.videoUrl);
+    if (files?.imageUrl) formData.append('image', files.imageUrl);
   } else if (mode === 'rewardMultipart') {
     formData.append('reward', JSON.stringify(clean));
     // Reward: backend dùng field name 'file' cho ảnh
@@ -278,6 +277,7 @@ export const adminModules: AdminModuleConfig[] = [
       { name: 'goalId',       label: 'Mục tiêu', type: 'select',
         remoteOptions: { endpoint: '/admin/goals', labelField: 'name', valueField: 'id' } },
       { name: 'title',        label: 'Tiêu đề',  required: true },
+      { name: 'imageUrl',     label: 'Ảnh bìa',  type: 'image-upload' },
       { name: 'description',  label: 'Mô tả',    type: 'textarea' },
       { name: 'durationDays', label: 'Số ngày',  type: 'number', required: true },
       { name: 'rewardPoints', label: 'Điểm thưởng', type: 'number', required: true },
