@@ -55,6 +55,9 @@ logs/
 # Backups
 backups/
 *.sql
+# Exception: Flyway migrations MUST be version-controlled
+!backend/src/main/resources/db/migration/*.sql
+!backend/src/main/resources/db/migration_archive/*.sql
 
 # Temporary files
 tmp/
