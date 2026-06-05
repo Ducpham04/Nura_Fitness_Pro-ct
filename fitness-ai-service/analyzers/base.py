@@ -3,6 +3,7 @@ Base abstract class for exercise analyzers
 """
 from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Optional
+from collections import deque
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -14,12 +15,24 @@ from utils.geometry import calculate_angle, calculate_distance, calculate_3d_dis
 class ExerciseAnalyzer(ABC):
     """Base class for all exercise analyzers"""
     
+    # Cấu hình làm mượt / chống nhiễu (có thể override ở analyzer con).
+    # window=3: đủ giảm nhiễu mà không trễ pha (ở ~4fps, pha xuống chỉ 2-4 frame).
+    # min_down=1: hysteresis gap lớn giữa 2 ngưỡng đã chống nhiễu chính; chỉ cần
+    # 1 frame xác nhận DOWN trước khi tính rep ở pha lên.
+    SMOOTH_WINDOW = 3          # số frame trung bình trượt cho góc
+    MIN_DOWN_FRAMES = 1        # số frame tối thiểu ở DOWN trước khi cho phép tính rep
+    QUALITY_EMA_ALPHA = 0.3    # hệ số EMA làm mượt điểm form
+
     def __init__(self):
         self.reps = 0
         self.current_state = ExerciseState.UNKNOWN
         self.previous_state = ExerciseState.UNKNOWN
         self.state_history: List[ExerciseState] = []
         self.quality_scores: List[float] = []
+        # Bộ đệm làm mượt theo tên tín hiệu (góc) + đếm frame ở DOWN + EMA quality
+        self._signal_buffers: Dict[str, deque] = {}
+        self._down_frame_count = 0
+        self._smoothed_quality: Optional[float] = None
     
     @abstractmethod
     def analyze(self, landmarks: List[Tuple[float, float, float]], 
@@ -60,6 +73,30 @@ class ExerciseAnalyzer(ABC):
         self.previous_state = ExerciseState.UNKNOWN
         self.state_history = []
         self.quality_scores = []
+        self._signal_buffers = {}
+        self._down_frame_count = 0
+        self._smoothed_quality = None
+
+    def _smooth(self, name: str, value: float, window: Optional[int] = None) -> float:
+        """Trung bình trượt cho 1 tín hiệu (vd góc khuỷu) để giảm nhiễu landmark."""
+        win = window or self.SMOOTH_WINDOW
+        buf = self._signal_buffers.get(name)
+        if buf is None or buf.maxlen != win:
+            buf = deque(maxlen=win)
+            self._signal_buffers[name] = buf
+        buf.append(value)
+        return sum(buf) / len(buf)
+
+    @staticmethod
+    def avg_visibility(landmarks: List[Tuple[float, ...]], indices: List[int]) -> float:
+        """Độ tin cậy trung bình của các khớp quan trọng (0-1).
+        Landmark dạng (x, y, z, visibility); nếu thiếu visibility -> coi như 1.0."""
+        vals = []
+        for i in indices:
+            if i < len(landmarks):
+                lm = landmarks[i]
+                vals.append(lm[3] if len(lm) > 3 else 1.0)
+        return sum(vals) / len(vals) if vals else 0.0
     
     def calculate_angle(self, point_a: Tuple[float, float], 
                        point_b: Tuple[float, float], 
@@ -87,28 +124,44 @@ class ExerciseAnalyzer(ABC):
         if len(self.state_history) > 10:
             self.state_history.pop(0)
     
-    def _check_rep_complete(self, down_threshold: float, up_threshold: float, 
-                           current_angle: float) -> bool:
+    def _check_rep_complete(self, down_threshold: float, up_threshold: float,
+                           current_angle: float, angle_name: str = "rep") -> bool:
         """
-        Check if a rep is complete based on state transitions
-        
+        Đếm rep bằng máy trạng thái có LÀM MƯỢT + CHỐNG NHIỄU (hysteresis).
+
+        Cải tiến so với bản gốc:
+        - Trung bình trượt góc -> giảm rung do landmark nhiễu.
+        - Yêu cầu giữ ở DOWN tối thiểu MIN_DOWN_FRAMES frame trước khi tính 1 rep
+          -> tránh đếm trùng / đếm hụt khi tay run nhẹ quanh ngưỡng.
+        - Khoảng cách down/up (hysteresis) tự nhiên vì 2 ngưỡng khác nhau.
+
         Args:
-            down_threshold: Angle threshold for DOWN state
-            up_threshold: Angle threshold for UP state
-            current_angle: Current angle value
-        
+            down_threshold: Ngưỡng góc cho trạng thái DOWN (đi xuống)
+            up_threshold: Ngưỡng góc cho trạng thái UP (rep hoàn thành)
+            current_angle: Góc hiện tại
+            angle_name: Tên tín hiệu (để làm mượt riêng từng góc)
+
         Returns:
-            True if rep completed
+            True nếu vừa hoàn thành 1 rep hợp lệ
         """
-        # Transition to DOWN
-        if current_angle < down_threshold and self.current_state != ExerciseState.DOWN:
-            self._update_state(ExerciseState.DOWN)
-        
-        # Transition to UP (rep complete)
-        elif current_angle > up_threshold and self.current_state == ExerciseState.DOWN:
+        angle = self._smooth(angle_name, current_angle)
+
+        # Đi xuống: vào/giữ DOWN, đếm số frame ở DOWN
+        if angle < down_threshold:
+            if self.current_state != ExerciseState.DOWN:
+                self._update_state(ExerciseState.DOWN)
+                self._down_frame_count = 1
+            else:
+                self._down_frame_count += 1
+            return False
+
+        # Đi lên qua ngưỡng UP, và trước đó đã ở DOWN đủ lâu -> tính 1 rep
+        if angle > up_threshold and self.current_state == ExerciseState.DOWN:
+            counted = self._down_frame_count >= self.MIN_DOWN_FRAMES
             self._update_state(ExerciseState.UP)
-            return True
-        
+            self._down_frame_count = 0
+            return counted
+
         return False
     
     def _calculate_quality_score(self, form_errors: List[FormError], 
@@ -152,6 +205,13 @@ class ExerciseAnalyzer(ABC):
             )
             if recent_changes > 2:
                 score -= 10
-        
-        return max(0.0, min(100.0, score))
+
+        score = max(0.0, min(100.0, score))
+        # Làm mượt điểm form qua các frame (EMA) -> số không nhảy giật
+        if self._smoothed_quality is None:
+            self._smoothed_quality = score
+        else:
+            a = self.QUALITY_EMA_ALPHA
+            self._smoothed_quality = a * score + (1 - a) * self._smoothed_quality
+        return round(self._smoothed_quality, 1)
 

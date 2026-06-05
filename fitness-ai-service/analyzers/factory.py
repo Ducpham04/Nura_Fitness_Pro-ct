@@ -51,7 +51,18 @@ class ExerciseFactory:
             cls._instances[exercise_type] = analyzer_class()
         
         return cls._instances[exercise_type]
-    
+
+    @classmethod
+    def create_new(cls, exercise_type: ExerciseType) -> ExerciseAnalyzer:
+        """
+        Tạo instance MỚI, ĐỘC LẬP cho mỗi phiên (mỗi kết nối WebSocket / mỗi
+        lần phân tích). Tránh bug state dùng chung toàn cục: bộ đếm reps + trạng
+        thái không bị lẫn giữa các user / các lần thi.
+        """
+        if exercise_type not in cls._analyzers:
+            raise ValueError(f"Unsupported exercise type: {exercise_type}")
+        return cls._analyzers[exercise_type]()
+
     @classmethod
     def reset(cls, exercise_type: ExerciseType):
         """

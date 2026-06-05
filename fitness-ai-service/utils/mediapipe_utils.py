@@ -126,7 +126,11 @@ def get_landmarks(landmark_list, image_width: int, image_height: int) -> List[Tu
         x = landmark.x * image_width
         y = landmark.y * image_height
         z = landmark.z * image_width  # z is relative to image width
-        landmarks.append((x, y, z))
-    
+        # Giữ visibility (0-1): độ tin cậy khớp có nhìn thấy không → dùng để
+        # bỏ qua frame nhiễu / khớp bị che. Backward-compatible: analyzer cũ
+        # chỉ dùng [0],[1],[2] vẫn chạy bình thường.
+        vis = float(getattr(landmark, "visibility", 1.0) or 0.0)
+        landmarks.append((x, y, z, vis))
+
     return landmarks
 

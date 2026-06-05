@@ -21,9 +21,14 @@ from models.schemas import (
 )
 from utils.mediapipe_utils import init_mediapipe, base64_to_image, get_landmarks
 from analyzers.factory import ExerciseFactory
+from analyzers.base import ExerciseAnalyzer
 
 # Load environment variables
 load_dotenv()
+
+# Khớp thân/chân chính để kiểm tra "có thấy rõ toàn thân không"
+KEY_BODY_JOINTS = [11, 12, 23, 24, 25, 26]   # vai, hông, gối (trái/phải)
+MIN_BODY_VISIBILITY = 0.5
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -129,9 +134,17 @@ async def analyze_frame(
                 message="Insufficient landmarks detected. Please ensure full body is visible.",
                 data=None
             )
-        
-        # Get analyzer for exercise type
-        analyzer = ExerciseFactory.create(exercise_type)
+
+        # Cổng độ tin cậy: nếu các khớp thân/chân bị che/mờ -> không chấm bừa
+        if ExerciseAnalyzer.avg_visibility(landmarks, KEY_BODY_JOINTS) < MIN_BODY_VISIBILITY:
+            return AnalyzeFrameResponse(
+                success=False,
+                message="Chưa thấy rõ toàn thân. Lùi ra xa, quay nghiêng và đảm bảo đủ sáng.",
+                data=None
+            )
+
+        # Instance MỚI per request (single frame stateless) -> không lẫn state
+        analyzer = ExerciseFactory.create_new(exercise_type)
         
         # Analyze
         metrics = analyzer.analyze(landmarks, image_width, image_height)
@@ -206,7 +219,8 @@ async def websocket_exercise(websocket: WebSocket, exercise_type: str):
             return
         
         # Get analyzer
-        analyzer = ExerciseFactory.create(exercise_type_enum)
+        # Instance RIÊNG cho mỗi kết nối -> bộ đếm reps độc lập từng phiên/người
+        analyzer = ExerciseFactory.create_new(exercise_type_enum)
         
         while True:
             # Receive message
@@ -252,7 +266,16 @@ async def websocket_exercise(websocket: WebSocket, exercise_type: str):
                         "timestamp": message.timestamp
                     })
                     continue
-                
+
+                # Cổng độ tin cậy: khớp thân/chân mờ -> bỏ frame, không chấm bừa
+                if ExerciseAnalyzer.avg_visibility(landmarks, KEY_BODY_JOINTS) < MIN_BODY_VISIBILITY:
+                    await websocket.send_json({
+                        "success": False,
+                        "error": "Chưa thấy rõ toàn thân. Lùi ra xa, quay nghiêng và đảm bảo đủ sáng.",
+                        "timestamp": message.timestamp
+                    })
+                    continue
+
                 # Analyze
                 metrics = analyzer.analyze(landmarks, image_width, image_height)
                 metrics.timestamp = message.timestamp
