@@ -76,14 +76,10 @@ class {EXERCISE_NAME}Analyzer(ExerciseAnalyzer):
         right_ankle = landmarks[self.RIGHT_ANKLE]
         
         # 3. Calculate average points (if using left/right average)
-        shoulder = ((left_shoulder[0] + right_shoulder[0]) / 2,
-                   (left_shoulder[1] + right_shoulder[1]) / 2)
-        hip = ((left_hip[0] + right_hip[0]) / 2,
-              (left_hip[1] + right_hip[1]) / 2)
-        knee = ((left_knee[0] + right_knee[0]) / 2,
-               (left_knee[1] + right_knee[1]) / 2)
-        ankle = ((left_ankle[0] + right_ankle[0]) / 2,
-                (left_ankle[1] + right_ankle[1]) / 2)
+        shoulder = self.mid(left_shoulder, right_shoulder)
+        hip = self.mid(left_hip, right_hip)
+        knee = self.mid(left_knee, right_knee)
+        ankle = self.mid(left_ankle, right_ankle)
         
         # 4. Calculate key angles for your exercise
         # TODO: Calculate angles specific to your exercise
@@ -159,14 +155,10 @@ class {EXERCISE_NAME}Analyzer(ExerciseAnalyzer):
         right_ankle = landmarks[self.RIGHT_ANKLE]
         
         # Average points
-        shoulder = ((left_shoulder[0] + right_shoulder[0]) / 2,
-                   (left_shoulder[1] + right_shoulder[1]) / 2)
-        hip = ((left_hip[0] + right_hip[0]) / 2,
-              (left_hip[1] + right_hip[1]) / 2)
-        knee = ((left_knee[0] + right_knee[0]) / 2,
-               (left_knee[1] + right_knee[1]) / 2)
-        ankle = ((left_ankle[0] + right_ankle[0]) / 2,
-                (left_ankle[1] + right_ankle[1]) / 2)
+        shoulder = self.mid(left_shoulder, right_shoulder)
+        hip = self.mid(left_hip, right_hip)
+        knee = self.mid(left_knee, right_knee)
+        ankle = self.mid(left_ankle, right_ankle)
         
         # 3. TODO: Add form validation rules specific to your exercise
         # Examples:

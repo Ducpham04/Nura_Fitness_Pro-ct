@@ -58,18 +58,12 @@ class PushUpAnalyzer(ExerciseAnalyzer):
         right_ankle = landmarks[self.RIGHT_ANKLE]
         
         # Calculate average points
-        shoulder = ((left_shoulder[0] + right_shoulder[0]) / 2,
-                   (left_shoulder[1] + right_shoulder[1]) / 2)
-        elbow = ((left_elbow[0] + right_elbow[0]) / 2,
-                (left_elbow[1] + right_elbow[1]) / 2)
-        wrist = ((left_wrist[0] + right_wrist[0]) / 2,
-                (left_wrist[1] + right_wrist[1]) / 2)
-        hip = ((left_hip[0] + right_hip[0]) / 2,
-              (left_hip[1] + right_hip[1]) / 2)
-        knee = ((left_knee[0] + right_knee[0]) / 2,
-               (left_knee[1] + right_knee[1]) / 2)
-        ankle = ((left_ankle[0] + right_ankle[0]) / 2,
-                (left_ankle[1] + right_ankle[1]) / 2)
+        shoulder = self.mid(left_shoulder, right_shoulder)
+        elbow = self.mid(left_elbow, right_elbow)
+        wrist = self.mid(left_wrist, right_wrist)
+        hip = self.mid(left_hip, right_hip)
+        knee = self.mid(left_knee, right_knee)
+        ankle = self.mid(left_ankle, right_ankle)
         
         # Calculate key angles
         elbow_angle = self.calculate_angle(shoulder, elbow, wrist)
@@ -146,18 +140,12 @@ class PushUpAnalyzer(ExerciseAnalyzer):
         right_ankle = landmarks[self.RIGHT_ANKLE]
         
         # Average points
-        shoulder = ((left_shoulder[0] + right_shoulder[0]) / 2,
-                   (left_shoulder[1] + right_shoulder[1]) / 2)
-        elbow = ((left_elbow[0] + right_elbow[0]) / 2,
-                (left_elbow[1] + right_elbow[1]) / 2)
-        wrist = ((left_wrist[0] + right_wrist[0]) / 2,
-                (left_wrist[1] + right_wrist[1]) / 2)
-        hip = ((left_hip[0] + right_hip[0]) / 2,
-              (left_hip[1] + right_hip[1]) / 2)
-        knee = ((left_knee[0] + right_knee[0]) / 2,
-               (left_knee[1] + right_knee[1]) / 2)
-        ankle = ((left_ankle[0] + right_ankle[0]) / 2,
-                (left_ankle[1] + right_ankle[1]) / 2)
+        shoulder = self.mid(left_shoulder, right_shoulder)
+        elbow = self.mid(left_elbow, right_elbow)
+        wrist = self.mid(left_wrist, right_wrist)
+        hip = self.mid(left_hip, right_hip)
+        knee = self.mid(left_knee, right_knee)
+        ankle = self.mid(left_ankle, right_ankle)
         
         # Check body alignment (shoulder-hip-ankle should be straight > 160°)
         body_angle = self.calculate_angle(shoulder, hip, ankle)

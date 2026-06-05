@@ -59,14 +59,10 @@ class PlankAnalyzer(ExerciseAnalyzer):
         right_ankle = landmarks[self.RIGHT_ANKLE]
         
         # Calculate average points
-        shoulder = ((left_shoulder[0] + right_shoulder[0]) / 2,
-                   (left_shoulder[1] + right_shoulder[1]) / 2)
-        elbow = ((left_elbow[0] + right_elbow[0]) / 2,
-                (left_elbow[1] + right_elbow[1]) / 2)
-        hip = ((left_hip[0] + right_hip[0]) / 2,
-              (left_hip[1] + right_hip[1]) / 2)
-        ankle = ((left_ankle[0] + right_ankle[0]) / 2,
-                (left_ankle[1] + right_ankle[1]) / 2)
+        shoulder = self.mid(left_shoulder, right_shoulder)
+        elbow = self.mid(left_elbow, right_elbow)
+        hip = self.mid(left_hip, right_hip)
+        ankle = self.mid(left_ankle, right_ankle)
         
         # Calculate key angles
         body_angle = self.calculate_angle(shoulder, hip, ankle)
@@ -140,14 +136,10 @@ class PlankAnalyzer(ExerciseAnalyzer):
         right_ankle = landmarks[self.RIGHT_ANKLE]
         
         # Average points
-        shoulder = ((left_shoulder[0] + right_shoulder[0]) / 2,
-                   (left_shoulder[1] + right_shoulder[1]) / 2)
-        elbow = ((left_elbow[0] + right_elbow[0]) / 2,
-                (left_elbow[1] + right_elbow[1]) / 2)
-        hip = ((left_hip[0] + right_hip[0]) / 2,
-              (left_hip[1] + right_hip[1]) / 2)
-        ankle = ((left_ankle[0] + right_ankle[0]) / 2,
-                (left_ankle[1] + right_ankle[1]) / 2)
+        shoulder = self.mid(left_shoulder, right_shoulder)
+        elbow = self.mid(left_elbow, right_elbow)
+        hip = self.mid(left_hip, right_hip)
+        ankle = self.mid(left_ankle, right_ankle)
         
         # Check body alignment (shoulder-hip-ankle should be straight > 160°)
         body_angle = self.calculate_angle(shoulder, hip, ankle)

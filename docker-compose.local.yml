@@ -99,7 +99,8 @@ services:
       HOST: 0.0.0.0
       PORT: 5001
       CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost:8080
-      MEDIAPIPE_MODEL_COMPLEXITY: 1
+      # complexity=2: landmark chính xác hơn (chậm hơn ~2x; cần CPU khá)
+      MEDIAPIPE_MODEL_COMPLEXITY: 2
     ports:
       - "5001:5001"
     networks:

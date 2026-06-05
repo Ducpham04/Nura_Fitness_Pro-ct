@@ -26,6 +26,15 @@ const STATE_LABEL: Record<string, string> = {
   up: 'Lên', down: 'Xuống', holding: 'Đang giữ', rest: 'Nghỉ', unknown: '—',
 };
 
+// Hướng dẫn đặt camera theo từng bài (góc nhìn quyết định độ chính xác)
+const CAMERA_HINT: Record<string, string> = {
+  'push-up': 'Đặt camera NGHIÊNG (nhìn từ bên hông) — thấy rõ vai · khuỷu · cổ tay và toàn thân.',
+  'squat': 'Đặt camera NGHIÊNG (bên hông) — thấy rõ hông · gối · cổ chân.',
+  'sit-up': 'Đặt camera NGHIÊNG — thấy rõ thân trên và đầu gối.',
+  'pull-up': 'Đặt camera CHÍNH DIỆN — thấy rõ tay · vai và toàn thân.',
+  'plank': 'Đặt camera NGHIÊNG — vai · hông · cổ chân thẳng hàng.',
+};
+
 export default function ChallengeCameraModal({ ucId, exerciseType, challengeName, targetReps, onClose, onResult }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -37,7 +46,7 @@ export default function ChallengeCameraModal({ ucId, exerciseType, challengeName
   const [status, setStatus] = useState<'init' | 'connecting' | 'ready' | 'error' | 'submitting'>('init');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
-  const [hint, setHint] = useState<string>('Đưa toàn thân vào khung hình, đủ sáng.');
+  const [hint, setHint] = useState<string>(CAMERA_HINT[exerciseType] ?? 'Đưa toàn thân vào khung hình, đủ sáng.');
 
   const cleanup = useCallback(() => {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
@@ -146,6 +155,12 @@ export default function ChallengeCameraModal({ ucId, exerciseType, challengeName
             <span className="font-grotesk font-bold text-white text-sm truncate max-w-[220px]">{challengeName}</span>
           </div>
           <button onClick={onClose} className="text-neutral-400 hover:text-white"><X className="w-5 h-5" /></button>
+        </div>
+
+        {/* Hướng dẫn đặt camera (góc nhìn quyết định độ chính xác) */}
+        <div className="px-5 py-2 bg-electric/10 border-b border-electric/15 flex items-start gap-2">
+          <Camera className="w-3.5 h-3.5 text-electric mt-0.5 shrink-0" />
+          <span className="text-electric/90 text-[11px] leading-snug">{CAMERA_HINT[exerciseType] ?? 'Đưa toàn thân vào khung hình, đủ sáng.'}</span>
         </div>
 
         {/* Camera */}

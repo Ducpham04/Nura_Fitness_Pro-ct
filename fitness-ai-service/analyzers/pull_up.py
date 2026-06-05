@@ -54,14 +54,10 @@ class PullUpAnalyzer(ExerciseAnalyzer):
         right_hip = landmarks[self.RIGHT_HIP]
         
         # Calculate average points (2D for angles, 3D for distance)
-        shoulder = ((left_shoulder[0] + right_shoulder[0]) / 2,
-                   (left_shoulder[1] + right_shoulder[1]) / 2)
-        elbow = ((left_elbow[0] + right_elbow[0]) / 2,
-                (left_elbow[1] + right_elbow[1]) / 2)
-        wrist = ((left_wrist[0] + right_wrist[0]) / 2,
-                (left_wrist[1] + right_wrist[1]) / 2)
-        hip = ((left_hip[0] + right_hip[0]) / 2,
-              (left_hip[1] + right_hip[1]) / 2)
+        shoulder = self.mid(left_shoulder, right_shoulder)
+        elbow = self.mid(left_elbow, right_elbow)
+        wrist = self.mid(left_wrist, right_wrist)
+        hip = self.mid(left_hip, right_hip)
         
         # Calculate 3D average points for distance calculation
         wrist_3d = ((left_wrist[0] + right_wrist[0]) / 2,
@@ -137,14 +133,10 @@ class PullUpAnalyzer(ExerciseAnalyzer):
         right_hip = landmarks[self.RIGHT_HIP]
         
         # Average points (2D for form validation)
-        shoulder = ((left_shoulder[0] + right_shoulder[0]) / 2,
-                   (left_shoulder[1] + right_shoulder[1]) / 2)
-        elbow = ((left_elbow[0] + right_elbow[0]) / 2,
-                (left_elbow[1] + right_elbow[1]) / 2)
-        wrist = ((left_wrist[0] + right_wrist[0]) / 2,
-                (left_wrist[1] + right_wrist[1]) / 2)
-        hip = ((left_hip[0] + right_hip[0]) / 2,
-              (left_hip[1] + right_hip[1]) / 2)
+        shoulder = self.mid(left_shoulder, right_shoulder)
+        elbow = self.mid(left_elbow, right_elbow)
+        wrist = self.mid(left_wrist, right_wrist)
+        hip = self.mid(left_hip, right_hip)
         
         # Check body alignment (should be straight, no swinging)
         body_angle = self.calculate_angle(shoulder, hip, (hip[0], hip[1] + 100))

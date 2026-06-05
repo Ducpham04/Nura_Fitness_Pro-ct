@@ -50,14 +50,10 @@ class SquatAnalyzer(ExerciseAnalyzer):
         right_ankle = landmarks[self.RIGHT_ANKLE]
         
         # Calculate average points
-        shoulder = ((left_shoulder[0] + right_shoulder[0]) / 2,
-                   (left_shoulder[1] + right_shoulder[1]) / 2)
-        hip = ((left_hip[0] + right_hip[0]) / 2,
-              (left_hip[1] + right_hip[1]) / 2)
-        knee = ((left_knee[0] + right_knee[0]) / 2,
-               (left_knee[1] + right_knee[1]) / 2)
-        ankle = ((left_ankle[0] + right_ankle[0]) / 2,
-                (left_ankle[1] + right_ankle[1]) / 2)
+        shoulder = self.mid(left_shoulder, right_shoulder)
+        hip = self.mid(left_hip, right_hip)
+        knee = self.mid(left_knee, right_knee)
+        ankle = self.mid(left_ankle, right_ankle)
         
         # Calculate key angles
         knee_angle = self.calculate_angle(hip, knee, ankle)
@@ -115,14 +111,10 @@ class SquatAnalyzer(ExerciseAnalyzer):
         right_ankle = landmarks[self.RIGHT_ANKLE]
         
         # Average points
-        shoulder = ((left_shoulder[0] + right_shoulder[0]) / 2,
-                   (left_shoulder[1] + right_shoulder[1]) / 2)
-        hip = ((left_hip[0] + right_hip[0]) / 2,
-              (left_hip[1] + right_hip[1]) / 2)
-        knee = ((left_knee[0] + right_knee[0]) / 2,
-               (left_knee[1] + right_knee[1]) / 2)
-        ankle = ((left_ankle[0] + right_ankle[0]) / 2,
-                (left_ankle[1] + right_ankle[1]) / 2)
+        shoulder = self.mid(left_shoulder, right_shoulder)
+        hip = self.mid(left_hip, right_hip)
+        knee = self.mid(left_knee, right_knee)
+        ankle = self.mid(left_ankle, right_ankle)
         
         # Check knee position (knee should not go past toes)
         # In 2D, we check if knee.x is forward of ankle.x

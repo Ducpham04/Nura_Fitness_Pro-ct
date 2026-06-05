@@ -97,6 +97,20 @@ class ExerciseAnalyzer(ABC):
                 lm = landmarks[i]
                 vals.append(lm[3] if len(lm) > 3 else 1.0)
         return sum(vals) / len(vals) if vals else 0.0
+
+    @staticmethod
+    def mid(p_left: Tuple[float, ...], p_right: Tuple[float, ...]) -> Tuple[float, float]:
+        """Điểm đại diện cho 1 khớp đôi: TRUNG BÌNH CÓ TRỌNG SỐ theo visibility.
+        - Cả hai bên rõ  -> ~điểm giữa (như cũ).
+        - Một bên bị che (visibility thấp) -> nghiêng về bên rõ hơn
+          => góc khớp chính xác hơn khi quay nghiêng (side view)."""
+        vl = p_left[3] if len(p_left) > 3 else 1.0
+        vr = p_right[3] if len(p_right) > 3 else 1.0
+        s = vl + vr
+        if s <= 1e-6:
+            return ((p_left[0] + p_right[0]) / 2.0, (p_left[1] + p_right[1]) / 2.0)
+        return ((p_left[0] * vl + p_right[0] * vr) / s,
+                (p_left[1] * vl + p_right[1] * vr) / s)
     
     def calculate_angle(self, point_a: Tuple[float, float], 
                        point_b: Tuple[float, float], 
