@@ -42,6 +42,10 @@ public class TrainingPlan {
     @Column(name = "duration_weeks")
     private Integer durationWeeks;
 
+    // 🏃 Số lần tập luyện mỗi tuần (ví dụ: 3, 4, 5)
+    @Column(name = "workouts_per_week")
+    private Integer workoutsPerWeek;
+
     // 🕒 Thời điểm tạo kế hoạch (mặc định là thời gian hiện tại)
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -64,6 +68,15 @@ public class TrainingPlan {
         this.description = description;
         this.difficultyLevel = difficultyLevel;
         this.durationWeeks = durationWeeks;
+    }
+
+    public TrainingPlan(Goals goal, String title, String description, String difficultyLevel, Integer durationWeeks, Integer workoutsPerWeek) {
+        this.goal = goal;
+        this.title = title;
+        this.description = description;
+        this.difficultyLevel = difficultyLevel;
+        this.durationWeeks = durationWeeks;
+        this.workoutsPerWeek = workoutsPerWeek;
     }
 
     /**
@@ -122,7 +135,15 @@ public class TrainingPlan {
     public void setDurationWeeks(Integer durationWeeks) {
         this.durationWeeks = durationWeeks;
     }
-    
+
+    public Integer getWorkoutsPerWeek() {
+        return workoutsPerWeek;
+    }
+
+    public void setWorkoutsPerWeek(Integer workoutsPerWeek) {
+        this.workoutsPerWeek = workoutsPerWeek;
+    }
+
     public OffsetDateTime getCreatedAt() {
         return createdAt;
     }

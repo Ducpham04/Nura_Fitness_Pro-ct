@@ -117,6 +117,7 @@ public class UserTrainingServiceImpl implements UserTrainingService {
         dto.setWeekNumber(userTraining.getWeekNumber());
         dto.setTotalWeeks(userTraining.getTotalWeeks());
         dto.setProgramId(userTraining.getProgramId());
+        dto.setWorkoutsPerWeek(userTraining.getTrainingPlan().getWorkoutsPerWeek());
 
         return dto;
     }

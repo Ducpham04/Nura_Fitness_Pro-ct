@@ -18,6 +18,7 @@ import { CountUp, containerStagger, fadeUp, fadeScale, premiumEase } from '../li
 // Lazy-load để tách recharts (~140kb) khỏi bundle chính
 const MacroRadial = lazy(() => import('../components/MacroRadial'));
 const TrendChart = lazy(() => import('../components/TrendChart'));
+const GoalTimelineChart = lazy(() => import('../components/GoalTimelineChart'));
 
 function pct(v: number, goal: number) { return goal ? Math.min(100, Math.round((v / goal) * 100)) : 0; }
 
@@ -630,6 +631,18 @@ export default function HomePage() {
             </div>
           }>
             <TrendChart userId={user.id} />
+          </Suspense>
+        </motion.div>
+      )}
+
+      {user?.id && (
+        <motion.div variants={fadeUp}>
+          <Suspense fallback={
+            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] h-[260px] flex items-center justify-center">
+              <div className="w-6 h-6 border-2 border-lime border-t-transparent rounded-full animate-spin" />
+            </div>
+          }>
+            <GoalTimelineChart userId={user.id} />
           </Suspense>
         </motion.div>
       )}

@@ -17,6 +17,7 @@ public class UserTrainingDTO {
     private Integer weekNumber;
     private Integer totalWeeks;
     private String programId;
+    private Integer workoutsPerWeek; // Số lần tập luyện mỗi tuần
 
     // Manual getters/setters for Lombok compatibility
     public Long getId() {
@@ -105,5 +106,13 @@ public class UserTrainingDTO {
 
     public void setProgramId(String programId) {
         this.programId = programId;
+    }
+
+    public Integer getWorkoutsPerWeek() {
+        return workoutsPerWeek;
+    }
+
+    public void setWorkoutsPerWeek(Integer workoutsPerWeek) {
+        this.workoutsPerWeek = workoutsPerWeek;
     }
 }

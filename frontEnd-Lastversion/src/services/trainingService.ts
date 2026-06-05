@@ -191,6 +191,7 @@ class TrainingService {
       weekNumber: item.weekNumber,
       totalWeeks: item.totalWeeks,
       programId: item.programId,
+      workoutsPerWeek: item.workoutsPerWeek ?? item.trainingPlan?.workoutsPerWeek ?? null,
     }));
   }
 

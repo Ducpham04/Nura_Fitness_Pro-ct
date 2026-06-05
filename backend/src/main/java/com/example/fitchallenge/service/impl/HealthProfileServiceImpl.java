@@ -126,6 +126,7 @@ public class HealthProfileServiceImpl implements HealthProfileService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public NotificationResponse getHealthProfile(Long userId) {
         try {
             Optional<HealthProfile> profileOpt = healthProfileRepository.findByUser_Id(userId);
