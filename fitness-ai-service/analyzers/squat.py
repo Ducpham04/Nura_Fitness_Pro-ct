@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.schemas import ExerciseMetrics, FormError, ExerciseState
 from analyzers.base import ExerciseAnalyzer
+import thresholds as T
 
 
 class SquatAnalyzer(ExerciseAnalyzer):
@@ -60,7 +61,7 @@ class SquatAnalyzer(ExerciseAnalyzer):
         back_angle = self.calculate_angle(shoulder, hip, knee)
         
         # Check for rep completion
-        if self._check_rep_complete(90.0, 160.0, knee_angle):
+        if self._check_rep_complete(T.SQUAT_DOWN, T.SQUAT_UP, knee_angle, "knee"):
             self.reps += 1
         
         # Validate form

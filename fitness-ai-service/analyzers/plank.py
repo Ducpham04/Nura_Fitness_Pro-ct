@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.schemas import ExerciseMetrics, FormError, ExerciseState
 from analyzers.base import ExerciseAnalyzer
+import thresholds as T
 import time
 
 
@@ -72,7 +73,7 @@ class PlankAnalyzer(ExerciseAnalyzer):
         is_valid, form_errors = self.validate_form(landmarks, image_width, image_height)
         
         # Update state based on form validity
-        if is_valid and body_angle > 160.0:
+        if is_valid and body_angle > T.PLANK_HOLD:
             if not self.is_holding:
                 self.is_holding = True
                 self.start_time = time.time()

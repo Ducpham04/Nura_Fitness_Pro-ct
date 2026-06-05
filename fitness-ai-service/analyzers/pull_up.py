@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.schemas import ExerciseMetrics, FormError, ExerciseState
 from analyzers.base import ExerciseAnalyzer
+import thresholds as T
 
 
 class PullUpAnalyzer(ExerciseAnalyzer):
@@ -77,9 +78,10 @@ class PullUpAnalyzer(ExerciseAnalyzer):
         # Check for rep completion
         # UP: chin above hands (chin.y < wrist.y) and elbow < 90°
         # DOWN: elbow > 160°
-        if elbow_angle < 90.0 and nose[1] < wrist[1] and self.current_state != ExerciseState.UP:
+        elbow_s = self._smooth("rep", elbow_angle)  # làm mượt giảm nhiễu
+        if elbow_s < T.PULLUP_CONTRACT and nose[1] < wrist[1] and self.current_state != ExerciseState.UP:
             self._update_state(ExerciseState.UP)
-        elif elbow_angle > 160.0 and self.current_state == ExerciseState.UP:
+        elif elbow_s > T.PULLUP_EXTEND and self.current_state == ExerciseState.UP:
             self._update_state(ExerciseState.DOWN)
             self.reps += 1
         

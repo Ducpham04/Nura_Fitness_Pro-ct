@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.schemas import ExerciseMetrics, FormError, ExerciseState
 from analyzers.base import ExerciseAnalyzer
+import thresholds as T
 
 
 class PushUpAnalyzer(ExerciseAnalyzer):
@@ -82,7 +83,7 @@ class PushUpAnalyzer(ExerciseAnalyzer):
         hand_to_shoulder_ratio = hand_width / shoulder_width if shoulder_width > 0 else 0
         
         # Check for rep completion
-        if self._check_rep_complete(90.0, 160.0, elbow_angle):
+        if self._check_rep_complete(T.PUSHUP_DOWN, T.PUSHUP_UP, elbow_angle, "elbow"):
             self.reps += 1
         
         # Validate form

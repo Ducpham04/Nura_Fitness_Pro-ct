@@ -8,6 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.schemas import ExerciseMetrics, FormError, ExerciseState
 from analyzers.base import ExerciseAnalyzer
+import thresholds as T
 
 
 class SitUpAnalyzer(ExerciseAnalyzer):
@@ -64,9 +65,10 @@ class SitUpAnalyzer(ExerciseAnalyzer):
         # Check for rep completion
         # UP: torso angle < 60° (body folded)
         # DOWN: torso angle > 140° (back on floor)
-        if torso_angle < 60.0 and self.current_state != ExerciseState.UP:
+        torso_s = self._smooth("rep", torso_angle)  # làm mượt giảm nhiễu
+        if torso_s < T.SITUP_UP and self.current_state != ExerciseState.UP:
             self._update_state(ExerciseState.UP)
-        elif torso_angle > 140.0 and self.current_state == ExerciseState.UP:
+        elif torso_s > T.SITUP_DOWN and self.current_state == ExerciseState.UP:
             self._update_state(ExerciseState.DOWN)
             self.reps += 1
         
