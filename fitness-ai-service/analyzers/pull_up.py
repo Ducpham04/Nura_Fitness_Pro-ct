@@ -76,10 +76,15 @@ class PullUpAnalyzer(ExerciseAnalyzer):
         )
         
         # Check for rep completion
-        # UP: chin above hands (chin.y < wrist.y) and elbow < 90°
-        # DOWN: elbow > 160°
-        elbow_s = self._smooth("rep", elbow_angle)  # làm mượt giảm nhiễu
-        if elbow_s < T.PULLUP_CONTRACT and nose[1] < wrist[1] and self.current_state != ExerciseState.UP:
+        # UP: cằm qua xà (nose gần/trên wrist), khuỷu co < CONTRACT
+        # DOWN: khuỷu duỗi thẳng > EXTEND
+        #
+        # Camera-agnostic: dùng arm_len làm tham chiếu thay vì so sánh tuyệt đối
+        # → hoạt động bất kể camera đặt ở chiều cao nào.
+        elbow_s = self._smooth("rep", elbow_angle)
+        arm_len = max(abs(shoulder[1] - wrist[1]), image_height * 0.05)
+        chin_over_bar = nose[1] < wrist[1] + 0.25 * arm_len  # nose trong 25% arm_len bên dưới wrist
+        if elbow_s < T.PULLUP_CONTRACT and chin_over_bar and self.current_state != ExerciseState.UP:
             self._update_state(ExerciseState.UP)
         elif elbow_s > T.PULLUP_EXTEND and self.current_state == ExerciseState.UP:
             self._update_state(ExerciseState.DOWN)
@@ -111,18 +116,18 @@ class PullUpAnalyzer(ExerciseAnalyzer):
             is_valid_form=is_valid
         )
     
-    def validate_form(self, landmarks: List[Tuple[float, float, float]], 
+    def validate_form(self, landmarks: List[Tuple[float, float, float]],
                      image_width: int, image_height: int) -> Tuple[bool, List[FormError]]:
         """Validate pull-up form"""
         errors = []
-        
+
         if len(landmarks) < 33:
             return False, [FormError(
                 type="insufficient_landmarks",
-                message="Not enough body landmarks detected",
+                message="Không phát hiện đủ khớp cơ thể",
                 severity="error"
             )]
-        
+
         # Get key points
         nose = landmarks[self.NOSE]
         left_shoulder = landmarks[self.LEFT_SHOULDER]
@@ -133,50 +138,51 @@ class PullUpAnalyzer(ExerciseAnalyzer):
         right_wrist = landmarks[self.RIGHT_WRIST]
         left_hip = landmarks[self.LEFT_HIP]
         right_hip = landmarks[self.RIGHT_HIP]
-        
-        # Average points (2D for form validation)
+
+        # Average points
         shoulder = self.mid(left_shoulder, right_shoulder)
         elbow = self.mid(left_elbow, right_elbow)
         wrist = self.mid(left_wrist, right_wrist)
         hip = self.mid(left_hip, right_hip)
-        
-        # Check body alignment (should be straight, no swinging)
+
+        # ── Kiểm tra thân thẳng (không lắc lư) — 160° thay vì 170° cho dễ hơn ──
         body_angle = self.calculate_angle(shoulder, hip, (hip[0], hip[1] + 100))
-        if body_angle < 170.0:
+        if body_angle < 160.0:
             errors.append(FormError(
                 type="body_alignment",
-                message="Keep your body straight. Don't swing.",
+                message="Giữ thân thẳng, không lắc lư.",
                 severity="error"
             ))
-        
-        # Check elbow position (should pull to sides, not forward)
-        elbow_forward = abs(elbow[0] - shoulder[0])  # Horizontal distance
-        if elbow_forward < 0.05 * image_width:  # Too close to body
+
+        # ── Khuỷu tay kéo ra hai bên (không kéo về phía trước) ───────────────
+        elbow_forward = abs(elbow[0] - shoulder[0])
+        if elbow_forward < 0.04 * image_width:
             errors.append(FormError(
                 type="elbow_position",
-                message="Pull your elbows to the sides, not forward",
+                message="Kéo khuỷu tay ra hai bên, không kéo về phía trước.",
                 severity="warning"
             ))
-        
-        # Check shoulder position when UP (shoulders should be down)
+
+        # ── Kéo vai xuống khi lên đỉnh ───────────────────────────────────────
         if self.current_state == ExerciseState.UP:
-            shoulder_height = shoulder[1]
-            if shoulder_height > wrist[1] + 0.1 * image_height:
+            # Camera-agnostic: dùng arm_len thay vì image_height tuyệt đối
+            arm_len = max(abs(shoulder[1] - wrist[1]), image_height * 0.05)
+            if shoulder[1] > wrist[1] + 0.15 * arm_len:
                 errors.append(FormError(
                     type="shoulder_position",
-                    message="Pull your shoulders down when at the top",
+                    message="Kéo vai xuống khi ở trên đỉnh.",
                     severity="warning"
                 ))
-        
-        # Check full extension when DOWN (elbow should be > 160°)
+
+        # ── Duỗi thẳng tay khi ở dưới ────────────────────────────────────────
         if self.current_state == ExerciseState.DOWN:
             elbow_angle = self.calculate_angle(shoulder, elbow, wrist)
-            if elbow_angle < 160.0:
+            if elbow_angle < 155.0:
                 errors.append(FormError(
                     type="full_extension",
-                    message="Fully extend your arms at the bottom",
+                    message="Duỗi thẳng tay hoàn toàn ở dưới.",
                     severity="warning"
                 ))
-        
+
         return len([e for e in errors if e.severity == "error"]) == 0, errors
 

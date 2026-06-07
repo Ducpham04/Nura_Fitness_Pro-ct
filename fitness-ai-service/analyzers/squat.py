@@ -89,18 +89,18 @@ class SquatAnalyzer(ExerciseAnalyzer):
             is_valid_form=is_valid
         )
     
-    def validate_form(self, landmarks: List[Tuple[float, float, float]], 
+    def validate_form(self, landmarks: List[Tuple[float, float, float]],
                      image_width: int, image_height: int) -> Tuple[bool, List[FormError]]:
         """Validate squat form"""
         errors = []
-        
+
         if len(landmarks) < 33:
             return False, [FormError(
                 type="insufficient_landmarks",
-                message="Not enough body landmarks detected",
+                message="Không phát hiện đủ khớp cơ thể",
                 severity="error"
             )]
-        
+
         # Get key points
         left_shoulder = landmarks[self.LEFT_SHOULDER]
         right_shoulder = landmarks[self.RIGHT_SHOULDER]
@@ -110,43 +110,45 @@ class SquatAnalyzer(ExerciseAnalyzer):
         right_knee = landmarks[self.RIGHT_KNEE]
         left_ankle = landmarks[self.LEFT_ANKLE]
         right_ankle = landmarks[self.RIGHT_ANKLE]
-        
+
         # Average points
         shoulder = self.mid(left_shoulder, right_shoulder)
         hip = self.mid(left_hip, right_hip)
         knee = self.mid(left_knee, right_knee)
         ankle = self.mid(left_ankle, right_ankle)
-        
-        # Check knee position (knee should not go past toes)
-        # In 2D, we check if knee.x is forward of ankle.x
-        knee_forward = knee[0] - ankle[0]  # Positive = knee forward
-        if knee_forward > 0.1 * image_width:  # More than 10% of image width
+
+        # ── Kiểm tra đầu gối vượt mũi chân ─────────────────────────────────
+        # Xác định hướng người đứng: vai trái < vai phải (X) → quay phải; ngược lại quay trái.
+        # Nếu góc nhìn chính diện thì shoulder_width lớn và check này ít ảnh hưởng.
+        facing_right = left_shoulder[0] < right_shoulder[0]
+        knee_forward = (knee[0] - ankle[0]) if facing_right else (ankle[0] - knee[0])
+        if knee_forward > 0.08 * image_width:
             errors.append(FormError(
                 type="knee_position",
-                message="Keep your knees behind your toes. Don't let knees go forward.",
+                message="Giữ đầu gối không vượt quá mũi chân.",
                 severity="error"
             ))
-        
-        # Check back alignment (shoulder-hip-knee should be > 150°)
+
+        # ── Kiểm tra lưng thẳng — chỉ khi đang ở trạng thái xuống ──────────
+        # (tránh cháy liên tục khi đứng dậy hoặc đứng thẳng)
         back_angle = self.calculate_angle(shoulder, hip, knee)
-        if back_angle < 150.0:
+        if self.current_state == ExerciseState.DOWN and back_angle < 145.0:
             errors.append(FormError(
                 type="back_alignment",
-                message=f"Keep your back straight. Current angle: {back_angle:.1f}°",
-                severity="error"
+                message=f"Giữ lưng thẳng. Góc hiện tại: {back_angle:.0f}°",
+                severity="warning"
             ))
-        
-        # Check squat depth when DOWN (knee angle should be ~90°)
+
+        # ── Kiểm tra độ sâu khi squat ────────────────────────────────────────
         knee_angle = self.calculate_angle(hip, knee, ankle)
-        if self.current_state == ExerciseState.DOWN:
-            if knee_angle > 100.0:
-                errors.append(FormError(
-                    type="squat_depth",
-                    message="Go deeper. Your thighs should be parallel to the floor.",
-                    severity="warning"
-                ))
-        
-        # Check foot width (should be about shoulder width)
+        if self.current_state == ExerciseState.DOWN and knee_angle > 105.0:
+            errors.append(FormError(
+                type="squat_depth",
+                message="Ngồi sâu hơn — đùi song song sàn là chuẩn.",
+                severity="warning"
+            ))
+
+        # ── Kiểm tra khoảng cách hai chân ────────────────────────────────────
         shoulder_width = self.calculate_distance(
             (left_shoulder[0], left_shoulder[1]),
             (right_shoulder[0], right_shoulder[1])
@@ -160,9 +162,9 @@ class SquatAnalyzer(ExerciseAnalyzer):
             if ratio < 0.8:
                 errors.append(FormError(
                     type="foot_width",
-                    message="Place your feet wider, about shoulder width apart",
+                    message="Dang chân rộng hơn, khoảng bằng vai.",
                     severity="info"
                 ))
-        
+
         return len([e for e in errors if e.severity == "error"]) == 0, errors
 

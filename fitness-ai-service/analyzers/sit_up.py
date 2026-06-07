@@ -97,18 +97,18 @@ class SitUpAnalyzer(ExerciseAnalyzer):
             is_valid_form=is_valid
         )
     
-    def validate_form(self, landmarks: List[Tuple[float, float, float]], 
+    def validate_form(self, landmarks: List[Tuple[float, float, float]],
                      image_width: int, image_height: int) -> Tuple[bool, List[FormError]]:
         """Validate sit-up form"""
         errors = []
-        
+
         if len(landmarks) < 33:
             return False, [FormError(
                 type="insufficient_landmarks",
-                message="Not enough body landmarks detected",
+                message="Không phát hiện đủ khớp cơ thể",
                 severity="error"
             )]
-        
+
         # Get key points
         left_shoulder = landmarks[self.LEFT_SHOULDER]
         right_shoulder = landmarks[self.RIGHT_SHOULDER]
@@ -118,48 +118,46 @@ class SitUpAnalyzer(ExerciseAnalyzer):
         right_knee = landmarks[self.RIGHT_KNEE]
         left_ankle = landmarks[self.LEFT_ANKLE]
         right_ankle = landmarks[self.RIGHT_ANKLE]
-        
+
         # Average points
         shoulder = self.mid(left_shoulder, right_shoulder)
         hip = self.mid(left_hip, right_hip)
         knee = self.mid(left_knee, right_knee)
         ankle = self.mid(left_ankle, right_ankle)
-        
-        # Check knee angle (should be ~90°)
+
+        # ── Góc gối: nới rộng 70–120° (thực tế người dùng 85–115°) ──────────
         knee_angle = self.calculate_angle(hip, knee, ankle)
-        if knee_angle < 80.0 or knee_angle > 100.0:
+        if knee_angle < 70.0 or knee_angle > 120.0:
             errors.append(FormError(
                 type="knee_angle",
-                message="Keep your knees bent at 90 degrees",
+                message=f"Giữ gối co ~90°. Hiện tại: {knee_angle:.0f}°",
                 severity="warning"
             ))
-        
-        # Check if using hands to pull head (nose too close to knees when UP)
+
+        # ── Không dùng tay kéo đầu khi UP ────────────────────────────────────
         if self.current_state == ExerciseState.UP:
             nose = landmarks[self.NOSE]
-            nose_to_knee_distance = self.calculate_distance(
-                (nose[0], nose[1]),
-                (knee[0], knee[1])
+            nose_to_knee = self.calculate_distance(
+                (nose[0], nose[1]), (knee[0], knee[1])
             )
-            shoulder_to_knee_distance = self.calculate_distance(
-                (shoulder[0], shoulder[1]),
-                (knee[0], knee[1])
+            shoulder_to_knee = self.calculate_distance(
+                (shoulder[0], shoulder[1]), (knee[0], knee[1])
             )
-            if nose_to_knee_distance < 0.3 * shoulder_to_knee_distance:
+            if shoulder_to_knee > 0 and nose_to_knee < 0.25 * shoulder_to_knee:
                 errors.append(FormError(
                     type="hand_pull",
-                    message="Don't use your hands to pull your head. Use your core muscles.",
+                    message="Không dùng tay giật đầu — dùng sức cơ bụng.",
                     severity="error"
                 ))
-        
-        # Check back contact when DOWN (should be on floor)
+
+        # ── Nằm xuống hoàn toàn khi DOWN ─────────────────────────────────────
         torso_angle = self.calculate_angle(shoulder, hip, knee)
-        if self.current_state == ExerciseState.DOWN and torso_angle < 140.0:
+        if self.current_state == ExerciseState.DOWN and torso_angle < 135.0:
             errors.append(FormError(
                 type="back_contact",
-                message="Lower your back completely to the floor",
+                message="Hạ lưng xuống sàn hoàn toàn.",
                 severity="warning"
             ))
-        
+
         return len([e for e in errors if e.severity == "error"]) == 0, errors
 

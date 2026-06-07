@@ -66,8 +66,8 @@ class PlankAnalyzer(ExerciseAnalyzer):
         ankle = self.mid(left_ankle, right_ankle)
         
         # Calculate key angles
-        body_angle = self.calculate_angle(shoulder, hip, ankle)
-        hip_angle = self.calculate_angle(shoulder, hip, ankle)
+        body_angle = self.calculate_angle(shoulder, hip, ankle)   # thẳng toàn thân
+        hip_angle = self.calculate_angle(elbow, shoulder, hip)    # khuỷu-vai-hông (không trùng)
         
         # Validate form
         is_valid, form_errors = self.validate_form(landmarks, image_width, image_height)
@@ -95,8 +95,8 @@ class PlankAnalyzer(ExerciseAnalyzer):
         
         # Calculate quality score
         ideal_angles = {
-            "body": (160.0, 180.0),  # Body should be straight
-            "hip": (160.0, 180.0)  # Hip should be in line
+            "body": (160.0, 180.0),   # toàn thân thẳng
+            "hip_angle": (80.0, 100.0),  # khuỷu gần thẳng góc với vai (plank tốt ~90°)
         }
         quality_score = self._calculate_quality_score(form_errors, angles, ideal_angles)
         
@@ -113,18 +113,18 @@ class PlankAnalyzer(ExerciseAnalyzer):
             is_valid_form=is_valid
         )
     
-    def validate_form(self, landmarks: List[Tuple[float, float, float]], 
+    def validate_form(self, landmarks: List[Tuple[float, float, float]],
                      image_width: int, image_height: int) -> Tuple[bool, List[FormError]]:
         """Validate plank form"""
         errors = []
-        
+
         if len(landmarks) < 33:
             return False, [FormError(
                 type="insufficient_landmarks",
-                message="Not enough body landmarks detected",
+                message="Không phát hiện đủ khớp cơ thể",
                 severity="error"
             )]
-        
+
         # Get key points
         nose = landmarks[self.NOSE]
         left_shoulder = landmarks[self.LEFT_SHOULDER]
@@ -135,60 +135,57 @@ class PlankAnalyzer(ExerciseAnalyzer):
         right_hip = landmarks[self.RIGHT_HIP]
         left_ankle = landmarks[self.LEFT_ANKLE]
         right_ankle = landmarks[self.RIGHT_ANKLE]
-        
+
         # Average points
         shoulder = self.mid(left_shoulder, right_shoulder)
         elbow = self.mid(left_elbow, right_elbow)
         hip = self.mid(left_hip, right_hip)
         ankle = self.mid(left_ankle, right_ankle)
-        
-        # Check body alignment (shoulder-hip-ankle should be straight > 160°)
+
+        # ── Thân thẳng vai-hông-cổ chân ─────────────────────────────────────
         body_angle = self.calculate_angle(shoulder, hip, ankle)
-        if body_angle < 160.0:
+        if body_angle < 158.0:
             errors.append(FormError(
                 type="body_alignment",
-                message=f"Keep your body straight. Current angle: {body_angle:.1f}°",
+                message=f"Giữ thân thẳng. Góc hiện tại: {body_angle:.0f}°",
                 severity="error"
             ))
-        
-        # Check hip position (should not be too high or too low)
-        # Hip should be roughly in line with shoulder and ankle
-        hip_height_relative = (hip[1] - shoulder[1]) / image_height
-        if hip_height_relative < -0.05:  # Hip too high (butt up)
+
+        # ── Hông không quá cao hoặc quá thấp ─────────────────────────────────
+        # hip[1] và shoulder[1] đều đã ở tọa độ PIXEL (= normalized * image_height)
+        # → chia cho image_height để ra tỷ lệ 0–1
+        hip_rel = (hip[1] - shoulder[1]) / image_height
+        if hip_rel < -0.05:   # hông cao hơn vai quá nhiều → mông vổng lên
             errors.append(FormError(
                 type="hip_position",
-                message="Lower your hips. Don't raise your butt.",
+                message="Hạ hông xuống — không vổng mông lên.",
                 severity="error"
             ))
-        elif hip_height_relative > 0.1:  # Hip too low (butt sagging)
+        elif hip_rel > 0.10:  # hông thấp hơn vai quá nhiều → mông chùng
             errors.append(FormError(
                 type="hip_position",
-                message="Raise your hips. Don't let your butt sag.",
+                message="Nâng hông lên — không để mông chùng xuống.",
                 severity="error"
             ))
-        
-        # Check elbow position (should be under shoulders)
-        elbow_shoulder_alignment = abs(elbow[0] - shoulder[0]) / image_width
-        if elbow_shoulder_alignment > 0.1:  # More than 10% offset
+
+        # ── Khuỷu thẳng dưới vai ─────────────────────────────────────────────
+        elbow_offset = abs(elbow[0] - shoulder[0]) / image_width
+        if elbow_offset > 0.10:
             errors.append(FormError(
                 type="elbow_position",
-                message="Keep your elbows directly under your shoulders",
+                message="Đặt khuỷu tay ngay dưới vai.",
                 severity="warning"
             ))
-        
-        # Check neck alignment (nose should be in line with body)
-        neck_angle = self.calculate_angle(
-            (nose[0], nose[1]),
-            shoulder,
-            hip
-        )
-        if neck_angle < 150.0:
+
+        # ── Cổ thẳng với lưng ────────────────────────────────────────────────
+        neck_angle = self.calculate_angle((nose[0], nose[1]), shoulder, hip)
+        if neck_angle < 145.0:
             errors.append(FormError(
                 type="neck_alignment",
-                message="Keep your neck straight with your back. Don't look up or down.",
+                message="Giữ cổ thẳng với lưng — không ngửa hoặc cúi đầu.",
                 severity="warning"
             ))
-        
+
         return len([e for e in errors if e.severity == "error"]) == 0, errors
     
     def reset(self):
