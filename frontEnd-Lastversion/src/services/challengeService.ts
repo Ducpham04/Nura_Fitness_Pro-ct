@@ -184,10 +184,12 @@ class ChallengeService {
   }
 
   // Ghi nhận kết quả buổi thi REALTIME (fitness-ai-service / MediaPipe)
-  // BE: POST /api/user/challenges/{ucId}/submit-result  (JSON: reps, qualityScore, exerciseType)
+  // Server-authoritative: gửi {token, sig} (kết quả ĐÃ KÝ bởi pose service);
+  // backend xác minh chữ ký rồi mới chấm — client không thể bịa điểm.
+  // BE: POST /api/user/challenges/{ucId}/submit-result  (JSON: token, sig)
   async submitResult(
     userChallengeId: number,
-    result: { reps: number; qualityScore: number; exerciseType: string },
+    result: { token: string; sig: string },
   ): Promise<ApiResponse<ChallengeAttemptResult>> {
     const res = await apiClient.post<any>(`/user/challenges/${userChallengeId}/submit-result`, result);
     if (res.success && res.data) {

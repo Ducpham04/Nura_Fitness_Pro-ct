@@ -42,6 +42,8 @@ export default function ChallengeCameraModal({ ucId, exerciseType, challengeName
   const wsRef = useRef<WebSocket | null>(null);
   const intervalRef = useRef<number | null>(null);
   const bestQualityRef = useRef<number>(0);
+  // Resolver chờ kết quả ĐÃ KÝ khi finalize
+  const finalizeResolver = useRef<((r: { token: string; sig: string } | null) => void) | null>(null);
 
   const [status, setStatus] = useState<'init' | 'connecting' | 'ready' | 'error' | 'submitting'>('init');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -97,6 +99,14 @@ export default function ChallengeCameraModal({ ucId, exerciseType, challengeName
         ws.onmessage = (ev) => {
           try {
             const msg = JSON.parse(ev.data);
+            // Kết quả ĐÃ KÝ từ finalize action → giải phóng promise trong handleSubmit
+            if (msg.final && msg.token !== undefined) {
+              if (finalizeResolver.current) {
+                finalizeResolver.current({ token: msg.token as string, sig: (msg.sig ?? '') as string });
+                finalizeResolver.current = null;
+              }
+              return;
+            }
             if (msg.success && msg.data) {
               const d = msg.data as Metrics;
               setMetrics(d);
@@ -131,12 +141,33 @@ export default function ChallengeCameraModal({ ucId, exerciseType, challengeName
 
   const handleSubmit = async () => {
     setStatus('submitting');
-    cleanup(); // tắt camera trước khi gửi
-    const res = await challengeService.submitResult(ucId, {
-      reps,
-      qualityScore: Math.max(quality, bestQualityRef.current),
-      exerciseType,
+    // Dừng gửi frame nhưng GIỮ WebSocket mở để nhận token đã ký
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+
+    // Yêu cầu pose service chốt kết quả và ký HMAC
+    const signedResult = await new Promise<{ token: string; sig: string } | null>((resolve) => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) { resolve(null); return; }
+      finalizeResolver.current = resolve;
+      // Timeout 8s phòng trường hợp service không phản hồi
+      const timeout = window.setTimeout(() => {
+        if (finalizeResolver.current) { finalizeResolver.current = null; resolve(null); }
+      }, 8000);
+      // Hủy timeout nếu resolver được gọi trước
+      const origResolver = finalizeResolver.current;
+      finalizeResolver.current = (r) => { clearTimeout(timeout); origResolver?.(r); };
+      ws.send(JSON.stringify({ action: 'finalize' }));
     });
+
+    cleanup(); // tắt camera + WebSocket sau khi đã nhận (hoặc timeout) token
+
+    if (!signedResult) {
+      setStatus('error');
+      setErrorMsg('Không lấy được kết quả đã ký từ dịch vụ AI. Vui lòng thử lại.');
+      return;
+    }
+
+    const res = await challengeService.submitResult(ucId, signedResult);
     if (res.success && res.data) {
       onResult(res.data);
     } else {

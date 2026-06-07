@@ -1,6 +1,7 @@
 package com.example.fitchallenge.controller.User;
 
 import com.example.fitchallenge.config.NotificationResponse;
+import com.example.fitchallenge.config.PoseResultVerifier;
 import com.example.fitchallenge.service.UserChallengeService;
 import com.example.fitchallenge.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,8 @@ public class UserChallengeUserController {
     private final UserChallengeService userChallengeService;
     @Autowired
     private final UserService userService;
+    @Autowired
+    private final PoseResultVerifier poseResultVerifier;
 
     /**
      * PUT /api/user/challenges/{id}/complete
@@ -83,7 +86,10 @@ public class UserChallengeUserController {
     /**
      * POST /api/user/challenges/{id}/submit-result
      * Ghi nhận kết quả buổi thi REALTIME (fitness-ai-service / MediaPipe).
-     * Body JSON: { reps, qualityScore, exerciseType }
+     *
+     * SERVER-AUTHORITATIVE: body chứa { token, sig } — kết quả ĐÃ KÝ HMAC bởi
+     * pose service. Backend xác minh chữ ký rồi mới lấy reps/quality từ payload đã
+     * ký (KHÔNG tin số do client gửi) -> chống gian lận điểm/thưởng.
      */
     @PostMapping("/{id}/submit-result")
     public ResponseEntity<NotificationResponse> submitResult(
@@ -94,12 +100,25 @@ public class UserChallengeUserController {
         if (userDetails == null) {
             return ResponseEntity.status(401).body(new NotificationResponse(false, "Unauthorized"));
         }
+
+        // Xác thực kết quả đã ký
+        PoseResultVerifier.VerifiedResult verified;
+        try {
+            String token = body.get("token") != null ? body.get("token").toString() : null;
+            String sig = body.get("sig") != null ? body.get("sig").toString() : null;
+            verified = poseResultVerifier.verify(token, sig);
+        } catch (SecurityException | IllegalArgumentException e) {
+            return ResponseEntity.status(400).body(new NotificationResponse(false,
+                    "Kết quả không hợp lệ: " + e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new NotificationResponse(false,
+                    "Không xác thực được kết quả: " + e.getMessage()));
+        }
+
         try {
             Long userId = userService.getUserByEmail(userDetails.getUsername()).getId();
-            Integer reps = body.get("reps") instanceof Number n ? n.intValue() : null;
-            Double quality = body.get("qualityScore") instanceof Number q ? q.doubleValue() : null;
-            String exerciseType = body.get("exerciseType") != null ? body.get("exerciseType").toString() : null;
-            NotificationResponse response = userChallengeService.submitChallengeResult(id, userId, reps, quality, exerciseType);
+            NotificationResponse response = userChallengeService.submitChallengeResult(
+                    id, userId, verified.reps(), verified.qualityScore(), verified.exerciseType());
             return response.isSuccess() ? ResponseEntity.ok(response)
                                         : ResponseEntity.status(400).body(response);
         } catch (Exception e) {

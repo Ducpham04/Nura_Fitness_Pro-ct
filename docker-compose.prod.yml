@@ -50,6 +50,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET là bắt buộc (tối thiểu 32 ký tự)}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
       AI_SERVICE_URL: http://ai-service:8001
+      POSE_SIGNING_SECRET: ${POSE_SIGNING_SECRET:?POSE_SIGNING_SECRET là bắt buộc (chống gian lận điểm thi)}
       # Same-origin qua nginx nên CORS không bị kích hoạt, nhưng prod profile
       # vẫn yêu cầu giá trị này -> đặt = domain public.
       CORS_ALLOWED_ORIGINS: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN là bắt buộc (vd https://fitnit.com)}
@@ -99,6 +100,8 @@ services:
       PORT: 5001
       # complexity=2: landmark chính xác hơn (chậm hơn ~2x; cần CPU khá)
       MEDIAPIPE_MODEL_COMPLEXITY: 2
+      # Bí mật ký kết quả — PHẢI trùng POSE_SIGNING_SECRET của backend
+      POSE_SIGNING_SECRET: ${POSE_SIGNING_SECRET:?POSE_SIGNING_SECRET là bắt buộc}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
       interval: 30s

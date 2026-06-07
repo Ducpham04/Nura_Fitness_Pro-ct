@@ -3,6 +3,12 @@ FastAPI main application for Fitness AI Service
 """
 import os
 import time
+import json
+import hmac
+import hashlib
+import base64
+import uuid
+import statistics
 from typing import Optional
 from fastapi import FastAPI, File, UploadFile, Form, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,6 +35,29 @@ load_dotenv()
 # Khớp thân/chân chính để kiểm tra "có thấy rõ toàn thân không"
 KEY_BODY_JOINTS = [11, 12, 23, 24, 25, 26]   # vai, hông, gối (trái/phải)
 MIN_BODY_VISIBILITY = 0.5
+
+# ── Server-authoritative scoring ────────────────────────────────────────────
+# Bí mật CHIA SẺ với backend. Khi finalize, service KÝ kết quả thật nó đếm được;
+# backend chỉ chấp nhận kết quả có chữ ký hợp lệ -> client KHÔNG thể bịa số rep.
+POSE_SIGNING_SECRET = os.getenv("POSE_SIGNING_SECRET", "")
+
+
+def make_signed_result(reps: int, qualities: list, exercise_type: str) -> dict:
+    """Tạo kết quả có chữ ký HMAC-SHA256 để backend xác thực."""
+    quality = round(statistics.median(qualities), 1) if qualities else 0.0
+    payload = {
+        "reps": int(reps),
+        "quality_score": quality,
+        "exercise_type": exercise_type,
+        "issued_at": int(time.time()),
+        "nonce": uuid.uuid4().hex,
+    }
+    body = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    token = base64.urlsafe_b64encode(body.encode()).decode()
+    sig = ""
+    if POSE_SIGNING_SECRET:
+        sig = hmac.new(POSE_SIGNING_SECRET.encode(), token.encode(), hashlib.sha256).hexdigest()
+    return {"success": True, "final": True, "result": payload, "token": token, "sig": sig}
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -221,11 +250,20 @@ async def websocket_exercise(websocket: WebSocket, exercise_type: str):
         # Get analyzer
         # Instance RIÊNG cho mỗi kết nối -> bộ đếm reps độc lập từng phiên/người
         analyzer = ExerciseFactory.create_new(exercise_type_enum)
-        
+        session_qualities: list = []  # quality các frame hợp lệ -> chốt điểm khi finalize
+
         while True:
             # Receive message
             data = await websocket.receive_json()
-            
+
+            # Finalize: trả KẾT QUẢ ĐÃ KÝ (server-authoritative) để backend xác thực.
+            # Client không thể bịa reps/quality vì không có bí mật ký.
+            if isinstance(data, dict) and data.get("action") == "finalize":
+                await websocket.send_json(
+                    make_signed_result(analyzer.reps, session_qualities, exercise_type)
+                )
+                continue
+
             try:
                 message = WebSocketMessage(**data)
             except Exception as e:
@@ -279,7 +317,10 @@ async def websocket_exercise(websocket: WebSocket, exercise_type: str):
                 # Analyze
                 metrics = analyzer.analyze(landmarks, image_width, image_height)
                 metrics.timestamp = message.timestamp
-                
+                # Ghi lại quality frame hợp lệ -> dùng để chốt điểm (median) khi finalize
+                if metrics.is_valid_form or metrics.quality_score > 0:
+                    session_qualities.append(metrics.quality_score)
+
                 # Send response
                 response = WebSocketResponse(
                     success=True,
