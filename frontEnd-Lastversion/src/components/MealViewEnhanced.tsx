@@ -519,7 +519,7 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
             ].map(item => (
               <div key={item.label} className="rounded-lg bg-black/20 px-2 py-1.5 text-center">
                 <div className="text-xs font-bold text-white">{item.value}</div>
-                <div className="text-[9px] text-neutral-600 uppercase tracking-wider">{item.label}</div>
+                <div className="text-[11px] text-neutral-600 uppercase tracking-wider">{item.label}</div>
               </div>
             ))}
           </div>
@@ -756,7 +756,7 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
               <div key={label} className="rounded-lg bg-white/[0.04] p-1.5 text-center">
                 <Icon className="w-2.5 h-2.5 mx-auto mb-0.5" style={{ color }} />
                 <div className="text-[10px] font-bold text-white">{Math.round(val)}g</div>
-                <div className="text-[9px] text-neutral-600">{label}</div>
+                <div className="text-[11px] text-neutral-600">{label}</div>
               </div>
             ))}
           </div>
@@ -781,7 +781,7 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
             <div className={`font-grotesk font-bold text-sm ${(dailyBudget - currentSpent) >= 0 ? 'text-lime' : 'text-red-400'}`}>
               {((dailyBudget - currentSpent)/1000).toFixed(0)}k
             </div>
-            <div className="text-neutral-600 text-[9px] uppercase tracking-wider mt-0.5">Còn lại</div>
+            <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">Còn lại</div>
           </div>
         </div>
       </div>

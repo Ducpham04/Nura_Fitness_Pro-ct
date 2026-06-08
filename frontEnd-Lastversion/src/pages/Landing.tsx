@@ -364,14 +364,14 @@ export default function Landing() {
 
               {/* HUD overlays */}
               <div className="absolute top-3 left-3 rounded-lg bg-black/60 border border-white/[0.08] px-2 py-1 backdrop-blur-sm">
-                <span className="text-[9px] font-mono text-neutral-500">cam://0 • 30fps</span>
+                <span className="text-[11px] font-mono text-neutral-500">cam://0 • 30fps</span>
               </div>
               <div className="absolute top-3 right-3 rounded-lg bg-lime/10 border border-lime/25 px-2 py-1">
-                <span className="text-[9px] font-mono text-lime">∠ 172°</span>
+                <span className="text-[11px] font-mono text-lime">∠ 172°</span>
               </div>
               <div className="absolute bottom-3 right-3 rounded-xl bg-black/70 border border-lime/30 backdrop-blur-sm px-3 py-2 text-right">
                 <div className="font-grotesk text-2xl font-bold text-lime leading-none">94%</div>
-                <div className="text-[9px] uppercase tracking-widest text-lime/60 mt-0.5">{t('landing.accuracy')}</div>
+                <div className="text-[11px] uppercase tracking-widest text-lime/60 mt-0.5">{t('landing.accuracy')}</div>
               </div>
             </div>
           </article>
@@ -416,11 +416,11 @@ export default function Landing() {
                 { label: 'Fat', pct: 38, color: 'bg-indigo-400' },
               ].map(({ label, pct, color }) => (
                 <div key={label} className="flex items-center gap-2">
-                  <span className="text-[9px] text-neutral-600 uppercase tracking-wide w-10 shrink-0">{label}</span>
+                  <span className="text-[11px] text-neutral-600 uppercase tracking-wide w-10 shrink-0">{label}</span>
                   <div className="flex-1 h-1 rounded-full bg-white/[0.05]">
                     <div className={`h-full rounded-full ${color} opacity-70`} style={{ width: `${pct}%` }} />
                   </div>
-                  <span className="text-[9px] font-mono text-neutral-600 w-6 text-right">{pct}%</span>
+                  <span className="text-[11px] font-mono text-neutral-600 w-6 text-right">{pct}%</span>
                 </div>
               ))}
             </div>

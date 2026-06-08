@@ -20,9 +20,9 @@ interface Props {
 }
 
 const programOptions = [
-  { value: '8W', label: '8 Weeks', hint: 'Build Muscle', weeks: 8, phase: 'foundation' },
-  { value: '10W', label: '10 Weeks', hint: 'Custom Balance', weeks: 10, phase: 'foundation' },
-  { value: '12W', label: '12 Weeks', hint: 'Performance Endurance', weeks: 12, phase: 'foundation' },
+  { value: '8W',  label: '8 Tuần',  hint: 'Xây dựng cơ nền',     weeks: 8,  phase: 'foundation' },
+  { value: '10W', label: '10 Tuần', hint: 'Cân bằng toàn diện',  weeks: 10, phase: 'foundation' },
+  { value: '12W', label: '12 Tuần', hint: 'Sức bền & hiệu suất', weeks: 12, phase: 'foundation' },
 ];
 
 const durationOptions = ['30', '45', '60'];
@@ -110,8 +110,8 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess }: Props) {
               <Dumbbell className="w-6 h-6 text-lime" />
             </div>
             <div>
-              <h2 className="text-xl font-grotesk font-bold text-white tracking-tight">AI Kinetic Protocol</h2>
-              <p className="text-xs text-neutral-500 font-medium uppercase tracking-widest">Multi-Week AI Generator</p>
+              <h2 className="text-xl font-grotesk font-bold text-white tracking-tight">AI Lập Kế Hoạch Tập</h2>
+              <p className="text-xs text-neutral-500 font-medium uppercase tracking-widest">Tạo kế hoạch nhiều tuần</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/[0.06] rounded-full transition-colors text-neutral-500 hover:text-white">
@@ -144,7 +144,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess }: Props) {
                 <div className="grid gap-6">
                   <div>
                     <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-3 block">
-                      Training Program
+                      Chương trình
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       {programOptions.map((option) => (
@@ -169,7 +169,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess }: Props) {
 
                   <div>
                     <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-3 block">
-                      Mins/Session
+                      Thời lượng / buổi (phút)
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       {durationOptions.map((minutes) => (
@@ -209,7 +209,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess }: Props) {
                       >
                         <span className="text-lg leading-none">{opt.emoji}</span>
                         <span className="font-grotesk text-[10px] font-bold leading-tight text-center">{opt.label}</span>
-                        <span className={`text-[9px] font-medium leading-tight text-center ${goal === opt.value ? 'text-lime/70' : 'text-neutral-600'}`}>
+                        <span className={`text-[11px] font-medium leading-tight text-center ${goal === opt.value ? 'text-lime/70' : 'text-neutral-600'}`}>
                           {opt.hint}
                         </span>
                       </button>
@@ -283,10 +283,14 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess }: Props) {
 
                 <div>
                   <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-3 block">
-                    Intensity Level
+                    Cường độ
                   </label>
                   <div className="grid grid-cols-3 gap-2">
-                    {['low', 'moderate', 'high'].map((level) => (
+                    {[
+                      { value: 'low',      label: 'Nhẹ' },
+                      { value: 'moderate', label: 'Vừa' },
+                      { value: 'high',     label: 'Cao' },
+                    ].map(({ value: level, label: levelLabel }) => (
                       <button
                         key={level}
                         onClick={() => setIntensity(level)}
@@ -294,7 +298,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess }: Props) {
                           intensity === level ? 'bg-electric text-white' : 'bg-white/[0.06] text-neutral-500 hover:bg-white/[0.06]'
                         }`}
                       >
-                        {level}
+                        {levelLabel}
                       </button>
                     ))}
                   </div>
@@ -302,7 +306,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess }: Props) {
 
                 <div>
                   <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-3 block">
-                    Available Gear
+                    Thiết bị tập
                   </label>
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     {equipmentPresets.map((preset) => (
@@ -343,7 +347,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess }: Props) {
               >
                 <div className="flex items-center justify-center gap-3 relative z-10 group-active:scale-95 transition-transform">
                   <Zap className="w-5 h-5" fill="currentColor" />
-                  INITIATE KINETIC PLAN
+                  TẠO KẾ HOẠCH AI
                 </div>
               </button>
             </>

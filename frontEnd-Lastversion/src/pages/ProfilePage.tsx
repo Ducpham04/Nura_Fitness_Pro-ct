@@ -32,7 +32,7 @@ function StatCard({ label, value, sub, icon: Icon, color }: {
     <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 flex flex-col items-center gap-1 text-center">
       <Icon className={`w-4 h-4 ${color} mb-1`} />
       <div className="font-grotesk font-bold text-lg text-white leading-none">{value}</div>
-      {sub && <div className="text-neutral-600 text-[9px]">{sub}</div>}
+      {sub && <div className="text-neutral-600 text-[11px]">{sub}</div>}
       <div className="text-neutral-500 text-[10px] uppercase tracking-wider mt-0.5">{label}</div>
     </div>
   );
@@ -171,7 +171,7 @@ export default function ProfilePage() {
               <div key={label} className="rounded-xl bg-white/[0.04] border border-white/[0.06] p-3 text-center">
                 <Icon className="w-3.5 h-3.5 text-neutral-600 mx-auto mb-1.5" />
                 <div className="font-grotesk font-bold text-sm text-white">{value}</div>
-                <div className="text-neutral-600 text-[9px] uppercase tracking-wider mt-0.5">{label}</div>
+                <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">{label}</div>
               </div>
             ))}
           </div>

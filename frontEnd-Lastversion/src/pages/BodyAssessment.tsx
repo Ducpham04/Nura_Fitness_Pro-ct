@@ -135,7 +135,7 @@ export default function BodyAssessment() {
             <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white border-2 border-obsidian shadow"
               style={{ left: `calc(${bmiPos}% - 6px)` }} />
           </div>
-          <div className="flex justify-between text-[9px] text-neutral-600 uppercase tracking-wider">
+          <div className="flex justify-between text-[11px] text-neutral-600 uppercase tracking-wider">
             <span>Thiếu cân</span><span>Bình thường</span><span>Béo phì</span>
           </div>
           <p className="text-neutral-400 text-xs mt-3 leading-relaxed">{metrics.bmiInfo.note}</p>
@@ -151,7 +151,7 @@ export default function BodyAssessment() {
             <div key={label} className="glass rounded-2xl p-4 border border-white/5 text-center">
               <Icon className={`w-4 h-4 ${color} mx-auto mb-2`} />
               <div className="font-grotesk font-bold text-xl text-white leading-none">{value.toLocaleString('vi-VN')}</div>
-              <div className="text-neutral-600 text-[9px] mt-1">{sub}</div>
+              <div className="text-neutral-600 text-[11px] mt-1">{sub}</div>
               <div className="text-neutral-500 text-[10px] uppercase tracking-wider mt-1.5">{label}</div>
             </div>
           ))}

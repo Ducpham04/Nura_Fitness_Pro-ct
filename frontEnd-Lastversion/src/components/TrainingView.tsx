@@ -906,15 +906,15 @@ function TrainingView() {
                 <div className="grid grid-cols-3 gap-2">
                   <div className="rounded-xl bg-black/20 p-2 text-center">
                     <div className="text-lg font-grotesk font-bold text-white">{poseScore}</div>
-                    <div className="text-[9px] uppercase tracking-wider text-neutral-600">Score</div>
+                    <div className="text-[11px] uppercase tracking-wider text-neutral-600">Score</div>
                   </div>
                   <div className={`rounded-xl border p-2 text-center ${poseRiskTone(poseRisk)}`}>
                     <div className="text-xs font-bold uppercase">{poseRisk}</div>
-                    <div className="text-[9px] uppercase tracking-wider opacity-70">Risk</div>
+                    <div className="text-[11px] uppercase tracking-wider opacity-70">Risk</div>
                   </div>
                   <div className="rounded-xl bg-black/20 p-2 text-center">
                     <div className="text-xs font-bold text-white">{Math.round(Number(poseResult.confidence ?? 0) * 100)}%</div>
-                    <div className="text-[9px] uppercase tracking-wider text-neutral-600">Tin cậy</div>
+                    <div className="text-[11px] uppercase tracking-wider text-neutral-600">Tin cậy</div>
                   </div>
                 </div>
 
@@ -988,7 +988,7 @@ function TrainingView() {
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-blue-400 font-grotesk font-bold text-2xl tabular-nums">{restCountdown}</span>
-                  <span className="text-blue-400/60 text-[9px] uppercase tracking-widest">giây</span>
+                  <span className="text-blue-400/60 text-[11px] uppercase tracking-widest">giây</span>
                 </div>
               </div>
               <p className="text-blue-300 font-semibold text-sm">Nghỉ giữa set</p>
@@ -1788,7 +1788,7 @@ function TrainingView() {
                       ].map(({ Icon, label, value, color }) => (
                         <div key={label} className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-2.5">
                           <Icon className={`w-3 h-3 ${color} mb-1`} />
-                          <p className="text-neutral-500 text-[9px] uppercase tracking-wider">{label}</p>
+                          <p className="text-neutral-500 text-[11px] uppercase tracking-wider">{label}</p>
                           <p className="text-white font-bold text-sm mt-0.5">{value}</p>
                         </div>
                       ))}
@@ -1969,15 +1969,15 @@ function TrainingView() {
                                         {altName}
                                       </p>
                                       <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                                        <span className="text-[9px] text-neutral-500 inline-flex items-center gap-1">
+                                        <span className="text-[11px] text-neutral-500 inline-flex items-center gap-1">
                                           <Dumbbell className="w-2 h-2" /> {translateMuscle(alt.primaryMuscle || '')}
                                         </span>
                                         {alt.defaultSets && alt.defaultReps && (
-                                          <span className="text-[9px] text-neutral-600">
+                                          <span className="text-[11px] text-neutral-600">
                                             · {alt.defaultSets}×{alt.defaultReps}
                                           </span>
                                         )}
-                                        <span className={`text-[9px] px-1 rounded border ml-auto ${
+                                        <span className={`text-[11px] px-1 rounded border ml-auto ${
                                           diff.includes('hard') ? 'text-orange-400 border-orange-400/20 bg-orange-400/10' :
                                           diff.includes('medium') ? 'text-yellow-400 border-yellow-400/20 bg-yellow-400/10' :
                                           'text-lime border-lime/20 bg-lime/10'

@@ -1,22 +1,36 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider, useAuthContext } from './context/AuthContext';
-import Landing from './pages/Landing';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import DashboardLayout from './pages/DashboardLayout';
-import AdminPanel from './pages/AdminPanel';
-import Onboarding from './pages/Onboarding';
-import BodyAssessment from './pages/BodyAssessment';
-import HomePage from './pages/HomePage';
-import WorkoutTab from './components/WorkoutTab';
-import DietTab from './components/DietTab';
-import ChallengesView from './components/ChallengesView';
-import ProfilePage from './pages/ProfilePage';
-import WelCome from './pages/WelCome';
-import AICoachPage from './pages/AICoachPage';
-import LogbookPage from './pages/LogbookPage';
-import ProfileEditPage from './pages/ProfileEditPage';
+
+// Lazy-load tất cả pages để giảm initial bundle (~724KB → chunk riêng per-route)
+const Landing = lazy(() => import('./pages/Landing'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const DashboardLayout = lazy(() => import('./pages/DashboardLayout'));
+const AdminPanel = lazy(() => import('./pages/AdminPanel'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const BodyAssessment = lazy(() => import('./pages/BodyAssessment'));
+const HomePage = lazy(() => import('./pages/HomePage'));
+const WorkoutTab = lazy(() => import('./components/WorkoutTab'));
+const DietTab = lazy(() => import('./components/DietTab'));
+const ChallengesView = lazy(() => import('./components/ChallengesView'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const WelCome = lazy(() => import('./pages/WelCome'));
+const AICoachPage = lazy(() => import('./pages/AICoachPage'));
+const LogbookPage = lazy(() => import('./pages/LogbookPage'));
+const ProfileEditPage = lazy(() => import('./pages/ProfileEditPage'));
+
+function PageSpinner() {
+  return (
+    <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center">
+      <div className="relative w-10 h-10">
+        <div className="absolute inset-0 border-2 border-[#CCFF00]/10 rounded-full" />
+        <div className="absolute inset-0 border-2 border-[#CCFF00] rounded-full border-t-transparent animate-spin" />
+      </div>
+    </div>
+  );
+}
 
 // AppContent is rendered inside <Router> (via App below), so useNavigate works
 // in AuthProvider → useAuth.
@@ -41,43 +55,45 @@ function AppContent() {
       : <Navigate to="/dashboard" replace />;
 
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={
-        !user ? <Login /> :
-        user.role === 'ADMIN' ? <Navigate to="/admin" replace /> :
-        <Navigate to="/dashboard" replace />
-      } />
-      <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
+    <Suspense fallback={<PageSpinner />}>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={
+          !user ? <Login /> :
+          user.role === 'ADMIN' ? <Navigate to="/admin" replace /> :
+          <Navigate to="/dashboard" replace />
+        } />
+        <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
 
-      {/* Auth-required pre-dashboard routes */}
-      <Route path="/onboarding" element={user ? <Onboarding /> : <Navigate to="/login" replace />} />
-      <Route path="/assessment" element={user ? <BodyAssessment /> : <Navigate to="/login" replace />} />
-      <Route path="/welcome" element={user ? <WelCome /> : <Navigate to="/login" replace />} />
+        {/* Auth-required pre-dashboard routes */}
+        <Route path="/onboarding" element={user ? <Onboarding /> : <Navigate to="/login" replace />} />
+        <Route path="/assessment" element={user ? <BodyAssessment /> : <Navigate to="/login" replace />} />
+        <Route path="/welcome" element={user ? <WelCome /> : <Navigate to="/login" replace />} />
 
-      {/* Admin route */}
-      <Route path="/admin" element={adminRoute} />
+        {/* Admin route */}
+        <Route path="/admin" element={adminRoute} />
 
-      {/* Dashboard routes */}
-      <Route path="/dashboard" element={
-        !user ? <Navigate to="/login" replace /> :
-        user.role === 'ADMIN' ? <Navigate to="/admin" replace /> :
-        <DashboardLayout />
-      }>
-        <Route index element={<HomePage />} />
-        <Route path="workout" element={<WorkoutTab />} />
-        <Route path="diet" element={<DietTab />} />
-        <Route path="challenges" element={<ChallengesView />} />
-        <Route path="profile" element={<ProfilePage />} />
-        <Route path="profile/edit" element={<ProfileEditPage />} />
-        <Route path="coach" element={<AICoachPage />} />
-        <Route path="logbook" element={<LogbookPage />} />
-      </Route>
+        {/* Dashboard routes */}
+        <Route path="/dashboard" element={
+          !user ? <Navigate to="/login" replace /> :
+          user.role === 'ADMIN' ? <Navigate to="/admin" replace /> :
+          <DashboardLayout />
+        }>
+          <Route index element={<HomePage />} />
+          <Route path="workout" element={<WorkoutTab />} />
+          <Route path="diet" element={<DietTab />} />
+          <Route path="challenges" element={<ChallengesView />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="profile/edit" element={<ProfileEditPage />} />
+          <Route path="coach" element={<AICoachPage />} />
+          <Route path="logbook" element={<LogbookPage />} />
+        </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 

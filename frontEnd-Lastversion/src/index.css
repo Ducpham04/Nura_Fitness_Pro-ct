@@ -27,13 +27,13 @@
     --color-text-muted: #707070;
 
     /* Borders */
-    --color-border: rgba(255, 255, 255, 0.06);
-    --color-border-hover: rgba(255, 255, 255, 0.12);
+    --color-border: rgba(255, 255, 255, 0.10);
+    --color-border-hover: rgba(255, 255, 255, 0.18);
 
     /* Glass Effects */
     --glass-blur: blur(10px);
     --glass-bg: rgba(18, 18, 18, 0.8);
-    --glass-border: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(255, 255, 255, 0.10);
 
     /* Spacing Scale */
     --space-xs: 0.25rem;
@@ -65,9 +65,8 @@
     transition: all 0.2s ease;
   }
 
-  :where(a, button):hover {
-    transform: translateY(-1px);
-  }
+  /* Không dùng global translateY — gây nhảy trên nav item, list link, card row.
+     Hover lift chỉ áp dụng qua class cụ thể: .btn-lime, .btn-ghost, .card-hover */
 
   :where(a, button):focus {
     outline: none;

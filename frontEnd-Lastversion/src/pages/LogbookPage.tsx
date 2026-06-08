@@ -137,7 +137,7 @@ export default function LogbookPage() {
             <Icon className={`w-4 h-4 ${color} mx-auto mb-2`} />
             <div className="font-grotesk font-bold text-xl text-white">{value}</div>
             <div className="text-neutral-600 text-[10px] uppercase tracking-wider mt-0.5">{label}</div>
-            <div className="text-neutral-700 text-[9px]">{sub}</div>
+            <div className="text-neutral-700 text-[11px]">{sub}</div>
           </div>
         ))}
       </div>
@@ -236,7 +236,7 @@ export default function LogbookPage() {
                     {log.caloriesBurned ? (
                       <div className="text-right shrink-0">
                         <div className="text-orange-400 font-bold text-sm">{log.caloriesBurned}</div>
-                        <div className="text-neutral-700 text-[9px]">kcal</div>
+                        <div className="text-neutral-700 text-[11px]">kcal</div>
                       </div>
                     ) : (
                       <ChevronRight className="w-4 h-4 text-neutral-700 shrink-0" />

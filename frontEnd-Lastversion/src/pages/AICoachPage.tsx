@@ -196,7 +196,7 @@ export default function AICoachPage() {
                     </div>
                   )}
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                  <div className={`text-[9px] mt-2 uppercase font-bold tracking-widest opacity-40 ${msg.role === 'user' ? 'text-obsidian' : 'text-neutral-500'}`}>
+                  <div className={`text-[11px] mt-2 uppercase font-bold tracking-widest opacity-40 ${msg.role === 'user' ? 'text-obsidian' : 'text-neutral-500'}`}>
                     {msg.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>

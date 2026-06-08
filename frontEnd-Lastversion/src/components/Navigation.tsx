@@ -100,7 +100,7 @@ export default function Navigation() {
             }`}
           >
             <Icon className={`w-6 h-6 ${id === 'coach' ? 'text-electric' : ''}`} />
-            <span className="text-[9px] font-bold font-grotesk uppercase tracking-widest">{label}</span>
+            <span className="text-[11px] font-bold font-grotesk uppercase tracking-widest">{label}</span>
           </Link>
         ))}
       </nav>

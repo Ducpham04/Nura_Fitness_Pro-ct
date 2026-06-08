@@ -222,7 +222,7 @@ export default function HomePage() {
         className="relative overflow-hidden rounded-3xl min-h-[280px] sm:min-h-[320px] flex flex-col justify-end shadow-[0_12px_50px_-16px_rgba(0,0,0,0.8)]">
         {/* Ảnh nền vận động viên */}
         <motion.img
-          src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1600&q=80"
+          src="https://images.unsplash.com/photo-1549060279-7e168fcee0c2?auto=format&fit=crop&w=1600&q=80"
           alt=""
           initial={{ scale: 1.12 }} animate={{ scale: 1 }}
           transition={{ duration: 1.4, ease: premiumEase }}
@@ -495,7 +495,7 @@ export default function HomePage() {
             ].map(({ label, value }) => (
               <div key={label} className="rounded-xl bg-white/[0.05] p-2.5 text-center">
                 <div className="text-white font-bold text-xs">{value}</div>
-                <div className="text-neutral-600 text-[9px] uppercase tracking-wider mt-0.5">{label}</div>
+                <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">{label}</div>
               </div>
             ))}
           </div>
@@ -576,15 +576,15 @@ export default function HomePage() {
           <div className="grid grid-cols-3 gap-2">
             <div className="rounded-xl bg-white/[0.05] p-2.5 text-center">
               <div className="text-lime font-bold text-sm">{stats.completedWorkoutsToday}</div>
-              <div className="text-neutral-600 text-[9px] uppercase tracking-wider mt-0.5">Hôm nay</div>
+              <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">Hôm nay</div>
             </div>
             <div className="rounded-xl bg-white/[0.05] p-2.5 text-center">
               <div className="text-orange-400 font-bold text-sm">{stats.caloriesBurned}</div>
-              <div className="text-neutral-600 text-[9px] uppercase tracking-wider mt-0.5">kcal đốt</div>
+              <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">kcal đốt</div>
             </div>
             <div className="rounded-xl bg-white/[0.05] p-2.5 text-center">
               <div className="text-blue-400 font-bold text-sm">{userSummary.streakDays}</div>
-              <div className="text-neutral-600 text-[9px] uppercase tracking-wider mt-0.5">streak</div>
+              <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">streak</div>
             </div>
           </div>
         </div>
@@ -607,7 +607,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-xl bg-white/[0.05] p-2.5">
               <div className="text-white font-bold text-sm">{stats.scheduledWorkoutsToday}</div>
-              <div className="text-neutral-600 text-[9px] uppercase tracking-wider mt-0.5">Bài hôm nay</div>
+              <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">Bài hôm nay</div>
             </div>
             <div className="rounded-xl bg-white/[0.05] p-2.5">
               <div className={`font-bold text-sm ${
@@ -616,7 +616,7 @@ export default function HomePage() {
               }`}>
                 {stats.completedWorkoutsToday}/{stats.scheduledWorkoutsToday}
               </div>
-              <div className="text-neutral-600 text-[9px] uppercase tracking-wider mt-0.5">Hoàn thành</div>
+              <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">Hoàn thành</div>
             </div>
           </div>
         </div>

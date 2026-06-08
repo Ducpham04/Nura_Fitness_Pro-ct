@@ -113,7 +113,7 @@ function Countdown({ target, size = 'md' }: { target?: string; size?: 'sm' | 'md
           <div className={`font-grotesk font-bold text-white tabular-nums leading-none ${sm ? 'text-sm' : 'text-lg'}`}>
             {pad(v)}
           </div>
-          <div className={`uppercase tracking-wider text-neutral-400 ${sm ? 'text-[8px] mt-0.5' : 'text-[9px] mt-1'}`}>
+          <div className={`uppercase tracking-wider text-neutral-400 ${sm ? 'text-[10px] mt-0.5' : 'text-[11px] mt-1'}`}>
             {label}
           </div>
         </div>
