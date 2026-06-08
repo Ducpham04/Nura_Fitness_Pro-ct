@@ -13,14 +13,18 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  *
  * Local default: http://localhost:5173
  * Production: set via CORS_ALLOWED_ORIGINS env var (comma-separated)
+ *
+ * Hỗ trợ pattern (wildcard) qua allowedOriginPatterns:
+ *   - https://*.ngrok-free.app  → demo qua ngrok
+ *   - https://*.yourdomain.com  → subdomains production
  */
 @Configuration
 public class CorsConfig {
 
     /**
-     * Comma-separated list of allowed origins.
-     * Defaults to localhost dev server; override via env var CORS_ALLOWED_ORIGINS in production.
-     * Example: CORS_ALLOWED_ORIGINS=https://fitnit.example.com,https://www.fitnit.example.com
+     * Comma-separated list of allowed origin patterns.
+     * Hỗ trợ wildcard (*) — dùng allowedOriginPatterns thay allowedOrigins
+     * để tương thích với allowCredentials(true).
      */
     @Value("${app.cors.allowed-origins:http://localhost:5173}")
     private String[] allowedOrigins;
@@ -31,7 +35,7 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins(allowedOrigins)
+                        .allowedOriginPatterns(allowedOrigins)
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                         .allowedHeaders("*")
                         .allowCredentials(true)
