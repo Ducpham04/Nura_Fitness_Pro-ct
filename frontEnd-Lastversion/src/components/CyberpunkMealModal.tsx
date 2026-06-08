@@ -90,8 +90,8 @@ export default function CyberpunkMealModal({ onClose, onSuccess, defaultBudget }
                 </div>
               </div>
               <div className="text-center space-y-3">
-                <p className="text-white text-xl font-grotesk font-bold">Building plan from catalog</p>
-                <p className="text-neutral-500 text-sm animate-pulse">Đang ghép khẩu phần vào bảng foods…</p>
+                <p className="text-white text-xl font-grotesk font-bold">Đang tạo kế hoạch dinh dưỡng</p>
+                <p className="text-neutral-500 text-sm animate-pulse">Đang ghép khẩu phần từ danh mục thực phẩm…</p>
               </div>
             </div>
           ) : (

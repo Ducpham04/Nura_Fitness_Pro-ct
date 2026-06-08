@@ -199,7 +199,7 @@ export default function SetupWizard({ userId, userName, onComplete }: Props) {
                 <div className="absolute inset-0 border-4 border-lime rounded-full border-t-transparent animate-spin"></div>
                 <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-lime animate-pulse" />
               </div>
-              <h2 className="text-3xl font-grotesk font-bold text-white mb-4">Neural Engine Active</h2>
+              <h2 className="text-3xl font-grotesk font-bold text-white mb-4">AI Đang Xử Lý</h2>
               <p className="text-neutral-400 text-xl">AI đang phân tích hồ sơ và kho thực phẩm để tạo thực đơn tối ưu cho 7 ngày tới...</p>
             </>
           )}
@@ -209,25 +209,25 @@ export default function SetupWizard({ userId, userName, onComplete }: Props) {
               <div className="w-20 h-20 bg-lime/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Brain className="w-10 h-10 text-lime" />
               </div>
-              <h3 className="text-2xl font-grotesk font-bold text-white mb-2">Protocol Generated!</h3>
+              <h3 className="text-2xl font-grotesk font-bold text-white mb-2">Kế Hoạch Đã Sẵn Sàng!</h3>
               <p className="text-neutral-500 mb-8 max-w-sm mx-auto">
-                Your 7-day intelligent nutrition plan is ready. AI has optimized your meals for your budget and inventory.
+                Thực đơn 7 ngày thông minh của bạn đã được tạo. AI đã tối ưu bữa ăn theo ngân sách và kho thực phẩm của bạn.
               </p>
-              
+
               <div className="grid grid-cols-1 gap-4 max-w-xs mx-auto">
                 <button
                   onClick={() => setPhase('workout')}
                   className="btn-lime py-4 text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-3"
                 >
                   <Activity className="w-5 h-5" />
-                  Setup Workout Plan
+                  Thiết lập kế hoạch tập luyện
                 </button>
                 <button
                   onClick={() => onComplete('diet')}
                   className="w-full py-4 rounded-2xl border border-white/10 text-white font-bold text-sm uppercase tracking-widest hover:bg-white/[0.06] transition-all flex items-center justify-center gap-3"
                 >
                   <Calendar className="w-5 h-5" />
-                  Go to Diet Tab
+                  Đến tab dinh dưỡng
                 </button>
               </div>
             </div>

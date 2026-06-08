@@ -131,10 +131,10 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess }: Props) {
                 </div>
               </div>
               <div className="text-center space-y-3">
-                <p className="text-white text-xl font-grotesk font-bold">Mapping Muscle Fibers</p>
+                <p className="text-white text-xl font-grotesk font-bold">AI đang phân tích cơ bắp</p>
                 <div className="flex flex-col gap-1">
-                  <p className="text-neutral-500 text-sm animate-pulse">Calculating biomechanical loads...</p>
-                  <p className="text-neutral-500 text-sm animate-pulse delay-75">Generating Week 1 Blueprint...</p>
+                  <p className="text-neutral-500 text-sm animate-pulse">Đang tính toán tải trọng sinh cơ học...</p>
+                  <p className="text-neutral-500 text-sm animate-pulse delay-75">Đang tạo kế hoạch tuần 1...</p>
                 </div>
               </div>
             </div>
