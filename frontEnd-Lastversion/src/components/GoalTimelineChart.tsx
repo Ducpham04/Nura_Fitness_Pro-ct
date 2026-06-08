@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  AreaChart, Area, BarChart, Bar,
+  AreaChart, Area,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts';
 import {
-  Target, TrendingDown, TrendingUp, Clock, Loader2,
+  Target, Clock, Loader2,
   Scale, CheckCircle2, Flame, Dumbbell, Zap,
 } from 'lucide-react';
 import ProgressRing from './ProgressRing';

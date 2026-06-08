@@ -283,7 +283,7 @@ export default function AICoachPage() {
             {nextWorkout ? (
               <>
                 <p className="text-neutral-400 text-sm leading-relaxed mb-5">
-                  Buổi tập hôm nay: <span className="text-white font-semibold">{nextWorkout.name || nextWorkout.title || 'Buổi tập của bạn'}</span>
+                  Buổi tập hôm nay: <span className="text-white font-semibold">{nextWorkout.name || (nextWorkout as { title?: string }).title || 'Buổi tập của bạn'}</span>
                 </p>
                 <Link to="/dashboard/workout" className="w-full btn-lime py-2.5 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
                   <Dumbbell className="w-4 h-4" /> Vào tập ngay

@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { Zap, Mail, Lock, ArrowRight, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { authService } from '../services/authService';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
 

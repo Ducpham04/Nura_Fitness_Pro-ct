@@ -1,7 +1,7 @@
 import { useState, useEffect, memo, useCallback } from 'react';
 import {
   Brain, Loader2, Camera, Utensils, ShoppingCart, X,
-  Check, RefreshCw, Flame, Wallet, ChevronLeft, ChevronRight,
+  Check, Flame, Wallet, ChevronLeft, ChevronRight,
   Beef, Wheat, Droplets, Shuffle, CalendarDays,
 } from 'lucide-react';
 import {
@@ -77,6 +77,12 @@ const MealCard = ({
         <img
           src={meal.imageUrl || 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200'}
           alt={meal.name}
+          onError={(e) => {
+            const img = e.currentTarget;
+            if (img.dataset.fbk) return;
+            img.dataset.fbk = '1';
+            img.src = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200';
+          }}
           className={`w-full h-full object-cover ${meal.isEaten ? 'opacity-50' : 'opacity-80'}`}
         />
       </div>
@@ -123,9 +129,9 @@ const MealCard = ({
     </div>
 
     {/* Ingredients (collapsed by default, expandable) */}
-    {meal.ingredients.length > 0 && (
+    {(meal.ingredients?.length ?? 0) > 0 && (
       <div className="mt-2.5 rounded-lg border border-white/[0.05] bg-black/10 divide-y divide-white/[0.04]">
-        {meal.ingredients.slice(0, 4).map(ing => (
+        {(meal.ingredients ?? []).slice(0, 4).map(ing => (
           <div key={ing.id} className="flex items-center gap-2 px-2.5 py-1.5 text-[10px]">
             <span className="flex-1 text-neutral-400 truncate">{ing.name}</span>
             <span className="text-neutral-600 font-semibold whitespace-nowrap">{Math.round(ing.quantity)}g</span>
@@ -135,9 +141,9 @@ const MealCard = ({
               : ing.price > 0 ? <span className="text-lime/70">{ing.price.toLocaleString()}đ</span> : null}
           </div>
         ))}
-        {meal.ingredients.length > 4 && (
+        {(meal.ingredients?.length ?? 0) > 4 && (
           <div className="px-2.5 py-1 text-[10px] text-neutral-600 text-center">
-            +{meal.ingredients.length - 4} nguyên liệu khác
+            +{(meal.ingredients?.length ?? 0) - 4} nguyên liệu khác
           </div>
         )}
       </div>
