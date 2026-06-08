@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Dumbbell, Brain,
   ChevronRight, Check, ShoppingCart,
-  Wallet, Moon, Beef, Wheat, Apple,
+  Wallet, Moon, Beef, Apple,
   Star, Flame, Play, History, Target, TrendingUp, Zap, Compass, X, Scale,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -21,6 +21,48 @@ const TrendChart = lazy(() => import('../components/TrendChart'));
 const GoalTimelineChart = lazy(() => import('../components/GoalTimelineChart'));
 
 function pct(v: number, goal: number) { return goal ? Math.min(100, Math.round((v / goal) * 100)) : 0; }
+
+// Skeleton khớp layout Dashboard — hiển thị khi đang tải để giảm cảm giác "trống",
+// mượt hơn spinner trơ. Chỉ là placeholder, không có logic.
+function SkBlock({ className = '' }: { className?: string }) {
+  return <div className={`animate-pulse rounded-2xl bg-white/[0.05] ${className}`} />;
+}
+function HomeSkeleton() {
+  return (
+    <div className="max-w-6xl mx-auto space-y-5 pb-24">
+      {/* hero */}
+      <SkBlock className="h-[280px] sm:h-[320px] rounded-3xl" />
+      {/* 3 stat cards */}
+      <div className="grid sm:grid-cols-3 gap-4">
+        {[0, 1, 2].map(i => (
+          <div key={i} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <SkBlock className="h-3 w-20 rounded" />
+              <SkBlock className="h-4 w-4 rounded" />
+            </div>
+            <SkBlock className="h-10 w-2/3 rounded-xl" />
+            <div className="grid grid-cols-2 gap-2">
+              <SkBlock className="h-12 rounded-xl" />
+              <SkBlock className="h-12 rounded-xl" />
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* AI coach + quick actions */}
+      <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
+        <SkBlock className="h-40" />
+        <div className="grid grid-cols-2 gap-2">
+          {[0, 1, 2, 3].map(i => <SkBlock key={i} className="h-[72px]" />)}
+        </div>
+      </div>
+      {/* weekly + plan */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <SkBlock className="h-44" />
+        <SkBlock className="h-44" />
+      </div>
+    </div>
+  );
+}
 
 function Confetti({ active }: { active: boolean }) {
   if (!active) return null;
@@ -45,27 +87,6 @@ function Confetti({ active }: { active: boolean }) {
   );
 }
 
-function MacroBar({ label, consumed, goal, unit, color, icon: Icon }: {
-  label: string; consumed: number; goal: number; unit: string; color: string; icon: any;
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <Icon className="w-3.5 h-3.5" style={{ color }} />
-          <span className="text-neutral-400 text-xs font-medium">{label}</span>
-        </div>
-        <span className="text-white text-xs font-bold">
-          {consumed}<span className="text-neutral-600 font-normal">/{goal}{unit}</span>
-        </span>
-      </div>
-      <div className="h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct(consumed, goal)}%`, backgroundColor: color }} />
-      </div>
-    </div>
-  );
-}
-
 export default function HomePage() {
   const [goalReached, setGoalReached] = useState(false);
   const [aiCaloriesIn, setAiCaloriesIn] = useState<number | null>(null);
@@ -83,7 +104,7 @@ export default function HomePage() {
     setGuideDismissed(true);
     try { localStorage.setItem('home_guide_dismissed', '1'); } catch { /* ignore */ }
   };
-  const { data, isLoading, error, refresh, updateStats } = useDashboard();
+  const { data, isLoading, error, refresh } = useDashboard();
   const navigate = useNavigate();
 
   const dashboardStats = data?.stats || {
@@ -94,6 +115,10 @@ export default function HomePage() {
     waterConsumed: 0, waterGoal: 2.5,
     budgetRemaining: 80000, budgetLimit: 80000,
     caloriesBurned: 0,
+    // ── Tập luyện (thiếu trong default trước đây → render undefined/NaN khi data.stats null) ──
+    completedWorkoutsToday: 0, scheduledWorkoutsToday: 0,
+    workoutsThisWeek: 0, workoutsWeeklyGoal: 5,
+    activePlanProgress: 0,
   };
 
   const userSummary = data?.userSummary || {
@@ -193,14 +218,7 @@ export default function HomePage() {
 
   const isSetupIncomplete = !hasActiveMealPlan && (!data || stats.budgetLimit === 80000 || todayWorkouts.length === 0);
 
-  if (isLoading) return (
-    <div className="flex h-full items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-2 border-lime border-t-transparent rounded-full animate-spin" />
-        <span className="text-neutral-500 text-sm">Đang tải...</span>
-      </div>
-    </div>
-  );
+  if (isLoading) return <HomeSkeleton />;
 
   if (error) return (
     <div className="flex h-full items-center justify-center">
