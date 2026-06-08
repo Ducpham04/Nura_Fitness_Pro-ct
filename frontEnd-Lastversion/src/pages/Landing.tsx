@@ -685,10 +685,15 @@ export default function Landing() {
             <span className="font-grotesk text-lg font-bold text-white">Fitnit</span>
           </div>
           <div className="flex flex-wrap justify-center gap-8">
-            {[t('landing.privacy'), t('landing.security'), t('landing.intel'), t('landing.support')].map(item => (
-              <span key={item} className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-600 hover:text-neutral-300 transition-colors">
-                {item}
-              </span>
+            {[
+              { label: t('landing.privacy'), href: 'mailto:hello@fitnit.vn?subject=Quyền riêng tư' },
+              { label: t('landing.security'), href: 'mailto:hello@fitnit.vn?subject=Bảo mật' },
+              { label: t('landing.intel'), href: '#intel' },
+              { label: t('landing.support'), href: 'mailto:hello@fitnit.vn?subject=Hỗ trợ' },
+            ].map(({ label, href }) => (
+              <a key={label} href={href} className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-600 hover:text-neutral-300 transition-colors">
+                {label}
+              </a>
             ))}
           </div>
           <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">© 2026 Fitnit</div>
