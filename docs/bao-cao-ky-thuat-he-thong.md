@@ -1,7 +1,8 @@
 # BÁO CÁO KỸ THUẬT HỆ THỐNG — FITNIT CHALLENGE
 
 > Tài liệu mô tả: **Mô hình dữ liệu (Entity) → Quan hệ trường data → Luồng nghiệp vụ → Công thức tính toán cụ thể.**
-> Phạm vi: Backend Spring Boot 3 (Java 17) + PostgreSQL + AI Service (FastAPI/Groq).
+> Phạm vi: Backend Spring Boot 3 (Java 17) + PostgreSQL + AI Service (FastAPI/Groq) + Pose Service (MediaPipe).
+> **Phiên bản:** v1.2 — cập nhật 06/2026 (bổ sung: chấm tư thế real-time MediaPipe + HMAC, macro dinh dưỡng theo g/kg, periodization NSCA 4 tuần, split buổi tập theo số ngày/tuần, dự đoán tiến độ cân nặng).
 
 ---
 
@@ -199,20 +200,54 @@ TDEE = BMR × Activity Multiplier
 | Extra active (rất nhiều) | 1.9 |
 *VD: 1617.5 × 1.55 = 2507 kcal*
 
-### 5.4 Calo mỗi buổi tập — MET Formula (Compendium 2024)
+### 5.4 Calo mỗi buổi tập — MET Formula chuẩn ACSM (Compendium 2024)
+
+**Công thức chính xác trong code** (`CaloriesCalculator.calculateCalories`):
 ```
-Calories = MET × weight(kg) × duration(phút) / 60
+Calories = MET × 3.5 × weight(kg) × duration(phút) / 200
 ```
-| Session type | MET |
-|---|---|
-| full_body | 5.0 |
-| upper_body | 4.5 |
-| lower_body | 5.5 |
-| cardio | 7.0 |
-| hiit | 8.0 |
-| stretch / mobility | 2.5 |
-| rest | 1.0 |
-*VD (full_body, 66kg, 45 phút): 5.0 × 66 × 45 / 60 = 247.5 → 248 kcal*
+> Đây là dạng chuẩn ACSM: `MET × 3.5 × kg / 200` = kcal/phút (vì 1 MET = 3.5 ml O₂/kg/phút, 1 L O₂ ≈ 5 kcal). Tương đương `MET × kg × giờ × 1.05`.
+
+**MET được tra theo 2 tầng** (`getMETValue`):
+1. **Theo TÊN bài tập** (ưu tiên — chính xác hơn): burpee=10, jump rope=10, pull-up/chin-up=8, push-up=8, bench press=6, squat=5.5, deadlift=6, lunge=5, plank=3.5, bicep curl=3.0, lateral raise=3.0, stretch/yoga=2.5…
+2. **Fallback theo LOẠI** (`exercise_type`): cardio=7.0, strength=5.0, full_body=5.5, upper/lower=5.0, mặc định=5.0.
+
+*VD (squat, 66kg, 30 phút): 5.5 × 3.5 × 66 × 30 / 200 = 190.5 → 191 kcal*
+
+**Ước tính thời lượng buổi tập** khi không có duration thực (`estimateDurationMinutes`):
+```
+active(s) = sets × reps × 2          (2 giây/rep — tempo trung bình)
+rest(s)   = (sets − 1) × restSeconds  (không tính nghỉ sau set cuối)
+duration  = round((active + rest) / 60)  phút
+```
+*VD (3×15, nghỉ 45s): active = 3×15×2 = 90s; rest = 2×45 = 90s; total = 180s = 3 phút.*
+
+> **Cân nặng mặc định** khi thiếu hồ sơ: 70 kg. Khi user đã hoàn thành buổi
+> (`calculateCaloriesFromLog`): ưu tiên duration thực; nếu chỉ có sets/reps thì
+> ước tính với nghỉ mặc định 45s.
+
+### 5.4b Macro mục tiêu dinh dưỡng (Smart Meal — `SmartMealPlanTransactionService`)
+
+Khi sinh thực đơn, backend tính **mục tiêu macro/ngày** từ hồ sơ — AI không bịa số:
+```
+Calo mục tiêu = UserBodyProfile.recommendedCalories (TDEE)   [mặc định 2000]
+
+Protein (g) = weight(kg) × hệ_số
+   hệ_số = 2.0  nếu goal chứa "muscle"/"tăng" (tăng cơ)
+   hệ_số = 1.6  các mục tiêu còn lại
+
+Fat (g)   = Calo × 0.25 / 9          (25% năng lượng từ chất béo; 1g fat = 9 kcal)
+
+Carbs (g) = (Calo − Protein×4 − Fat×9) / 4   (phần năng lượng còn lại; 1g = 4 kcal)
+```
+*VD (nam tăng cơ, 66kg, TDEE 2500):*
+- *Protein = 66 × 2.0 = 132 g (528 kcal)*
+- *Fat = 2500 × 0.25 / 9 = 69.4 g (625 kcal)*
+- *Carbs = (2500 − 528 − 625) / 4 = 336.75 g*
+
+> **Lưu ý phân biệt:** màn Dashboard tổng quan dùng tỉ lệ nhanh 25/50/25
+> (protein/carbs/fat) để vẽ vòng macro; còn **engine sinh thực đơn thật** dùng
+> công thức protein theo **g/kg thể trọng** ở trên (chính xác theo dinh dưỡng thể thao).
 
 ### 5.5 WHR (Waist-Hip Ratio)
 ```
@@ -227,23 +262,125 @@ Nữ:  %BF = 495 / (1.29579 − 0.35004×log₁₀(waist+hip−neck) + 0.22100×
 ```
 *(số đo quy đổi sang inch: cm / 2.54)*
 
-### 5.7 Tăng tiến theo tuần (Progression — block 4 tuần)
-```
-Tuần % 4 == 0  → DELOAD: sets − 1 (giữ reps để hồi phục)
+### 5.7 Tăng tiến theo tuần — Periodization NSCA chu kỳ 4 tuần
 
-Block 0 (tuần 1–3) FOUNDATION: reps = base + weekInBlock      (3×12 → 3×13 → 3×14)
-Block 1 (tuần 5–7) BUILD:      reps = base + 2 + weekInBlock   (3×14 → 3×15 → 3×16)
-Block 2+ (tuần 9+) OVERLOAD:   sets = base + 1 + weekInBlock/2,
-                               reps = max(base−2, 3), rest + 30s
-```
+AI service (`workout_planner._PHASE_PARAMS`) áp **chu kỳ NSCA 4 tuần lặp lại**, pha
+tự suy ra từ số tuần: `phase = cycle[(week−1) % 4 + 1]`.
 
-### 5.8 Rep range & nghỉ theo mục tiêu (AI prompt)
-| Goal | Rest gợi ý | Weekly pattern |
+| Tuần trong chu kỳ | Pha | Sets | Rep range | Nghỉ | Cường độ (%1RM) |
+|---|---|---|---|---|---|
+| 1 | **foundation** (thích nghi) | 3 | 12–15 | 75s | 65% |
+| 2 | **volume** (khối lượng) | 4 | 10–12 | 75s | 70% |
+| 3 | **intensity** (cường độ) | 4 | 6–8 | 90s | 80% |
+| 4 | **deload** (giảm tải hồi phục) | 2 | 12–15 | 60s | 55% |
+
+Hai pha mở rộng (khi auto-regulation yêu cầu): **build** (4×8–10, 90s, 75%) và
+**overload** (5×4–6, 120s, 85%).
+
+> **Cap cường độ theo rủi ro:** với hồ sơ tuổi cao / có chấn thương,
+> `intensity_pct` bị giới hạn bởi `intensity_cap_pct` (vd cap 70% → không bao giờ
+> đẩy lên pha intensity 80%). An toàn luôn ưu tiên hơn tiến độ.
+
+### 5.8 Chọn split buổi tập theo SỐ NGÀY/TUẦN & trình độ
+
+Pattern tuần 7 ngày chọn theo **trình độ** (NSCA frequency) rồi tinh chỉnh theo
+**chiến lược chia buổi** (`_SPLIT_PATTERNS`, ưu tiên cao hơn nếu có):
+
+| Trình độ | Tần suất | Logic |
+|---|---|---|
+| **beginner** | 3 buổi/tuần | Full-body xen kẽ nghỉ (giai đoạn thích nghi thần kinh-cơ) |
+| **intermediate** | 4 buổi/tuần | Upper/Lower split |
+| **advanced** | 5 buổi/tuần | Tần suất cao hơn mỗi nhóm cơ |
+
+**Rep range & nghỉ theo mục tiêu** (AI prompt) + weekly pattern mẫu (intermediate):
+
+| Goal | Rest gợi ý | Weekly pattern mẫu |
 |---|---|---|
 | muscle_gain | 60–90s (75s) | `[upper_push, lower, rest, upper_pull, lower, rest, rest]` |
 | strength | 120–180s (150s) | `[lower, upper_push, rest, lower, upper_pull, rest, rest]` |
 | weight_loss | 45–60s (52s) | `[full_body, cardio_core, full_body, rest, cardio_core, full_body, rest]` |
 | endurance | 30–45s (38s) | `[full_body, cardio_core, full_body, cardio_core, rest, full_body, rest]` |
+
+**Chiến lược chia buổi cá nhân hoá** (`_SPLIT_PATTERNS`): `upper_lower`,
+`lower_focus`, `core_focus`, `full_body_lowimpact` (người lớn tuổi/ít va đập),
+`light_general`… → cho phép bias vùng cơ thay vì ép full-body.
+
+**Cân bằng đẩy–kéo:** guardrail Java đảm bảo buổi `upper_push` chỉ chứa ngực/vai/tay
+sau, `upper_pull` chỉ lưng/tay trước; full_body phải đủ **push + pull + lower + core**
+(mỗi nhóm ≥1 bài) → tránh mất cân đối cơ.
+
+---
+
+### 5.9 Chấm điểm tư thế real-time (Pose Service — MediaPipe)
+
+Pose service (`fitness-ai-service`) chạy MediaPipe Pose (33 landmark), mỗi bài có
+analyzer riêng (squat, push-up, pull-up, sit-up, plank). Quy trình mỗi frame:
+
+**a) Tính góc khớp** (`utils/geometry.calculate_angle`) — góc tại đỉnh B của 3 điểm A-B-C:
+```
+θ = | atan2(Cy−By, Cx−Bx) − atan2(Ay−By, Ax−Bx) | × 180/π
+nếu θ > 180 → θ = 360 − θ        (chuẩn hoá về 0–180°)
+```
+*VD squat: góc gối = angle(hip, knee, ankle); góc lưng = angle(shoulder, hip, knee).*
+
+**b) Đếm rep — máy trạng thái có hysteresis + làm mượt** (`_check_rep_complete`):
+- Góc được **trung bình trượt** cửa sổ 3 frame (`SMOOTH_WINDOW=3`) → giảm nhiễu landmark.
+- Vào DOWN khi `góc < down_threshold`; tính **+1 rep** khi `góc > up_threshold`
+  VÀ trước đó đã giữ DOWN ≥ `MIN_DOWN_FRAMES` (1) frame.
+- 2 ngưỡng khác nhau tạo **hysteresis** tự nhiên → không đếm trùng khi tay run quanh ngưỡng.
+- Điểm khớp đôi dùng **trung bình có trọng số theo visibility** → chính xác khi quay nghiêng.
+
+**c) Điểm chất lượng form 0–100** (`_calculate_quality_score`), bắt đầu từ 100:
+```
+− 15 điểm / lỗi severity = error
+−  8 điểm / lỗi severity = warning
+−  3 điểm / lỗi severity = info
+− min(độ_lệch_góc / 5, 10) cho mỗi góc lệch khỏi khoảng lý tưởng
+− 10 điểm nếu chuyển trạng thái giật cục (>2 lần đổi state gần đây)
+→ kẹp [0, 100], rồi LÀM MƯỢT EMA: score = 0.3×mới + 0.7×cũ
+```
+*VD squat lý tưởng: gối 85–95° (đáy ~90°), lưng 150–180°. Lỗi điển hình: gối vượt mũi
+chân (error −15), lưng cong khi xuống <145° (warning −8), squat chưa đủ sâu >105° (warning −8).*
+
+### 5.10 Bảo mật điểm — HMAC server-authoritative (`PoseResultVerifier`)
+
+Điểm **phải do pose service ký**, client không thể tự khai reps/quality:
+```
+1. Pose service tạo token = base64url(JSON{reps, quality_score, exercise_type, issued_at})
+2. Ký: sig = HMAC-SHA256(POSE_SIGNING_SECRET, token)  (hex)
+3. Client chỉ chuyển tiếp {token, sig} cho backend
+4. Backend verify:
+   - tính lại HMAC, so sánh hằng-thời-gian (MessageDigest.isEqual) → chống timing attack
+   - kiểm tra issued_at, |now − issued_at| ≤ 300s → token hết hạn sau 5 phút
+   - reps/quality LẤY TỪ payload đã ký, KHÔNG từ input client
+```
+> `POSE_SIGNING_SECRET` là bí mật chia sẻ giữa backend và pose service. Đây là
+> bất biến an toàn: **không có chữ ký hợp lệ ⇒ không có điểm**.
+
+### 5.11 Dự đoán tiến độ cân nặng (Progress Prediction)
+
+Từ chuỗi `(recordedAt, weightKg)` trong `BodyMetricHistory`:
+
+**a) Tốc độ thay đổi** — hồi quy tuyến tính bình phương tối thiểu (đổi thời gian → tuần):
+```
+rate_kg_per_week = slope(weight ~ week);   R² → độ tin cậy
+< 3 mốc → dùng 2 điểm: (last − first) / số_tuần  (nhãn "ước lượng sơ bộ")
+```
+
+**b) ETA đạt mục tiêu** (dùng `HealthProfile.goalWeightKg`):
+```
+weeks_to_goal = (currentWeight − targetWeightKg) / rate_kg_per_week
+```
+Chỉ hiển thị khi dấu của rate khớp hướng mục tiêu; ngược hướng → cảnh báo "đi sai hướng".
+
+**c) Kỳ vọng theo cân bằng năng lượng** (đối chiếu thực tế ↔ kế hoạch):
+```
+expected_kg_per_week ≈ (intake_avg − TDEE) × 7 / 7700      (7700 kcal ≈ 1 kg mỡ)
+```
+→ kết luận: **đúng tiến độ | nhanh hơn | chậm hơn | chững lại (plateau)**.
+
+**d) Ngưỡng an toàn:** giảm cân ~ −0.5 kg/tuần, tăng cơ ~ +0.25…+0.5 kg/tuần;
+`|rate| > 1% thể trọng/tuần` → cảnh báo "thay đổi quá nhanh".
 
 ---
 
@@ -255,6 +392,8 @@ Block 2+ (tuần 9+) OVERLOAD:   sets = base + 1 + weekInBlock/2,
 4. **Đồng bộ template ↔ personalized:** `PersonalizedPlanDetail.tpd_id` luôn trỏ TrainingPlanDetail hợp lệ; goal đồng bộ qua 2 bảng profile.
 5. **Kinh tế điểm nguyên tử:** đổi thưởng trừ điểm + giảm stock trong 1 `@Transactional`; huỷ thì hoàn lại.
 6. **BMI/BMR/TDEE tự tính:** mọi lần lưu body metric, backend tính lại (không tin client).
+7. **Điểm tư thế do server ký:** reps/quality chỉ được chấp nhận khi có chữ ký HMAC-SHA256 hợp lệ từ pose service (`POSE_SIGNING_SECRET`), token hết hạn sau 5 phút → client không thể bịa điểm.
+8. **Macro & calo do backend tính:** AI chỉ chọn `dish_id`/`exercise_id`; gram, macro, chi phí, calo đốt đều do Java tính từ dữ liệu thật (`foods.*_per_100g`, MET).
 
 ---
 
