@@ -319,7 +319,7 @@ export const adminModules: AdminModuleConfig[] = [
       { name: 'rpeMin',                 label: 'RPE thấp nhất',          type: 'number' },
       { name: 'rpeMax',                 label: 'RPE cao nhất',           type: 'number' },
       { name: 'videoUrl',               label: 'Đường dẫn video' },
-      { name: 'imageUrl',               label: 'Ảnh minh hoạ' },
+      { name: 'imageUrl',               label: 'Ảnh minh hoạ',  type: 'image-upload' },
       { name: 'status',                 label: 'Trạng thái',             type: 'select', options: ['ACTIVE', 'INACTIVE'] },
       { name: 'spinalLoading',          label: 'Tải trọng cột sống',     type: 'boolean' },
       { name: 'kneeDominant',           label: 'Bài tập đầu gối',        type: 'boolean' },
@@ -538,10 +538,33 @@ export const adminService = {
     return unwrapList(response.data);
   },
 
+  /** Upload 1 file ảnh qua /files/upload-image, trả về URL tương đối */
+  async uploadImage(file: File): Promise<string> {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await requestRaw('/files/upload-image', 'POST', fd);
+    const norm = normalizeResponse(res);
+    if (!norm.success) throw new Error(norm.error?.message || 'Upload ảnh thất bại');
+    // Backend trả URL dạng chuỗi hoặc object { url }
+    return typeof norm.data === 'string' ? norm.data : (norm.data as any)?.url ?? (norm.data as any)?.filePath ?? String(norm.data);
+  },
+
+  /** Với module JSON có file đính kèm → upload ảnh trước, thay blob URL bằng URL thật */
+  async resolveImageFiles(payload: Record<string, any>, files?: Record<string, File>): Promise<Record<string, any>> {
+    if (!files || Object.keys(files).length === 0) return payload;
+    const resolved = { ...payload };
+    for (const [fieldName, file] of Object.entries(files)) {
+      const url = await adminService.uploadImage(file);
+      resolved[fieldName] = url;
+    }
+    return resolved;
+  },
+
   async create(module: AdminModuleConfig, payload: Record<string, any>, files?: Record<string, File>) {
     const normalizedPayload = normalizeAdminPayload(module, payload);
     if (module.createMode === 'json') {
-      return normalizeResponse(await apiClient.post(module.endpoint, normalizedPayload));
+      const finalPayload = await adminService.resolveImageFiles(normalizedPayload, files);
+      return normalizeResponse(await apiClient.post(module.endpoint, finalPayload));
     }
     return normalizeResponse(await requestRaw(module.endpoint, 'POST', toFormData(module.createMode, normalizedPayload, files)));
   },
@@ -549,7 +572,8 @@ export const adminService = {
   async update(module: AdminModuleConfig, id: string | number, payload: Record<string, any>, files?: Record<string, File>) {
     const normalizedPayload = normalizeAdminPayload(module, payload);
     if (module.createMode === 'json') {
-      return normalizeResponse(await apiClient.put(`${module.endpoint}/${id}`, normalizedPayload));
+      const finalPayload = await adminService.resolveImageFiles(normalizedPayload, files);
+      return normalizeResponse(await apiClient.put(`${module.endpoint}/${id}`, finalPayload));
     }
     return normalizeResponse(await requestRaw(`${module.endpoint}/${id}`, 'PUT', toFormData(module.createMode, normalizedPayload, files)));
   },
