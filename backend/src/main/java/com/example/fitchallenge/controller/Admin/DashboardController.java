@@ -63,6 +63,15 @@ public class DashboardController {
         return ResponseEntity.ok(dashboardService.getRewardStats(period));
     }
 
+    /**
+     * GET /api/admin/dashboard/ai-stats
+     * Thống kê lượt gọi AI & ước tính token sử dụng (Groq)
+     */
+    @GetMapping("/ai-stats")
+    public ResponseEntity<DashboardDTO.AiStatsResponse> getAiStats() {
+        return ResponseEntity.ok(dashboardService.getAiStats());
+    }
+
 }
 
 

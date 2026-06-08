@@ -31,7 +31,17 @@ import {
 } from '../services/adminService';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-type AdminTab = 'dashboard' | 'dataSeeder' | AdminModuleKey;
+type AdminTab = 'dashboard' | 'dataSeeder' | 'aiStats' | AdminModuleKey;
+
+/* ─── AI Stats types (mirrors backend DashboardDTO) ─────────────────────── */
+interface UserAiUsage { userId: number; fullName: string; email: string; totalCalls: number; }
+interface AiCallLog  { type: string; userName: string; createdAt: string; estimatedTokens: number; }
+interface AiStatsData {
+  totalCallsToday: number; totalCallsThisMonth: number; totalCallsAllTime: number;
+  estimatedTokensToday: number; estimatedTokensThisMonth: number;
+  mealPlanCalls: number; workoutPlanCalls: number; poseEvalCalls: number;
+  topUsers: UserAiUsage[]; recentLogs: AiCallLog[];
+}
 
 /* ─── Nav structure ──────────────────────────────────────────────────────── */
 const NAV: {
@@ -80,6 +90,7 @@ const NAV: {
       { id: 'informationBody', label: 'Hồ sơ thể chất' },
     ],
   },
+  { id: 'aiStats', label: 'Thống kê AI / Token', icon: Zap, single: 'aiStats', accent: 'text-cyan-400' },
   { id: 'seeder', label: 'Nhập dữ liệu mẫu', icon: Zap, single: 'dataSeeder', accent: 'text-fuchsia-400' },
 ];
 
@@ -100,6 +111,7 @@ const TAB_META: Record<string, { title: string; subtitle: string; icon: typeof B
   challengeSubmissions: { title: 'Bài nộp thử thách',     subtitle: 'Bài nộp của người dùng cho từng thử thách', icon: ClipboardList },
   userChallenges:       { title: 'Tham gia thử thách',    subtitle: 'Theo dõi người dùng tham gia thử thách',  icon: Trophy },
   leaderboard:          { title: 'Bảng xếp hạng',         subtitle: 'Xếp hạng người dùng theo điểm & streak', icon: BarChart3 },
+  aiStats:              { title: 'Thống kê AI / Token',  subtitle: 'Lượt gọi Groq, ước tính token & log người dùng', icon: Zap },
   dataSeeder:           { title: 'Nhập dữ liệu mẫu',     subtitle: 'Import dữ liệu mẫu vào hệ thống',         icon: Zap },
 };
 
@@ -780,6 +792,7 @@ export default function AdminPanel() {
   const [openGroups, setOpenGroups]   = useState<Set<string>>(new Set(['people']));
   const [exerciseAudit, setExerciseAudit] = useState<ExerciseMetadataAuditReport | null>(null);
   const [exerciseAuditLoading, setExerciseAuditLoading] = useState(false);
+  const [aiStats, setAiStats] = useState<AiStatsData | null>(null);
 
   // Pagination
   const [currentPage, setCurrentPage]         = useState(0);
@@ -990,6 +1003,10 @@ export default function AdminPanel() {
     try {
       if (activeTab === 'dashboard') {
         setDashboard(await adminService.getDashboard());
+        setRows([]);
+      } else if (activeTab === 'aiStats') {
+        const res = await apiClient.get('/admin/dashboard/ai-stats');
+        if (res.success) setAiStats(res.data as AiStatsData);
         setRows([]);
       } else if (activeTab === 'dataSeeder') {
         setRows([]);
@@ -1330,6 +1347,127 @@ export default function AdminPanel() {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ── AI Stats ── */}
+          {activeTab === 'aiStats' && (
+            <div className="space-y-6">
+              {loading && (
+                <div className="flex items-center justify-center py-20">
+                  <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
+                </div>
+              )}
+              {!loading && aiStats && (
+                <>
+                  {/* KPI cards */}
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    {[
+                      { label: 'Lượt gọi AI hôm nay',    value: aiStats.totalCallsToday.toLocaleString(),    sub: 'Tổng các loại', color: 'text-cyan-400' },
+                      { label: 'Lượt gọi tháng này',      value: aiStats.totalCallsThisMonth.toLocaleString(), sub: 'Kể từ đầu tháng', color: 'text-violet-400' },
+                      { label: 'Token ước tính hôm nay',  value: aiStats.estimatedTokensToday.toLocaleString(), sub: '≈ Groq usage', color: 'text-amber-400' },
+                      { label: 'Token ước tính tháng này', value: aiStats.estimatedTokensThisMonth.toLocaleString(), sub: 'Meal×2k · Workout×2.5k · Pose×0.5k', color: 'text-emerald-400' },
+                    ].map(({ label, value, sub, color }) => (
+                      <div key={label} className="rounded-2xl border border-white/5 bg-white/3 p-5">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">{label}</p>
+                        <p className={`text-3xl font-bold font-grotesk ${color}`}>{value}</p>
+                        <p className="mt-1 text-xs text-slate-500">{sub}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Call type breakdown */}
+                  <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
+                    <h3 className="text-sm font-bold text-slate-300 mb-4 uppercase tracking-widest">Phân loại lượt gọi (All time)</h3>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {[
+                        { label: 'Kế hoạch bữa ăn', count: aiStats.mealPlanCalls,    tokens: aiStats.mealPlanCalls * 2000,    color: 'bg-amber-400' },
+                        { label: 'Kế hoạch tập',     count: aiStats.workoutPlanCalls, tokens: aiStats.workoutPlanCalls * 2500, color: 'bg-emerald-400' },
+                        { label: 'Đánh giá tư thế',  count: aiStats.poseEvalCalls,    tokens: aiStats.poseEvalCalls * 500,    color: 'bg-cyan-400' },
+                      ].map(({ label, count, tokens, color }) => {
+                        const total = aiStats.totalCallsAllTime || 1;
+                        const pct = Math.round(count / total * 100);
+                        return (
+                          <div key={label} className="rounded-xl border border-white/8 bg-white/3 p-4 space-y-2">
+                            <div className="flex justify-between items-baseline">
+                              <span className="text-sm font-medium text-slate-300">{label}</span>
+                              <span className="text-xs text-slate-500">{pct}%</span>
+                            </div>
+                            <p className="text-2xl font-bold text-white">{count.toLocaleString()}</p>
+                            <p className="text-xs text-slate-500">≈ {tokens.toLocaleString()} tokens</p>
+                            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                              <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    {/* Top users */}
+                    <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
+                      <h3 className="text-sm font-bold text-slate-300 mb-4 uppercase tracking-widest">Top người dùng (theo lượt gọi AI)</h3>
+                      {aiStats.topUsers.length === 0 ? (
+                        <p className="text-slate-500 text-sm">Chưa có dữ liệu</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {aiStats.topUsers.map((u, i) => (
+                            <div key={u.userId} className="flex items-center gap-3 rounded-xl bg-white/3 px-3 py-2.5">
+                              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                                i === 0 ? 'bg-amber-400/20 text-amber-400' : i === 1 ? 'bg-slate-400/20 text-slate-300' : 'bg-slate-700/50 text-slate-500'
+                              }`}>{i + 1}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-slate-200 truncate">{u.fullName || u.email}</p>
+                                <p className="text-xs text-slate-500 truncate">{u.email}</p>
+                              </div>
+                              <span className="text-sm font-bold text-cyan-400 flex-shrink-0">{u.totalCalls.toLocaleString()} lần</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Recent logs */}
+                    <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
+                      <h3 className="text-sm font-bold text-slate-300 mb-4 uppercase tracking-widest">Log gần nhất (20 lần)</h3>
+                      {aiStats.recentLogs.length === 0 ? (
+                        <p className="text-slate-500 text-sm">Chưa có dữ liệu</p>
+                      ) : (
+                        <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                          {aiStats.recentLogs.map((log, i) => {
+                            const typeMeta: Record<string, { label: string; cls: string }> = {
+                              MEAL_PLAN:    { label: 'Bữa ăn',    cls: 'bg-amber-400/10 text-amber-400' },
+                              WORKOUT_PLAN: { label: 'Tập luyện', cls: 'bg-emerald-400/10 text-emerald-400' },
+                              POSE_EVAL:    { label: 'Tư thế',    cls: 'bg-cyan-400/10 text-cyan-400' },
+                            };
+                            const m = typeMeta[log.type] ?? { label: log.type, cls: 'bg-slate-700 text-slate-400' };
+                            return (
+                              <div key={i} className="flex items-center gap-2.5 rounded-lg bg-white/2 px-3 py-2">
+                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full flex-shrink-0 ${m.cls}`}>{m.label}</span>
+                                <span className="text-sm text-slate-300 flex-1 truncate">{log.userName}</span>
+                                <span className="text-xs text-slate-500 flex-shrink-0">{log.createdAt}</span>
+                                <span className="text-xs text-slate-600 flex-shrink-0">{log.estimatedTokens.toLocaleString()} tk</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-600 text-center">
+                    * Token ước tính dựa trên trung bình: Kế hoạch bữa ăn ~2 000 tokens, Kế hoạch tập ~2 500 tokens, Đánh giá tư thế ~500 tokens.
+                    Groq free tier: 14 400 req/ngày · 500 000 tokens/ngày · 1 000 000 tokens/phút tùy model.
+                  </p>
+                </>
+              )}
+              {!loading && !aiStats && (
+                <div className="flex flex-col items-center gap-3 py-20 text-slate-500">
+                  <Zap className="h-8 w-8 opacity-30" />
+                  <p className="text-sm">Không thể tải dữ liệu AI stats</p>
+                </div>
+              )}
             </div>
           )}
 

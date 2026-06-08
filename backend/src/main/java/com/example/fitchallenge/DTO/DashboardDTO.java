@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 /**
  * DTOs cho Dashboard Statistics
@@ -357,6 +358,42 @@ public class DashboardDTO {
         private String title;
         private String value;
         private String date;
+    }
+
+    // ── AI / Token Usage Stats ────────────────────────────────────────────
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class AiStatsResponse {
+        // Tổng lượt gọi AI
+        private long totalCallsToday;
+        private long totalCallsThisMonth;
+        private long totalCallsAllTime;
+        // Ước tính token (meal ~2000, workout ~2500, food ~500 token/lần)
+        private long estimatedTokensToday;
+        private long estimatedTokensThisMonth;
+        // Phân loại theo loại AI call
+        private long mealPlanCalls;
+        private long workoutPlanCalls;
+        private long poseEvalCalls;
+        // Top users theo lượt gọi AI
+        private List<UserAiUsage> topUsers;
+        // Log 20 lần gọi gần nhất
+        private List<AiCallLog> recentLogs;
+    }
+
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class UserAiUsage {
+        private Long userId;
+        private String fullName;
+        private String email;
+        private long totalCalls;
+    }
+
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class AiCallLog {
+        private String type;       // MEAL_PLAN / WORKOUT_PLAN / POSE_EVAL
+        private String userName;
+        private String createdAt;
+        private long estimatedTokens;
     }
 }
 

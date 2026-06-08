@@ -37,6 +37,11 @@ public interface DashboardService {
      * Lấy tổng quan dashboard cho user cá nhân
      */
     DashboardDTO.CustomerDashboardResponse getCustomerDashboard(Long userId);
+
+    /**
+     * Thống kê lượt gọi AI + ước tính token Groq
+     */
+    DashboardDTO.AiStatsResponse getAiStats();
 }
 
 

@@ -697,6 +697,180 @@ public class DashboardServiceImpl implements DashboardService {
                 .build();
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // AI / Token Usage Stats
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Ước tính token sử dụng dựa trên loại AI call:
+     *   MEAL_PLAN    ≈ 2 000 tokens / lần
+     *   WORKOUT_PLAN ≈ 2 500 tokens / lần
+     *   POSE_EVAL    ≈ 500  tokens / lần
+     */
+    private static final long TOKENS_MEAL    = 2_000L;
+    private static final long TOKENS_WORKOUT = 2_500L;
+    private static final long TOKENS_POSE    = 500L;
+
+    @Override
+    @Transactional(readOnly = true)
+    public DashboardDTO.AiStatsResponse getAiStats() {
+        LocalDate today = LocalDate.now();
+        LocalDate monthStart = today.withDayOfMonth(1);
+
+        // ── 1. Meal plan calls  (personalized_nutrition_plans) ─────────────
+        List<PersonalizedNutritionPlan> allMealPlans = personalizedNutritionPlanRepository.findAll();
+
+        long mealToday = allMealPlans.stream()
+                .filter(p -> p.getStartDate() != null && p.getStartDate().isEqual(today))
+                .count();
+        long mealMonth = allMealPlans.stream()
+                .filter(p -> p.getStartDate() != null && !p.getStartDate().isBefore(monthStart))
+                .count();
+        long mealAll = allMealPlans.size();
+
+        // ── 2. Workout plan calls  (user_training) ─────────────────────────
+        List<UserTraining> allWorkouts = userTrainingRepository.findAll();
+
+        long workoutToday = allWorkouts.stream()
+                .filter(ut -> ut.getStartDate() != null && ut.getStartDate().isEqual(today))
+                .count();
+        long workoutMonth = allWorkouts.stream()
+                .filter(ut -> ut.getStartDate() != null && !ut.getStartDate().isBefore(monthStart))
+                .count();
+        long workoutAll = allWorkouts.size();
+
+        // ── 3. Pose eval calls  (user_challenges SUCCESS hoặc FAILED — AI đã chấm) ─
+        List<UserChallenge> allUc = userChallengeRepository.findAll();
+
+        long poseToday = allUc.stream()
+                .filter(uc -> uc.getSubmittedAt() != null
+                        && uc.getSubmittedAt().toLocalDate().isEqual(today)
+                        && uc.getStatus() != UserChallenge.UserChallengeStatus.PENDING)
+                .count();
+        long poseMonth = allUc.stream()
+                .filter(uc -> uc.getSubmittedAt() != null
+                        && !uc.getSubmittedAt().toLocalDate().isBefore(monthStart)
+                        && uc.getStatus() != UserChallenge.UserChallengeStatus.PENDING)
+                .count();
+        long poseAll = allUc.stream()
+                .filter(uc -> uc.getStatus() != UserChallenge.UserChallengeStatus.PENDING)
+                .count();
+
+        // ── 4. Totals ───────────────────────────────────────────────────────
+        long totalToday    = mealToday    + workoutToday    + poseToday;
+        long totalMonth    = mealMonth    + workoutMonth    + poseMonth;
+        long totalAllTime  = mealAll      + workoutAll      + poseAll;
+
+        long tokensToday  = mealToday  * TOKENS_MEAL + workoutToday  * TOKENS_WORKOUT + poseToday  * TOKENS_POSE;
+        long tokensMonth  = mealMonth  * TOKENS_MEAL + workoutMonth  * TOKENS_WORKOUT + poseMonth  * TOKENS_POSE;
+
+        // ── 5. Top users by total AI calls ─────────────────────────────────
+        // Đếm meal plan per user
+        Map<Long, Long> mealByUser = allMealPlans.stream()
+                .filter(p -> p.getUser() != null)
+                .collect(Collectors.groupingBy(p -> p.getUser().getId(), Collectors.counting()));
+
+        // Đếm workout per user
+        Map<Long, Long> workoutByUser = allWorkouts.stream()
+                .filter(ut -> ut.getUser() != null)
+                .collect(Collectors.groupingBy(ut -> ut.getUser().getId(), Collectors.counting()));
+
+        // Đếm pose eval per user
+        Map<Long, Long> poseByUser = allUc.stream()
+                .filter(uc -> uc.getUser() != null
+                        && uc.getStatus() != UserChallenge.UserChallengeStatus.PENDING)
+                .collect(Collectors.groupingBy(uc -> uc.getUser().getId(), Collectors.counting()));
+
+        // Gộp
+        Map<Long, Long> totalByUser = new java.util.HashMap<>(mealByUser);
+        workoutByUser.forEach((uid, cnt) -> totalByUser.merge(uid, cnt, Long::sum));
+        poseByUser.forEach((uid, cnt) -> totalByUser.merge(uid, cnt, Long::sum));
+
+        // Build top-10 list
+        List<DashboardDTO.UserAiUsage> topUsers = totalByUser.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+                .limit(10)
+                .map(entry -> {
+                    User u = userRepository.findById(entry.getKey()).orElse(null);
+                    if (u == null) return null;
+                    return DashboardDTO.UserAiUsage.builder()
+                            .userId(u.getId())
+                            .fullName(u.getFullName() != null ? u.getFullName() : u.getUserName())
+                            .email(u.getEmail())
+                            .totalCalls(entry.getValue())
+                            .build();
+                })
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+
+        // ── 6. Recent 20 logs ───────────────────────────────────────────────
+        // Tổng hợp 3 nguồn → sắp xếp theo ngày giảm dần → lấy 20
+        List<DashboardDTO.AiCallLog> recentLogs = new ArrayList<>();
+
+        // Meal plan logs
+        allMealPlans.stream()
+                .filter(p -> p.getStartDate() != null && p.getUser() != null)
+                .forEach(p -> {
+                    String name = p.getUser().getFullName() != null
+                            ? p.getUser().getFullName() : p.getUser().getUserName();
+                    recentLogs.add(DashboardDTO.AiCallLog.builder()
+                            .type("MEAL_PLAN")
+                            .userName(name)
+                            .createdAt(p.getStartDate().toString())
+                            .estimatedTokens(TOKENS_MEAL)
+                            .build());
+                });
+
+        // Workout plan logs
+        allWorkouts.stream()
+                .filter(ut -> ut.getStartDate() != null && ut.getUser() != null)
+                .forEach(ut -> {
+                    String name = ut.getUser().getFullName() != null
+                            ? ut.getUser().getFullName() : ut.getUser().getUserName();
+                    recentLogs.add(DashboardDTO.AiCallLog.builder()
+                            .type("WORKOUT_PLAN")
+                            .userName(name)
+                            .createdAt(ut.getStartDate().toString())
+                            .estimatedTokens(TOKENS_WORKOUT)
+                            .build());
+                });
+
+        // Pose eval logs
+        allUc.stream()
+                .filter(uc -> uc.getSubmittedAt() != null
+                        && uc.getUser() != null
+                        && uc.getStatus() != UserChallenge.UserChallengeStatus.PENDING)
+                .forEach(uc -> {
+                    String name = uc.getUser().getFullName() != null
+                            ? uc.getUser().getFullName() : uc.getUser().getUserName();
+                    recentLogs.add(DashboardDTO.AiCallLog.builder()
+                            .type("POSE_EVAL")
+                            .userName(name)
+                            .createdAt(uc.getSubmittedAt().toLocalDate().toString())
+                            .estimatedTokens(TOKENS_POSE)
+                            .build());
+                });
+
+        // Sắp xếp gần nhất lên đầu, lấy 20
+        List<DashboardDTO.AiCallLog> sortedLogs = recentLogs.stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .limit(20)
+                .collect(Collectors.toList());
+
+        return DashboardDTO.AiStatsResponse.builder()
+                .totalCallsToday(totalToday)
+                .totalCallsThisMonth(totalMonth)
+                .totalCallsAllTime(totalAllTime)
+                .estimatedTokensToday(tokensToday)
+                .estimatedTokensThisMonth(tokensMonth)
+                .mealPlanCalls(mealAll)
+                .workoutPlanCalls(workoutAll)
+                .poseEvalCalls(poseAll)
+                .topUsers(topUsers)
+                .recentLogs(sortedLogs)
+                .build();
+    }
+
     /** Helper: sum một field BigDecimal từ list */
     @SuppressWarnings("unchecked")
     private <T> BigDecimal sum(List<T> list, java.util.function.Function<T, BigDecimal> getter) {
