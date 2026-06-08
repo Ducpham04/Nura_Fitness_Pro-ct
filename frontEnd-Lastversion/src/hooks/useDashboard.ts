@@ -1,7 +1,11 @@
 // Dashboard Data Hook
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { userService, type DashboardData } from '../services/userService';
 import { useAuthContext } from '../context/AuthContext';
+
+// Khoảng tối thiểu giữa 2 lần refetch do quay lại tab (tránh spam 2 API mỗi lần
+// chuyển tab). workout-completed vẫn refetch tức thì, không bị chặn bởi guard này.
+const VISIBILITY_REFETCH_MIN_MS = 30_000;
 
 interface UseDashboardReturn {
   data: DashboardData | null;
@@ -16,6 +20,9 @@ export function useDashboard(): UseDashboardReturn {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Mốc thời gian lần fetch thành công gần nhất — dùng để chặn refetch quá dày
+  // khi user liên tục chuyển qua lại tab.
+  const lastFetchRef = useRef<number>(0);
 
   const fetchData = useCallback(async () => {
     if (!user || !isAuthenticated) {
@@ -31,6 +38,7 @@ export function useDashboard(): UseDashboardReturn {
 
       if (response.success && response.data) {
         const todayWorkouts = await userService.getTodayWorkouts(user.id);
+        lastFetchRef.current = Date.now();
         setData({
           ...response.data,
           todayWorkouts,
@@ -68,12 +76,14 @@ export function useDashboard(): UseDashboardReturn {
     return () => window.removeEventListener('workout-completed', onWorkoutCompleted);
   }, [fetchData]);
 
-  // Refresh khi user quay lại tab (chuyển từ WorkoutTab → Dashboard)
+  // Refresh khi user quay lại tab (chuyển từ WorkoutTab → Dashboard).
+  // Chỉ refetch nếu đã quá VISIBILITY_REFETCH_MIN_MS kể từ lần fetch gần nhất —
+  // tránh gọi 2 API mỗi lần liếc qua tab khác rồi quay lại.
   useEffect(() => {
     const onVisibility = () => {
-      if (document.visibilityState === 'visible' && isAuthenticated && user) {
-        fetchData();
-      }
+      if (document.visibilityState !== 'visible' || !isAuthenticated || !user) return;
+      if (Date.now() - lastFetchRef.current < VISIBILITY_REFETCH_MIN_MS) return;
+      fetchData();
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);

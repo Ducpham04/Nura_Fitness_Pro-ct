@@ -682,14 +682,19 @@ export default function HomePage() {
           <div className="divide-y divide-white/[0.04]">
             {todayWorkouts.map((ex: any) => (
               <div key={ex.id} className="px-5 py-3.5 flex items-center gap-3">
-                {/* Ảnh hoặc icon */}
-                <div className={`w-10 h-10 rounded-xl overflow-hidden shrink-0 ${ex.done ? 'opacity-50' : ''}`}>
-                  {ex.imageUrl ? (
-                    <img src={ex.imageUrl} alt={ex.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className={`w-full h-full flex items-center justify-center ${ex.done ? 'bg-lime/10' : 'bg-white/[0.06]'}`}>
-                      {ex.done ? <Check className="w-4 h-4 text-lime" /> : <Dumbbell className="w-4 h-4 text-neutral-500" />}
-                    </div>
+                {/* Ảnh hoặc icon — icon luôn nằm dưới làm fallback; ảnh đè lên,
+                    nếu URL lỗi (404) onError ẩn ảnh để lộ icon (không còn ảnh vỡ). */}
+                <div className={`relative w-10 h-10 rounded-xl overflow-hidden shrink-0 ${ex.done ? 'opacity-50' : ''}`}>
+                  <div className={`absolute inset-0 flex items-center justify-center ${ex.done ? 'bg-lime/10' : 'bg-white/[0.06]'}`}>
+                    {ex.done ? <Check className="w-4 h-4 text-lime" /> : <Dumbbell className="w-4 h-4 text-neutral-500" />}
+                  </div>
+                  {ex.imageUrl && (
+                    <img
+                      src={ex.imageUrl}
+                      alt={ex.name}
+                      className="relative w-full h-full object-cover"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">

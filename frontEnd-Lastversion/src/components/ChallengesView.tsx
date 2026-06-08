@@ -68,6 +68,14 @@ const imgFor = (id: number, url?: string) => {
   return FALLBACK_IMAGES[Math.abs(id) % FALLBACK_IMAGES.length];
 };
 
+// Ảnh lỗi (404/CORS) → tự đổi sang ảnh dự phòng Unsplash. Guard data-fbk tránh lặp.
+const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>, id: number) => {
+  const img = e.currentTarget;
+  if (img.dataset.fbk) return;
+  img.dataset.fbk = '1';
+  img.src = FALLBACK_IMAGES[Math.abs(id) % FALLBACK_IMAGES.length];
+};
+
 const pad = (n: number) => String(Math.max(0, n)).padStart(2, '0');
 
 /** Tính thời gian còn lại tới mốc `target`, cập nhật mỗi giây. */
@@ -389,7 +397,7 @@ function ChallengesView() {
         <div className="grid lg:grid-cols-3 gap-6 pb-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="relative h-80 rounded-3xl overflow-hidden">
-              <img src={c.image} alt={c.name} className="w-full h-full object-cover" />
+              <img src={c.image} alt={c.name} onError={(e) => handleImgError(e, c.id)} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/40 to-transparent" />
               <div className="absolute top-5 right-5">
                 {c.status === 'active' && <Countdown target={c.ends_at} size="sm" />}
@@ -617,6 +625,7 @@ function ChallengesView() {
         >
           <img
             src={featured.image} alt={featured.name}
+            onError={(e) => handleImgError(e, featured.id)}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
@@ -733,7 +742,7 @@ function ChallengesView() {
               className="text-left group rounded-3xl overflow-hidden border border-white/[0.07] bg-white/[0.03] hover:border-lime/25 transition-all duration-300 hover:-translate-y-1 flex flex-col"
             >
               <div className="relative h-44">
-                <img src={c.image} alt={c.name} loading="lazy"
+                <img src={c.image} alt={c.name} loading="lazy" onError={(e) => handleImgError(e, c.id)}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/30 to-transparent" />
 
