@@ -285,6 +285,9 @@ public class UserChallengeImp implements UserChallengeService {
         boolean passed = overallScore >= passScore && confidence >= minConfidence;
 
         // Lưu kết quả vào UserChallenge
+        // Trạng thái TRƯỚC khi cập nhật → cộng điểm idempotent (chỉ lần đạt đầu)
+        boolean wasSuccessBefore = uc.getStatus() == UserChallenge.UserChallengeStatus.SUCCESS;
+
         uc.setVideoUrl(imageUrl);
         uc.setScore(overallScore);
         uc.setConfidence(confidence);
@@ -296,6 +299,10 @@ public class UserChallengeImp implements UserChallengeService {
         }
         userChallengeRepository.save(uc);
 
+        // Cộng điểm thưởng vào số dư user (chỉ lần đạt đầu tiên)
+        int totalPoints = awardRewardPointsOnce(uc, challenge, passed, wasSuccessBefore);
+        boolean awarded = passed && !wasSuccessBefore;
+
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("ucId", uc.getUcId());
         data.put("challengeId", challenge.getId());
@@ -305,7 +312,8 @@ public class UserChallengeImp implements UserChallengeService {
         data.put("passScore", passScore);
         data.put("passed", passed);
         data.put("imageUrl", imageUrl);
-        data.put("rewardPoints", passed ? challenge.getRewardPoints() : 0);
+        data.put("rewardPoints", awarded ? challenge.getRewardPoints() : 0);
+        data.put("totalPoints", totalPoints);
         data.put("analysis", result); // corrections, key_findings, risk_level, notes
         return new NotificationResponse(true,
                 passed ? "Chúc mừng! Bạn đã vượt qua thử thách 🏆"
@@ -341,6 +349,8 @@ public class UserChallengeImp implements UserChallengeService {
         payload.put("exercise_type", exerciseType);
         payload.put("source", "realtime-mediapipe");
 
+        boolean wasSuccessBefore = uc.getStatus() == UserChallenge.UserChallengeStatus.SUCCESS;
+
         uc.setScore(score);
         uc.setKeypointsPayload(safeJson(payload));
         uc.setSubmittedAt(ZonedDateTime.now());
@@ -349,6 +359,9 @@ public class UserChallengeImp implements UserChallengeService {
             uc.setCompletedAt(ZonedDateTime.now());
         }
         userChallengeRepository.save(uc);
+
+        int totalPoints = awardRewardPointsOnce(uc, challenge, passed, wasSuccessBefore);
+        boolean awarded = passed && !wasSuccessBefore;
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("ucId", uc.getUcId());
@@ -359,7 +372,8 @@ public class UserChallengeImp implements UserChallengeService {
         data.put("passScore", passScore);
         data.put("targetReps", targetReps);
         data.put("passed", passed);
-        data.put("rewardPoints", passed ? challenge.getRewardPoints() : 0);
+        data.put("rewardPoints", awarded ? challenge.getRewardPoints() : 0);
+        data.put("totalPoints", totalPoints);
         return new NotificationResponse(true,
                 passed ? "Chúc mừng! Bạn đã vượt qua thử thách 🏆"
                        : "Chưa đạt ngưỡng. Tập thêm và thử lại nhé!",
@@ -367,6 +381,26 @@ public class UserChallengeImp implements UserChallengeService {
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
+
+    /**
+     * Cộng điểm thưởng của challenge vào số dư User.points — CHỈ lần đạt đầu tiên.
+     * Idempotent: nếu UserChallenge đã ở trạng thái SUCCESS trước đó thì không
+     * cộng lại (chống farm điểm bằng cách thi lại nhiều lần).
+     * @return số dư điểm mới của user (để trả về cho FE hiển thị).
+     */
+    private int awardRewardPointsOnce(UserChallenge uc, Challenges challenge,
+                                      boolean passedNow, boolean wasSuccessBefore) {
+        User user = uc.getUser();
+        int balance = (user != null && user.getPoints() != null) ? user.getPoints() : 0;
+        if (!passedNow || wasSuccessBefore || user == null || challenge == null) return balance;
+        Integer rp = challenge.getRewardPoints();
+        if (rp == null || rp <= 0) return balance;
+        balance += rp;
+        user.setPoints(balance);
+        userRepository.save(user);
+        return balance;
+    }
+
     private double readThreshold(String aiRulesJson, String key, double fallback) {
         if (aiRulesJson == null || aiRulesJson.isBlank()) return fallback;
         try {
