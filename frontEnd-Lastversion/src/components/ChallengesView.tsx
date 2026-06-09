@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo, memo, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import {
   Search, Trophy, Clock, Users, Play, CheckCircle, ChevronRight,
-  Zap, Award, Loader2, Flame, Target, ArrowLeft, Crown, Camera, Gift,
+  Zap, Award, Loader2, Flame, Target, ArrowLeft, Crown, Camera, Gift, Coins,
 } from 'lucide-react';
 import { challengeService, type Challenge, type UserChallenge, type ChallengeAttemptResult } from '../services/challengeService';
+import { rewardService } from '../services/rewardService';
 import { API_CONFIG } from '../config/api';
 import { useAuthContext } from '../context/AuthContext';
 
@@ -193,6 +194,15 @@ function ChallengesView() {
   const [attemptResult, setAttemptResult] = useState<ChallengeAttemptResult | null>(null);
   const [cameraTarget, setCameraTarget] = useState<ChallengeUI | null>(null); // challenge đang thi realtime
   const [showRewardShop, setShowRewardShop] = useState(false);
+  const [walletPoints, setWalletPoints] = useState<number | null>(null);
+
+  // Số dư ví điểm (tiêu được) — khác với "điểm đang đua"
+  const loadBalance = async () => {
+    if (!user?.id) return;
+    const res = await rewardService.getBalance(user.id);
+    if (res.success && typeof res.data === 'number') setWalletPoints(res.data);
+  };
+  useEffect(() => { loadBalance(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
 
   const mapDifficulty = (difficulty?: string): ChallengeUI['difficulty'] => {
     if (difficulty === 'EASY') return 'beginner';
@@ -601,12 +611,22 @@ function ChallengesView() {
           </h1>
           <p className="text-neutral-400 text-sm mt-2">Thi đua cùng cộng đồng — chứng minh phong độ, giành phần thưởng.</p>
         </div>
-        <button
-          onClick={() => setShowRewardShop(true)}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-lime/10 border border-lime/30 px-4 py-2 text-lime text-xs font-bold hover:bg-lime/15 transition-all"
-        >
-          <Gift className="w-3.5 h-3.5" /> Đổi thưởng
-        </button>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          {/* Số dư ví điểm thật (tiêu được) — phân biệt với "điểm đang đua" */}
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.05] border border-white/[0.1] px-3 py-1" title="Số dư điểm tiêu được">
+            <Coins className="w-3.5 h-3.5 text-lime" />
+            <span className="text-white font-grotesk font-bold text-sm tabular-nums">
+              {walletPoints != null ? walletPoints.toLocaleString('vi-VN') : '—'}
+            </span>
+            <span className="text-neutral-500 text-[11px]">điểm ví</span>
+          </span>
+          <button
+            onClick={() => setShowRewardShop(true)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-lime/10 border border-lime/30 px-4 py-2 text-lime text-xs font-bold hover:bg-lime/15 transition-all"
+          >
+            <Gift className="w-3.5 h-3.5" /> Đổi thưởng
+          </button>
+        </div>
       </motion.div>
 
       {/* Stats strip cá nhân */}
@@ -614,7 +634,7 @@ function ChallengesView() {
         {[
           { label: 'Đang tham gia', value: joinedCount, icon: Flame, color: 'text-orange-400', ring: 'bg-orange-400/10 border-orange-400/20' },
           { label: 'Đã hoàn thành', value: doneCount, icon: CheckCircle, color: 'text-lime', ring: 'bg-lime/10 border-lime/20' },
-          { label: 'Điểm đang đua', value: pointsAtStake, icon: Trophy, color: 'text-electric', ring: 'bg-electric/10 border-electric/20' },
+          { label: 'Điểm có thể giành', value: pointsAtStake, icon: Trophy, color: 'text-electric', ring: 'bg-electric/10 border-electric/20' },
         ].map(({ label, value, icon: Icon, color, ring }) => (
           <div key={label} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 flex flex-col items-center text-center">
             <div className={`w-9 h-9 rounded-xl border flex items-center justify-center mb-2 ${ring}`}>
@@ -809,7 +829,7 @@ function ChallengesView() {
 
       {showRewardShop && user && (
         <Suspense fallback={null}>
-          <RewardShop userId={user.id} onClose={() => setShowRewardShop(false)} />
+          <RewardShop userId={user.id} onClose={() => { setShowRewardShop(false); loadBalance(); }} />
         </Suspense>
       )}
     </motion.div>
