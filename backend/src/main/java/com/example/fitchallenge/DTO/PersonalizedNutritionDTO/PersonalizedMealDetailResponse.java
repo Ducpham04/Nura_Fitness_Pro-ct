@@ -17,6 +17,7 @@ public class PersonalizedMealDetailResponse {
     private Integer dayNumber;
     private String mealType;
     private String mealName;
+    private String imageUrl; // Ảnh đại diện món (ưu tiên dish, fallback food)
     /** Legacy AI JSON snapshot; preferred: {@link #mealItems}. */
     private String mealItemsJson;
 

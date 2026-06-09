@@ -13,11 +13,21 @@ import { useAuthContext } from '../context/AuthContext';
 import AIFoodScanner from './AIFoodScanner';
 import CyberpunkMealModal from './CyberpunkMealModal';
 import { useSearchParams } from 'react-router-dom';
+import { API_CONFIG } from '../config/api';
 
 interface Props { budget: number; }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const pct = (v: number, g: number) => g ? Math.min(100, Math.round(v / g * 100)) : 0;
+
+// Ảnh dish/food: URL tuyệt đối giữ nguyên; path tương đối ghép base backend.
+const MEAL_IMG_FALLBACK = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200';
+const resolveMealImg = (url?: string): string | undefined => {
+  if (!url || url.length < 5) return undefined;
+  if (/^(https?:|blob:|data:)/.test(url)) return url;
+  const clean = url.startsWith('/') ? url.slice(1) : url;
+  return `${API_CONFIG.BASE_URL}/${clean}`;
+};
 const VI_DAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const VI_DAYS_FULL = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
 
@@ -310,7 +320,8 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
             carbs: Math.round((m.totalCarbs ?? 0) * 10) / 10,
             fat: Math.round((m.totalFat ?? 0) * 10) / 10,
             price: m.estimatedCost ?? 0,
-            imageUrl: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200',
+            // Ảnh thật từ dish/food trong data backend; chỉ fallback khi không có
+            imageUrl: resolveMealImg(m.imageUrl) ?? MEAL_IMG_FALLBACK,
             mealType: type.toLowerCase() as any,
             isEaten: m.wasEaten || false,
             isInStock: ingredients.some(i => i.fromInventory),

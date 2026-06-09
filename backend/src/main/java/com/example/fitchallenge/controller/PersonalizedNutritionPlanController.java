@@ -402,6 +402,21 @@ public class PersonalizedNutritionPlanController {
                 .build();
     }
 
+    /** Ảnh đại diện bữa ăn: ưu tiên ảnh món (dish), fallback ảnh nguyên liệu (food). */
+    private String pickMealImage(PersonalizedMealDetail meal) {
+        if (meal == null || meal.getMealItems() == null) return null;
+        String foodImg = null;
+        for (PersonalizedMealItem mi : meal.getMealItems()) {
+            if (mi.getDish() != null && mi.getDish().getImageUrl() != null && !mi.getDish().getImageUrl().isBlank()) {
+                return mi.getDish().getImageUrl();
+            }
+            if (foodImg == null && mi.getFood() != null && mi.getFood().getImageUrl() != null && !mi.getFood().getImageUrl().isBlank()) {
+                foodImg = mi.getFood().getImageUrl();
+            }
+        }
+        return foodImg;
+    }
+
     private PersonalizedMealDetailResponse toMealDetailResponse(PersonalizedMealDetail meal) {
         if (meal == null) {
             return null;
@@ -416,6 +431,7 @@ public class PersonalizedNutritionPlanController {
                 .dayNumber(meal.getDayNumber())
                 .mealType(meal.getMealType() != null ? meal.getMealType().name() : null)
                 .mealName(suggestMealName(meal, mealItems))
+                .imageUrl(pickMealImage(meal))
                 .mealItemsJson(meal.getMealItemsJson())
                 .mealItems(mealItems)
                 .totalCalories(meal.getTotalCalories())
