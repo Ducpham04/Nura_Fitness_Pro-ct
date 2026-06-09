@@ -2,13 +2,14 @@ import { useState, useEffect, useMemo, memo, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import {
   Search, Trophy, Clock, Users, Play, CheckCircle, ChevronRight,
-  Zap, Award, Loader2, Flame, Target, ArrowLeft, Crown, Camera,
+  Zap, Award, Loader2, Flame, Target, ArrowLeft, Crown, Camera, Gift,
 } from 'lucide-react';
 import { challengeService, type Challenge, type UserChallenge, type ChallengeAttemptResult } from '../services/challengeService';
 import { API_CONFIG } from '../config/api';
 import { useAuthContext } from '../context/AuthContext';
 
 const ChallengeCameraModal = lazy(() => import('./ChallengeCameraModal'));
+const RewardShop = lazy(() => import('./RewardShop'));
 
 // Map challenge -> exercise_type của fitness-ai-service (push-up|squat|pull-up|sit-up|plank)
 function exerciseTypeFor(c: { name: string; exercise: string }): string {
@@ -191,6 +192,7 @@ function ChallengesView() {
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [attemptResult, setAttemptResult] = useState<ChallengeAttemptResult | null>(null);
   const [cameraTarget, setCameraTarget] = useState<ChallengeUI | null>(null); // challenge đang thi realtime
+  const [showRewardShop, setShowRewardShop] = useState(false);
 
   const mapDifficulty = (difficulty?: string): ChallengeUI['difficulty'] => {
     if (difficulty === 'EASY') return 'beginner';
@@ -590,13 +592,21 @@ function ChallengesView() {
     <motion.div variants={containerStagger} initial="hidden" animate="show" className="space-y-7 animate-fade-in">
 
       {/* Eyebrow */}
-      <motion.div variants={fadeUp} className="relative pl-4">
-        <div className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-lime" />
-        <p className="text-lime text-[10px] font-bold uppercase tracking-[0.28em] mb-1.5">Đấu trường</p>
-        <h1 className="font-grotesk font-bold italic uppercase text-white text-2xl sm:text-[2rem] leading-[0.92] tracking-tight">
-          Thử thách
-        </h1>
-        <p className="text-neutral-400 text-sm mt-2">Thi đua cùng cộng đồng — chứng minh phong độ, giành phần thưởng.</p>
+      <motion.div variants={fadeUp} className="relative pl-4 flex items-start justify-between gap-4">
+        <div>
+          <div className="absolute left-0 top-1 bottom-1 w-1 rounded-full bg-lime" />
+          <p className="text-lime text-[10px] font-bold uppercase tracking-[0.28em] mb-1.5">Đấu trường</p>
+          <h1 className="font-grotesk font-bold italic uppercase text-white text-2xl sm:text-[2rem] leading-[0.92] tracking-tight">
+            Thử thách
+          </h1>
+          <p className="text-neutral-400 text-sm mt-2">Thi đua cùng cộng đồng — chứng minh phong độ, giành phần thưởng.</p>
+        </div>
+        <button
+          onClick={() => setShowRewardShop(true)}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-lime/10 border border-lime/30 px-4 py-2 text-lime text-xs font-bold hover:bg-lime/15 transition-all"
+        >
+          <Gift className="w-3.5 h-3.5" /> Đổi thưởng
+        </button>
       </motion.div>
 
       {/* Stats strip cá nhân */}
@@ -795,6 +805,12 @@ function ChallengesView() {
             </motion.button>
           ))}
         </div>
+      )}
+
+      {showRewardShop && user && (
+        <Suspense fallback={null}>
+          <RewardShop userId={user.id} onClose={() => setShowRewardShop(false)} />
+        </Suspense>
       )}
     </motion.div>
   );
