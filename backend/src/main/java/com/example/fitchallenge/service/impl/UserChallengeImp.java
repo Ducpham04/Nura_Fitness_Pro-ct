@@ -286,7 +286,7 @@ public class UserChallengeImp implements UserChallengeService {
 
         // Lưu kết quả vào UserChallenge
         // Trạng thái TRƯỚC khi cập nhật → cộng điểm idempotent (chỉ lần đạt đầu)
-        boolean wasSuccessBefore = uc.getStatus() == UserChallenge.UserChallengeStatus.SUCCESS;
+        boolean alreadyAwarded = Boolean.TRUE.equals(uc.getPointsAwarded());
 
         uc.setVideoUrl(imageUrl);
         uc.setScore(overallScore);
@@ -300,8 +300,8 @@ public class UserChallengeImp implements UserChallengeService {
         userChallengeRepository.save(uc);
 
         // Cộng điểm thưởng vào số dư user (chỉ lần đạt đầu tiên)
-        int totalPoints = awardRewardPointsOnce(uc, challenge, passed, wasSuccessBefore);
-        boolean awarded = passed && !wasSuccessBefore;
+        int totalPoints = awardRewardPointsOnce(uc, challenge, passed);
+        boolean awarded = passed && !alreadyAwarded;
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("ucId", uc.getUcId());
@@ -349,7 +349,7 @@ public class UserChallengeImp implements UserChallengeService {
         payload.put("exercise_type", exerciseType);
         payload.put("source", "realtime-mediapipe");
 
-        boolean wasSuccessBefore = uc.getStatus() == UserChallenge.UserChallengeStatus.SUCCESS;
+        boolean alreadyAwarded = Boolean.TRUE.equals(uc.getPointsAwarded());
 
         uc.setScore(score);
         uc.setKeypointsPayload(safeJson(payload));
@@ -360,8 +360,8 @@ public class UserChallengeImp implements UserChallengeService {
         }
         userChallengeRepository.save(uc);
 
-        int totalPoints = awardRewardPointsOnce(uc, challenge, passed, wasSuccessBefore);
-        boolean awarded = passed && !wasSuccessBefore;
+        int totalPoints = awardRewardPointsOnce(uc, challenge, passed);
+        boolean awarded = passed && !alreadyAwarded;
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("ucId", uc.getUcId());
@@ -388,11 +388,11 @@ public class UserChallengeImp implements UserChallengeService {
      * cộng lại (chống farm điểm bằng cách thi lại nhiều lần).
      * @return số dư điểm mới của user (để trả về cho FE hiển thị).
      */
-    private int awardRewardPointsOnce(UserChallenge uc, Challenges challenge,
-                                      boolean passedNow, boolean wasSuccessBefore) {
+    private int awardRewardPointsOnce(UserChallenge uc, Challenges challenge, boolean passedNow) {
         User user = uc.getUser();
         int balance = (user != null && user.getPoints() != null) ? user.getPoints() : 0;
-        if (!passedNow || wasSuccessBefore || user == null || challenge == null) return balance;
+        if (!passedNow || user == null || challenge == null) return balance;
+        if (Boolean.TRUE.equals(uc.getPointsAwarded())) return balance; // đã cộng rồi → bỏ qua
         Integer rp = challenge.getRewardPoints();
         if (rp == null || rp <= 0) return balance;
         // Ví tiêu được (đổi thưởng trừ vào đây)
@@ -402,7 +402,9 @@ public class UserChallengeImp implements UserChallengeService {
         // trước khi cộng (≈ điểm đã tích) để không tụt level.
         int lvlPts = user.getLevelPoints() != null ? user.getLevelPoints() : (balance - rp);
         user.setLevelPoints(lvlPts + rp);
+        uc.setPointsAwarded(true);
         userRepository.save(user);
+        userChallengeRepository.save(uc);
         return balance;
     }
 

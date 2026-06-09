@@ -72,6 +72,10 @@ public class UserChallenge {
     @Column(name = "score")
     private Integer score;
 
+    /** 🔹 Đã cộng điểm thưởng vào ví user chưa — chống cộng trùng (idempotent). */
+    @Column(name = "points_awarded")
+    private Boolean pointsAwarded = false;
+
     /** 🔹 Độ tin cậy của mô hình AI, có thể từ 0.0000 → 1.0000 */
     @Column(name = "confidence")
     private Double confidence;
