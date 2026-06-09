@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, memo, type ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, memo, type ChangeEvent } from 'react';
 import {
   Play,
   X,
@@ -384,7 +384,6 @@ function TrainingView() {
   const [swapping, setSwapping] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [sessionData, setSessionData] = useState<SessionData>({ reps: 0, caloriesBurned: 0, avgRepTime: 0 });
-  const [formAlert, setFormAlert] = useState<string | null>(null);
   const [scheduleExercises, setScheduleExercises] = useState<TrainingExercise[]>([]);
   const [selectedDay, setSelectedDay] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -499,9 +498,46 @@ function TrainingView() {
     return () => clearInterval(timerInterval);
   }, [cameraActive]);
 
+  // ── Audio cue: beep khi xong set / đếm ngược / hết giờ nghỉ ──
+  // Web Audio API (không cần file âm thanh), tôn trọng soundEnabled.
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const playCue = useCallback((kind: 'set' | 'tick' | 'rest-done') => {
+    if (!soundEnabled) return;
+    try {
+      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') void ctx.resume();
+      const beep = (freq: number, at: number, dur: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const t0 = ctx.currentTime + at;
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(0.3, t0 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(t0); osc.stop(t0 + dur + 0.02);
+      };
+      if (kind === 'set') beep(660, 0, 0.18);                         // xong set: 1 beep
+      else if (kind === 'tick') beep(440, 0, 0.08);                   // đếm ngược: tick nhẹ
+      else { beep(523, 0, 0.12); beep(659, 0.14, 0.12); beep(784, 0.28, 0.24); } // hết nghỉ: 3 nốt lên
+    } catch { /* ignore */ }
+  }, [soundEnabled]);
+
+  // Beep "hết giờ nghỉ" đúng lúc rest kết thúc (về 0 hoặc bấm bỏ qua)
+  const wasRestingRef = useRef(false);
+  useEffect(() => {
+    if (wasRestingRef.current && !isResting) playCue('rest-done');
+    wasRestingRef.current = isResting;
+  }, [isResting, playCue]);
+
   // Rest countdown timer
   useEffect(() => {
     if (!isResting || restCountdown <= 0) return;
+    if (restCountdown <= 3) playCue('tick'); // tick 3 giây cuối
     const t = setTimeout(() => {
       setRestCountdown(c => {
         if (c <= 1) { setIsResting(false); return 0; }
@@ -509,7 +545,7 @@ function TrainingView() {
       });
     }, 1000);
     return () => clearTimeout(t);
-  }, [isResting, restCountdown]);
+  }, [isResting, restCountdown, playCue]);
 
   // Mở panel đổi bài, load alternatives ngay lập tức
   const openSwap = async (ex: TrainingExercise) => {
@@ -581,7 +617,6 @@ function TrainingView() {
     setActiveExercise(ex);
     setCameraActive(true);
     setSessionData({ reps: 0, caloriesBurned: 0, avgRepTime: 0 });
-    setFormAlert(null);
     setSaveError(null);
     setCurrentSet(0);
     setSessionTime(0);
@@ -725,6 +760,7 @@ function TrainingView() {
 
   const completeSet = () => {
     if (!activeExercise) return;
+    playCue('set');
     const targetSets = activeExercise.targetSets || 1;
     const repsThisSet = currentRepInput || activeExercise.targetReps || 0;
     const nextSet = Math.min(targetSets, currentSet + 1);
@@ -792,7 +828,6 @@ function TrainingView() {
     const targetSets   = activeExercise.targetSets || parseInt(activeExercise.sets.split('x')[0]) || 3;
     const targetReps   = activeExercise.targetReps || parseInt(activeExercise.sets.split('x')[1]) || 10;
     const allSetsDone  = currentSet >= targetSets;
-    const setProgress  = Math.round((currentSet / targetSets) * 100);
     const restPct      = activeExercise.restTime ? Math.round((restCountdown / activeExercise.restTime) * 100) : 0;
     const exerciseName = i18n.language === 'vi' ? (activeExercise as any).nameVi || activeExercise.name : activeExercise.name;
     const parsed       = parseNotes(activeExercise.notes);
@@ -819,9 +854,19 @@ function TrainingView() {
             <span className="text-white font-grotesk font-bold text-sm tabular-nums">{formatTime(sessionTime)}</span>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <span className="text-neutral-500 text-xs">{activeExercise.estimatedCalories || 0}</span>
-            <Flame className="w-3.5 h-3.5 text-orange-400" />
+          <div className="flex items-center gap-2">
+            {/* Bật/tắt âm thanh (beep xong set, hết giờ nghỉ) */}
+            <button
+              onClick={() => setSoundEnabled(s => !s)}
+              title={soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
+              className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
+            >
+              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+            <div className="flex items-center gap-1.5">
+              <span className="text-neutral-500 text-xs">{activeExercise.estimatedCalories || 0}</span>
+              <Flame className="w-3.5 h-3.5 text-orange-400" />
+            </div>
           </div>
         </div>
 
@@ -829,8 +874,16 @@ function TrainingView() {
         <div className="px-5 pb-4 shrink-0">
           <div className="flex items-start gap-3">
             {activeExercise.imageUrl && (
-              <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-white/[0.08]">
-                <img src={activeExercise.imageUrl} alt={exerciseName} className="w-full h-full object-cover opacity-80" />
+              <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-white/[0.08] bg-white/[0.04]">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Dumbbell className="w-5 h-5 text-neutral-600" />
+                </div>
+                <img
+                  src={activeExercise.imageUrl}
+                  alt={exerciseName}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  className="relative w-full h-full object-cover opacity-80"
+                />
               </div>
             )}
             <div className="flex-1 min-w-0">
