@@ -81,6 +81,7 @@ public class UserServiceImpl implements UserService {
         user.setRole(role);
         user.setStatus("active"); // Set default status
         user.setPoints(0); // Set default points
+        user.setLevelPoints(0); // XP tích luỹ ban đầu
         ZonedDateTime now = ZonedDateTime.now();
         user.setCreatedAt(now);
         user.setUpdatedAt(now);
@@ -138,6 +139,7 @@ public class UserServiceImpl implements UserService {
         newUser.setRole(userRole);
         newUser.setStatus("active");
         newUser.setPoints(0);
+        newUser.setLevelPoints(0);
 
         ZonedDateTime now = ZonedDateTime.now();
         newUser.setCreatedAt(now);

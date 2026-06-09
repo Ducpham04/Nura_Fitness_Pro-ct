@@ -47,7 +47,10 @@ public class User {
     private ZonedDateTime lastLoginAt;
 
     @Column(name="points")
-    private Integer points;
+    private Integer points; // Ví điểm tiêu được — đổi thưởng trừ vào đây
+
+    @Column(name="level_points")
+    private Integer levelPoints; // XP tích luỹ — chỉ tăng, quyết định level (không bị trừ khi đổi quà)
 
     @Column(name="full_name")
     private String fullName;

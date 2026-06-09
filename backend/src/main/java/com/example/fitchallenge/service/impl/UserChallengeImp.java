@@ -395,8 +395,13 @@ public class UserChallengeImp implements UserChallengeService {
         if (!passedNow || wasSuccessBefore || user == null || challenge == null) return balance;
         Integer rp = challenge.getRewardPoints();
         if (rp == null || rp <= 0) return balance;
+        // Ví tiêu được (đổi thưởng trừ vào đây)
         balance += rp;
         user.setPoints(balance);
+        // XP/level tích luỹ — chỉ tăng. User cũ chưa có levelPoints → seed từ số dư
+        // trước khi cộng (≈ điểm đã tích) để không tụt level.
+        int lvlPts = user.getLevelPoints() != null ? user.getLevelPoints() : (balance - rp);
+        user.setLevelPoints(lvlPts + rp);
         userRepository.save(user);
         return balance;
     }

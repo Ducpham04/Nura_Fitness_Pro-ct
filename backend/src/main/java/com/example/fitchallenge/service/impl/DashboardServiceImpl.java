@@ -418,8 +418,11 @@ public class DashboardServiceImpl implements DashboardService {
 
         // ── 1. User Summary ──────────────────────────────────────────────
         int points = user.getPoints() != null ? user.getPoints() : 0;
-        int level = Math.max(1, points / 100 + 1);
-        int currentExp = points % 100;
+        // Level dựa trên XP tích luỹ (levelPoints) — KHÔNG tụt khi đổi thưởng.
+        // User cũ chưa có levelPoints → fallback sang points để giữ nguyên level.
+        int xp = user.getLevelPoints() != null ? user.getLevelPoints() : points;
+        int level = Math.max(1, xp / 100 + 1);
+        int currentExp = xp % 100;
         int nextLevelExp = 100;
 
         DashboardDTO.UserSummary userSummary = DashboardDTO.UserSummary.builder()
