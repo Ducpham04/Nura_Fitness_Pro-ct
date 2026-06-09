@@ -853,19 +853,24 @@ function TrainingView() {
         </div>
 
         {/* ── Main content (scrollable) ── */}
-        <div className="flex-1 overflow-y-auto px-5 space-y-4 pb-4">
+        {/* max-w-lg: giới hạn bề rộng cột (tránh video aspect-video phình to trên
+            desktop). order-*: video + set + nhập rep nằm cùng phần đầu → hiện
+            chung một màn hình, tham khảo (tips/form-check) ở dưới. */}
+        <div className="flex-1 overflow-y-auto px-5 pb-4 flex flex-col gap-3 max-w-lg w-full mx-auto">
 
-          {/* VIDEO HƯỚNG DẪN — tự mở khi vào bài */}
+          {/* VIDEO HƯỚNG DẪN — hiện sẵn cùng phần set (order-1) */}
           {activeExercise.videoUrl && (
-            <ExerciseVideoPlayer
-              videoUrl={activeExercise.videoUrl}
-              name={exerciseName}
-              defaultExpanded={true}
-            />
+            <div className="order-1">
+              <ExerciseVideoPlayer
+                videoUrl={activeExercise.videoUrl}
+                name={exerciseName}
+                defaultExpanded={true}
+              />
+            </div>
           )}
 
-          {/* AI FORM CHECK — snapshot-based vision analysis */}
-          <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+          {/* AI FORM CHECK — snapshot-based vision analysis (order-last: ít dùng mỗi set) */}
+          <div className="order-last rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
@@ -940,8 +945,8 @@ function TrainingView() {
             )}
           </div>
 
-          {/* SET PROGRESS */}
-          <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+          {/* SET PROGRESS (order-1: thao tác chính lên đầu) */}
+          <div className="order-1 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Tiến độ set</span>
               <span className="text-white font-grotesk font-bold text-sm">
@@ -972,7 +977,7 @@ function TrainingView() {
 
           {/* REST TIMER — hiện khi đang nghỉ */}
           {isResting && (
-            <div className="rounded-2xl border border-blue-500/30 bg-blue-500/[0.06] p-5 text-center relative overflow-hidden">
+            <div className="order-1 rounded-2xl border border-blue-500/30 bg-blue-500/[0.06] p-5 text-center relative overflow-hidden">
               {/* Circular countdown */}
               <div className="relative w-24 h-24 mx-auto mb-3">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
@@ -1002,27 +1007,27 @@ function TrainingView() {
             </div>
           )}
 
-          {/* REP INPUT — cho set hiện tại */}
+          {/* REP INPUT — cho set hiện tại (order-1: ngay đầu, không phải cuộn) */}
           {!isResting && !allSetsDone && (
-            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
-              <div className="text-center mb-4">
+            <div className="order-1 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+              <div className="text-center mb-2.5">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-1">
                   Set {currentSet + 1} — Số rep thực hiện
                 </p>
                 <p className="text-neutral-600 text-xs">Mục tiêu: <span className="text-lime font-bold">{targetReps} rep</span></p>
               </div>
 
-              {/* Big rep display with +/- */}
-              <div className="flex items-center justify-center gap-6 mb-5">
+              {/* Big rep display with +/- (gọn để vừa màn cùng video) */}
+              <div className="flex items-center justify-center gap-5 mb-3">
                 <button
                   onClick={() => setCurrentRepInput(r => Math.max(0, r - 1))}
-                  className="w-12 h-12 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white text-xl font-bold flex items-center justify-center hover:bg-white/[0.1] active:scale-95 transition-all"
+                  className="w-11 h-11 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white text-xl font-bold flex items-center justify-center hover:bg-white/[0.1] active:scale-95 transition-all"
                 >−</button>
 
                 <div className="text-center">
                   <div
                     className="font-grotesk font-bold text-white leading-none"
-                    style={{ fontSize: '72px', textShadow: currentRepInput >= targetReps ? '0 0 25px rgba(204,255,0,0.5)' : 'none' }}
+                    style={{ fontSize: '52px', textShadow: currentRepInput >= targetReps ? '0 0 25px rgba(204,255,0,0.5)' : 'none' }}
                   >
                     <span className={currentRepInput >= targetReps ? 'text-lime' : 'text-white'}>{currentRepInput}</span>
                   </div>
@@ -1031,7 +1036,7 @@ function TrainingView() {
 
                 <button
                   onClick={() => setCurrentRepInput(r => r + 1)}
-                  className="w-12 h-12 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white text-xl font-bold flex items-center justify-center hover:bg-white/[0.1] active:scale-95 transition-all"
+                  className="w-11 h-11 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white text-xl font-bold flex items-center justify-center hover:bg-white/[0.1] active:scale-95 transition-all"
                 >+</button>
               </div>
 
@@ -1056,7 +1061,7 @@ function TrainingView() {
 
           {/* ALL SETS DONE — summary */}
           {allSetsDone && (
-            <div className="rounded-2xl border border-lime/30 bg-lime/[0.06] p-5 text-center">
+            <div className="order-1 rounded-2xl border border-lime/30 bg-lime/[0.06] p-5 text-center">
               <div className="w-12 h-12 rounded-full bg-lime/15 flex items-center justify-center mx-auto mb-2">
                 <Check className="w-6 h-6 text-lime" />
               </div>
@@ -1073,7 +1078,7 @@ function TrainingView() {
 
           {/* Tips — hướng dẫn nhanh */}
           {parsed.benefit && !allSetsDone && (
-            <div className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3">
+            <div className="order-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 mb-1 flex items-center gap-1.5">
                 <Activity className="w-3 h-3" /> Lợi ích
               </p>
@@ -1088,7 +1093,7 @@ function TrainingView() {
 
           {/* Equipment */}
           {activeExercise.equipment && (
-            <div className="flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-2.5 text-sm">
+            <div className="order-3 flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-2.5 text-sm">
               <span className="text-neutral-500 text-xs">Dụng cụ</span>
               <span className="text-white text-xs font-medium inline-flex items-center gap-1.5">
                 {activeExercise.equipment.toUpperCase() === 'BODYWEIGHT'
@@ -1098,7 +1103,7 @@ function TrainingView() {
             </div>
           )}
           {activeExercise.recommendedWeight && (
-            <div className="flex items-center justify-between rounded-xl border border-cyan-500/20 bg-cyan-500/[0.04] px-4 py-2.5">
+            <div className="order-3 flex items-center justify-between rounded-xl border border-cyan-500/20 bg-cyan-500/[0.04] px-4 py-2.5">
               <span className="text-neutral-500 text-xs inline-flex items-center gap-1.5"><Scale className="w-3.5 h-3.5" /> Tạ gợi ý</span>
               <span className="text-cyan-400 text-xs font-semibold">{activeExercise.recommendedWeight}</span>
             </div>
