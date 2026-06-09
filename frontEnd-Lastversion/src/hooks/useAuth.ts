@@ -70,11 +70,11 @@ export function useAuth(): UseAuthReturn {
         setUser(user);
         return true;
       }
-      setError('Login failed. Please check your credentials.');
       return false;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      return false;
+      const msg = err instanceof Error ? err.message : 'An error occurred';
+      setError(msg);
+      throw new Error(msg); // ném tiếp để trang Login hiển thị đúng message
     } finally {
       setIsLoading(false);
     }

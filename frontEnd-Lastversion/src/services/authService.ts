@@ -28,7 +28,8 @@ class AuthService {
       this.saveAuthData(feData);
       return true;
     }
-    return false;
+    // Ném message thật từ backend (vd "Sai email hoặc mật khẩu") để UI hiển thị đúng
+    throw new Error(response.error?.message || 'Đăng nhập thất bại');
   }
 
   // Register

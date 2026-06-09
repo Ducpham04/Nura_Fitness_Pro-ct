@@ -35,7 +35,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login, error: authError } = useAuthContext();
+  const { login } = useAuthContext();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,14 +48,14 @@ export default function Login() {
       return;
     }
 
-    // Call real API
-    const success = await login({ email, password });
-    setLoading(false);
-
-    if (success) {
-      onLogin('/dashboard');
-    } else {
-      setError(authError || t('auth.loginFailed'));
+    // Call real API — login() ném lỗi kèm message thật từ backend khi thất bại
+    try {
+      const success = await login({ email, password });
+      if (success) onLogin('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('auth.loginFailed'));
+    } finally {
+      setLoading(false);
     }
   };
 
