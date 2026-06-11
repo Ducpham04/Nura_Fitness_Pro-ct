@@ -34,6 +34,9 @@ import { aiService } from '../services/aiService';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import CyberpunkWorkoutModal from './CyberpunkWorkoutModal';
+import { AiUsageBadge } from './AiUsageBadge';
+import { AiUpgradeModal } from './AiUpgradeModal';
+import { useAiUsage } from '../hooks/useAiUsage';
 import { Sparkles } from 'lucide-react';
 
 interface TrainingExercise {
@@ -409,6 +412,8 @@ function TrainingView() {
   const [checkIn, setCheckIn] = useState<{ fatigue: number; rpe: number; sleep: string }>({ fatigue: 0, rpe: 0, sleep: '' });
   // Modal tạo kế hoạch AI (gộp từ tab "Kế Hoạch Tập" cũ)
   const [aiPlanModalOpen, setAiPlanModalOpen] = useState(false);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const { usage, packages, refresh: refreshUsage } = useAiUsage(user?.id ?? null);
   // Thông tin cá nhân hóa hiển thị sau khi tạo plan (kiến thức + cảnh báo y khoa)
   const [planInsight, setPlanInsight] = useState<{ rationale: string; disclaimer: string; riskTier: string; notes: string[] } | null>(null);
 
@@ -1341,6 +1346,19 @@ function TrainingView() {
         <CyberpunkWorkoutModal
           onClose={() => setAiPlanModalOpen(false)}
           onSuccess={handleAiPlanSuccess}
+          onQuotaExceeded={() => { setAiPlanModalOpen(false); setUpgradeModalOpen(true); }}
+        />
+      )}
+
+      {/* ── Modal nâng cấp gói AI ── */}
+      {upgradeModalOpen && user?.id && (
+        <AiUpgradeModal
+          isOpen={upgradeModalOpen}
+          onClose={() => setUpgradeModalOpen(false)}
+          usage={usage}
+          packages={packages}
+          userId={user.id}
+          onUpgradeSuccess={() => { refreshUsage(); setUpgradeModalOpen(false); }}
         />
       )}
 
@@ -1442,14 +1460,17 @@ function TrainingView() {
               )}
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <button
-                onClick={() => setAiPlanModalOpen(true)}
-                className="rounded-xl bg-lime border border-lime px-3.5 py-2 text-black text-xs font-bold hover:bg-lime/90 transition-colors flex items-center gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{activePlan ? 'Tạo lại bằng AI' : 'Tạo kế hoạch AI'}</span>
-                <span className="sm:hidden">AI</span>
-              </button>
+              <div className="flex flex-col items-end gap-1.5">
+                <button
+                  onClick={() => setAiPlanModalOpen(true)}
+                  className="rounded-xl bg-lime border border-lime px-3.5 py-2 text-black text-xs font-bold hover:bg-lime/90 transition-colors flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{activePlan ? 'Tạo lại bằng AI' : 'Tạo kế hoạch AI'}</span>
+                  <span className="sm:hidden">AI</span>
+                </button>
+                <AiUsageBadge usage={usage} actionCost={5} onUpgradeClick={() => setUpgradeModalOpen(true)} />
+              </div>
               <button
                 onClick={() => window.location.reload()}
                 className="rounded-xl border border-white/15 bg-white/5 backdrop-blur px-3 py-2 text-neutral-200 text-xs font-medium hover:text-white hover:border-white/30 transition-colors flex items-center gap-1.5"

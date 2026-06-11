@@ -17,6 +17,7 @@ const dayOptions = [2, 3, 4, 5, 6];
 interface Props {
   onClose: () => void;
   onSuccess: (data: any) => void;
+  onQuotaExceeded?: () => void;
 }
 
 const programOptions = [
@@ -43,7 +44,7 @@ const goalOptions = [
   { value: 'maintenance',  label: 'Duy trì',   emoji: '⚖️', hint: 'Cân bằng' },
 ];
 
-export default function CyberpunkWorkoutModal({ onClose, onSuccess }: Props) {
+export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExceeded }: Props) {
   const { user } = useAuthContext();
   const [program, setProgram] = useState(programOptions[0]);
   const [equipment, setEquipment] = useState('full gym');
@@ -90,6 +91,11 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess }: Props) {
       if (response.success) {
         onSuccess(response.data);
       } else {
+        if (response.error?.code === 'QUOTA_EXCEEDED') {
+          onClose();
+          onQuotaExceeded?.();
+          return;
+        }
         setError(response.error?.message || 'Failed to generate workout plan');
       }
     } catch (err: any) {

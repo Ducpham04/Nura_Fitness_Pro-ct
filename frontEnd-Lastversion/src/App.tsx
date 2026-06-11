@@ -20,6 +20,7 @@ const WelCome = lazy(() => import('./pages/WelCome'));
 const AICoachPage = lazy(() => import('./pages/AICoachPage'));
 const LogbookPage = lazy(() => import('./pages/LogbookPage'));
 const ProfileEditPage = lazy(() => import('./pages/ProfileEditPage'));
+const PaymentResultPage = lazy(() => import('./pages/PaymentResultPage'));
 
 function PageSpinner() {
   return (
@@ -89,6 +90,9 @@ function AppContent() {
           <Route path="coach" element={<AICoachPage />} />
           <Route path="logbook" element={<LogbookPage />} />
         </Route>
+
+        {/* Payment result (public — VNPay redirect) */}
+        <Route path="/payment/result" element={<PaymentResultPage />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
