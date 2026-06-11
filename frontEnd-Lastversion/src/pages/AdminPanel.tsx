@@ -31,7 +31,7 @@ import {
 } from '../services/adminService';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-type AdminTab = 'dashboard' | 'dataSeeder' | 'aiStats' | AdminModuleKey;
+type AdminTab = 'dashboard' | 'dataSeeder' | 'aiStats' | 'aiPackages' | AdminModuleKey;
 
 /* ─── AI Stats types (mirrors backend DashboardDTO) ─────────────────────── */
 interface UserAiUsage { userId: number; fullName: string; email: string; totalCalls: number; }
@@ -90,7 +90,13 @@ const NAV: {
       { id: 'informationBody', label: 'Hồ sơ thể chất' },
     ],
   },
-  { id: 'aiStats', label: 'Thống kê AI / Token', icon: Zap, single: 'aiStats', accent: 'text-cyan-400' },
+  {
+    id: 'ai', label: 'AI & Gói dịch vụ', icon: Zap, accent: 'text-cyan-400',
+    children: [
+      { id: 'aiStats',    label: 'Thống kê AI / Token' },
+      { id: 'aiPackages', label: 'Quản lý gói AI' },
+    ],
+  },
   { id: 'seeder', label: 'Nhập dữ liệu mẫu', icon: Zap, single: 'dataSeeder', accent: 'text-fuchsia-400' },
 ];
 
@@ -112,6 +118,7 @@ const TAB_META: Record<string, { title: string; subtitle: string; icon: typeof B
   userChallenges:       { title: 'Tham gia thử thách',    subtitle: 'Theo dõi người dùng tham gia thử thách',  icon: Trophy },
   leaderboard:          { title: 'Bảng xếp hạng',         subtitle: 'Xếp hạng người dùng theo điểm & streak', icon: BarChart3 },
   aiStats:              { title: 'Thống kê AI / Token',  subtitle: 'Lượt gọi Groq, ước tính token & log người dùng', icon: Zap },
+  aiPackages:           { title: 'Quản lý gói AI',       subtitle: 'Gói Free/Plus/Pro, mã khuyến mãi, gán gói cho user', icon: Zap },
   dataSeeder:           { title: 'Nhập dữ liệu mẫu',     subtitle: 'Import dữ liệu mẫu vào hệ thống',         icon: Zap },
 };
 
@@ -794,6 +801,21 @@ export default function AdminPanel() {
   const [exerciseAuditLoading, setExerciseAuditLoading] = useState(false);
   const [aiStats, setAiStats] = useState<AiStatsData | null>(null);
 
+  // AI Packages management state
+  const [aiPkgs,       setAiPkgs]       = useState<any[]>([]);
+  const [aiPromos,     setAiPromos]      = useState<any[]>([]);
+  const [aiPkgForm,    setAiPkgForm]     = useState<Record<string,string>>({});
+  const [aiPromoForm,  setAiPromoForm]   = useState<Record<string,string>>({});
+  const [aiPkgEditing, setAiPkgEditing] = useState<any|null>(null);
+  const [aiPkgSaving,  setAiPkgSaving]  = useState(false);
+  const [aiPromoSaving,setAiPromoSaving]= useState(false);
+  const [aiPkgTab,     setAiPkgTab]     = useState<'packages'|'promos'|'users'>('packages');
+  const [aiUserSearch, setAiUserSearch] = useState('');
+  const [aiUserResult, setAiUserResult] = useState<any|null>(null);
+  const [aiUserLoading,setAiUserLoading]= useState(false);
+  const [aiAssignPkgId,setAiAssignPkgId]= useState('');
+  const [aiAssignDays, setAiAssignDays] = useState('30');
+
   // Pagination
   const [currentPage, setCurrentPage]         = useState(0);
   const PAGE_SIZE = 25;
@@ -1007,6 +1029,14 @@ export default function AdminPanel() {
       } else if (activeTab === 'aiStats') {
         const res = await apiClient.get('/admin/dashboard/ai-stats');
         if (res.success) setAiStats(res.data as AiStatsData);
+        setRows([]);
+      } else if (activeTab === 'aiPackages') {
+        const [pkgRes, promoRes] = await Promise.all([
+          apiClient.get('/admin/ai/packages'),
+          apiClient.get('/admin/ai/promo-codes'),
+        ]);
+        if (pkgRes.success)   setAiPkgs(pkgRes.data   as any[] ?? []);
+        if (promoRes.success) setAiPromos(promoRes.data as any[] ?? []);
         setRows([]);
       } else if (activeTab === 'dataSeeder') {
         setRows([]);
@@ -1466,6 +1496,288 @@ export default function AdminPanel() {
                 <div className="flex flex-col items-center gap-3 py-20 text-slate-500">
                   <Zap className="h-8 w-8 opacity-30" />
                   <p className="text-sm">Không thể tải dữ liệu AI stats</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── AI Packages Management ── */}
+          {activeTab === 'aiPackages' && (
+            <div className="space-y-5">
+              {/* Sub-tabs */}
+              <div className="flex gap-1 p-1 bg-white/5 rounded-xl w-fit">
+                {(['packages','promos','users'] as const).map(t => (
+                  <button key={t} onClick={() => setAiPkgTab(t)}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                      aiPkgTab === t ? 'bg-cyan-500 text-black' : 'text-slate-400 hover:text-white'}`}>
+                    {t === 'packages' ? '📦 Gói AI' : t === 'promos' ? '🎟 Mã KM' : '👤 Gán cho User'}
+                  </button>
+                ))}
+              </div>
+
+              {/* ── Tab: Packages ── */}
+              {aiPkgTab === 'packages' && (
+                <div className="space-y-4">
+                  {/* Package table */}
+                  <div className="rounded-2xl border border-white/5 bg-white/3 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-slate-200 uppercase tracking-widest">Danh sách gói AI</h3>
+                      <button onClick={() => { setAiPkgEditing({}); setAiPkgForm({ code:'', name:'', aiQuota:'25', priceVnd:'0', durationDays:'30', sortOrder:'99' }); }}
+                        className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold rounded-lg transition-colors">
+                        + Thêm gói
+                      </button>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-white/5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                            {['ID','Code','Tên gói','Credit/tháng','Giá (VND)','Ngày HH','Trạng thái','Hành động'].map(h => (
+                              <th key={h} className="px-4 py-3 text-left">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/3">
+                          {aiPkgs.map((pkg: any) => (
+                            <tr key={pkg.id} className="hover:bg-white/3 transition-colors">
+                              <td className="px-4 py-3 text-slate-500 text-xs">{pkg.id}</td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                  pkg.code==='PRO' ? 'bg-violet-500/20 text-violet-300' :
+                                  pkg.code==='PLUS' ? 'bg-lime-500/20 text-lime-300' : 'bg-zinc-500/20 text-zinc-300'}`}>
+                                  {pkg.code}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-slate-200 font-medium">{pkg.name}</td>
+                              <td className="px-4 py-3 text-cyan-300 font-mono">
+                                {pkg.aiQuota === -1 ? '∞' : pkg.aiQuota.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-amber-300">
+                                {pkg.priceVnd === 0 ? 'Miễn phí' : `${pkg.priceVnd.toLocaleString()}đ`}
+                              </td>
+                              <td className="px-4 py-3 text-slate-400">{pkg.durationDays} ngày</td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${pkg.isActive ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
+                                  {pkg.isActive ? 'Hoạt động' : 'Tắt'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <button onClick={() => { setAiPkgEditing(pkg); setAiPkgForm({ name: pkg.name, aiQuota: String(pkg.aiQuota), priceVnd: String(pkg.priceVnd), durationDays: String(pkg.durationDays), sortOrder: String(pkg.sortOrder) }); }}
+                                  className="text-xs text-cyan-400 hover:text-cyan-300 font-medium mr-3">Sửa</button>
+                                {pkg.code !== 'FREE' && (
+                                  <button onClick={async () => {
+                                    if (!confirm(`Vô hiệu hóa gói ${pkg.name}?`)) return;
+                                    await apiClient.delete(`/admin/ai/packages/${pkg.id}`);
+                                    void loadTab();
+                                  }} className="text-xs text-red-400 hover:text-red-300 font-medium">Tắt</button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Edit / Create form */}
+                  {aiPkgEditing !== null && (
+                    <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/5 p-5 space-y-4">
+                      <h4 className="text-sm font-bold text-cyan-300">{aiPkgEditing.id ? `Sửa gói: ${aiPkgEditing.name}` : 'Tạo gói mới'}</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {!aiPkgEditing.id && (
+                          <div>
+                            <label className="text-[10px] text-slate-400 uppercase tracking-wider">Code</label>
+                            <input value={aiPkgForm.code ?? ''} onChange={e => setAiPkgForm(f=>({...f, code: e.target.value.toUpperCase()}))}
+                              placeholder="VD: PREMIUM" className="mt-1 w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-500" />
+                          </div>
+                        )}
+                        <div>
+                          <label className="text-[10px] text-slate-400 uppercase tracking-wider">Tên gói</label>
+                          <input value={aiPkgForm.name ?? ''} onChange={e => setAiPkgForm(f=>({...f, name: e.target.value}))}
+                            className="mt-1 w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-500" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 uppercase tracking-wider">Credit/tháng (-1=∞)</label>
+                          <input type="number" value={aiPkgForm.aiQuota ?? ''} onChange={e => setAiPkgForm(f=>({...f, aiQuota: e.target.value}))}
+                            className="mt-1 w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-500" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 uppercase tracking-wider">Giá (VND)</label>
+                          <input type="number" value={aiPkgForm.priceVnd ?? ''} onChange={e => setAiPkgForm(f=>({...f, priceVnd: e.target.value}))}
+                            className="mt-1 w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-500" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 uppercase tracking-wider">Số ngày HH</label>
+                          <input type="number" value={aiPkgForm.durationDays ?? ''} onChange={e => setAiPkgForm(f=>({...f, durationDays: e.target.value}))}
+                            className="mt-1 w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white focus:outline-none focus:border-cyan-500" />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button disabled={aiPkgSaving} onClick={async () => {
+                          setAiPkgSaving(true);
+                          const body = { name: aiPkgForm.name, aiQuota: Number(aiPkgForm.aiQuota), priceVnd: Number(aiPkgForm.priceVnd), durationDays: Number(aiPkgForm.durationDays), sortOrder: Number(aiPkgForm.sortOrder ?? 99) };
+                          if (aiPkgEditing.id) {
+                            await apiClient.put(`/admin/ai/packages/${aiPkgEditing.id}`, body);
+                          } else {
+                            await apiClient.post('/admin/ai/packages', { ...body, code: aiPkgForm.code });
+                          }
+                          setAiPkgSaving(false); setAiPkgEditing(null); void loadTab();
+                        }} className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-black text-sm font-bold rounded-lg disabled:opacity-50 transition-colors">
+                          {aiPkgSaving ? 'Đang lưu...' : 'Lưu'}
+                        </button>
+                        <button onClick={() => setAiPkgEditing(null)} className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white text-sm rounded-lg transition-colors">Hủy</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── Tab: Promo Codes ── */}
+              {aiPkgTab === 'promos' && (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-white/5 bg-white/3 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-slate-200 uppercase tracking-widest">Mã khuyến mãi</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-white/5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                            {['Code','Mô tả','Giảm giá','Bonus credit','Đã dùng / Tối đa','Hết hạn','Trạng thái'].map(h => (
+                              <th key={h} className="px-4 py-3 text-left">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/3">
+                          {aiPromos.length === 0 && (
+                            <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500 text-sm">Chưa có mã khuyến mãi nào</td></tr>
+                          )}
+                          {aiPromos.map((p: any) => (
+                            <tr key={p.id} className="hover:bg-white/3 transition-colors">
+                              <td className="px-4 py-3">
+                                <span className="font-mono font-bold text-amber-300">{p.code}</span>
+                              </td>
+                              <td className="px-4 py-3 text-slate-400 text-xs max-w-[180px] truncate">{p.description || '—'}</td>
+                              <td className="px-4 py-3 text-rose-300">{p.discountPercent > 0 ? `-${p.discountPercent}%` : '—'}</td>
+                              <td className="px-4 py-3 text-cyan-300">{p.bonusCredits > 0 ? `+${p.bonusCredits}` : '—'}</td>
+                              <td className="px-4 py-3 text-slate-300">{p.usedCount} / {p.maxUses ?? '∞'}</td>
+                              <td className="px-4 py-3 text-slate-400 text-xs">{p.validUntil ? new Date(p.validUntil).toLocaleDateString('vi-VN') : '∞'}</td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.isActive ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
+                                  {p.isActive ? 'Hoạt động' : 'Tắt'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Create promo form */}
+                  <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 space-y-4">
+                    <h4 className="text-sm font-bold text-amber-300">Tạo mã khuyến mãi mới</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {[
+                        { key: 'code',            label: 'Code (viết hoa)',     placeholder: 'SUMMER50' },
+                        { key: 'description',     label: 'Mô tả',               placeholder: 'Giảm 50% hè 2026' },
+                        { key: 'discountPercent', label: 'Giảm giá (%)',         placeholder: '0' },
+                        { key: 'bonusCredits',    label: 'Credit thêm',          placeholder: '0' },
+                        { key: 'maxUses',         label: 'Số lần dùng tối đa',  placeholder: 'Để trống = ∞' },
+                        { key: 'validUntil',      label: 'Hết hạn (ISO date)',   placeholder: '2026-12-31T23:59:59+07:00' },
+                      ].map(({ key, label, placeholder }) => (
+                        <div key={key}>
+                          <label className="text-[10px] text-slate-400 uppercase tracking-wider">{label}</label>
+                          <input value={aiPromoForm[key] ?? ''} onChange={e => setAiPromoForm(f=>({...f, [key]: e.target.value}))}
+                            placeholder={placeholder}
+                            className="mt-1 w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500" />
+                        </div>
+                      ))}
+                    </div>
+                    <button disabled={aiPromoSaving || !aiPromoForm.code} onClick={async () => {
+                      setAiPromoSaving(true);
+                      const body: any = {
+                        code: aiPromoForm.code,
+                        description: aiPromoForm.description,
+                        discountPercent: Number(aiPromoForm.discountPercent || 0),
+                        bonusCredits: Number(aiPromoForm.bonusCredits || 0),
+                      };
+                      if (aiPromoForm.maxUses) body.maxUses = Number(aiPromoForm.maxUses);
+                      if (aiPromoForm.validUntil) body.validUntil = aiPromoForm.validUntil;
+                      await apiClient.post('/admin/ai/promo-codes', body);
+                      setAiPromoSaving(false); setAiPromoForm({}); void loadTab();
+                    }} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold rounded-lg disabled:opacity-50 transition-colors">
+                      {aiPromoSaving ? 'Đang tạo...' : 'Tạo mã'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Tab: User AI Assignment ── */}
+              {aiPkgTab === 'users' && (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5 space-y-4">
+                    <h4 className="text-sm font-bold text-violet-300">Tìm user & gán gói AI</h4>
+                    <div className="flex gap-2">
+                      <input value={aiUserSearch} onChange={e => setAiUserSearch(e.target.value)}
+                        placeholder="Nhập User ID (số)"
+                        className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500" />
+                      <button disabled={!aiUserSearch || aiUserLoading} onClick={async () => {
+                        setAiUserLoading(true); setAiUserResult(null);
+                        const res = await apiClient.get(`/admin/ai/users/${aiUserSearch}/usage`);
+                        if (res.success) setAiUserResult({ userId: Number(aiUserSearch), ...res.data });
+                        setAiUserLoading(false);
+                      }} className="px-4 py-2 bg-violet-500 hover:bg-violet-400 text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors">
+                        {aiUserLoading ? 'Đang tìm...' : 'Tìm'}
+                      </button>
+                    </div>
+
+                    {aiUserResult && (
+                      <div className="space-y-4 border-t border-white/5 pt-4">
+                        {/* Usage info */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          {[
+                            { label: 'Gói hiện tại',  value: aiUserResult.packageCode,  color: 'text-violet-300' },
+                            { label: 'Quota',          value: aiUserResult.isUnlimited ? '∞' : aiUserResult.quota, color: 'text-cyan-300' },
+                            { label: 'Đã dùng',        value: aiUserResult.used,         color: 'text-amber-300' },
+                            { label: 'Còn lại',        value: aiUserResult.isUnlimited ? '∞' : aiUserResult.remaining, color: 'text-emerald-300' },
+                          ].map(({ label, value, color }) => (
+                            <div key={label} className="bg-white/3 rounded-xl p-3 text-center">
+                              <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label}</p>
+                              <p className={`text-xl font-bold font-mono ${color}`}>{value}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-xs text-slate-500">Reset lúc: {aiUserResult.resetAt ? new Date(aiUserResult.resetAt).toLocaleString('vi-VN') : '—'}</p>
+
+                        {/* Assign package */}
+                        <div className="flex gap-2 flex-wrap">
+                          <select value={aiAssignPkgId} onChange={e => setAiAssignPkgId(e.target.value)}
+                            className="px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white focus:outline-none focus:border-violet-500">
+                            <option value="">-- Chọn gói --</option>
+                            {aiPkgs.map((p: any) => <option key={p.id} value={p.id}>{p.name} ({p.aiQuota === -1 ? '∞' : p.aiQuota} credit)</option>)}
+                          </select>
+                          <input type="number" value={aiAssignDays} onChange={e => setAiAssignDays(e.target.value)}
+                            placeholder="Số ngày HH"
+                            className="w-28 px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white focus:outline-none focus:border-violet-500" />
+                          <button disabled={!aiAssignPkgId} onClick={async () => {
+                            await apiClient.put(`/admin/ai/users/${aiUserResult.userId}/package`, { packageId: Number(aiAssignPkgId), durationDays: Number(aiAssignDays) });
+                            const res = await apiClient.get(`/admin/ai/users/${aiUserResult.userId}/usage`);
+                            if (res.success) setAiUserResult({ ...aiUserResult, ...res.data });
+                          }} className="px-4 py-2 bg-violet-500 hover:bg-violet-400 text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors">
+                            Gán gói
+                          </button>
+                          <button onClick={async () => {
+                            if (!confirm('Reset lượt AI về 0?')) return;
+                            await apiClient.put(`/admin/ai/users/${aiUserResult.userId}/reset-usage`, {});
+                            const res = await apiClient.get(`/admin/ai/users/${aiUserResult.userId}/usage`);
+                            if (res.success) setAiUserResult({ ...aiUserResult, ...res.data });
+                          }} className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white text-sm font-semibold rounded-lg transition-colors">
+                            Reset lượt
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
