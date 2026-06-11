@@ -2,6 +2,8 @@ package com.example.fitchallenge.controller;
 
 import com.example.fitchallenge.config.NotificationResponse;
 import com.example.fitchallenge.service.AIGatewayService;
+import com.example.fitchallenge.service.AiCreditCost;
+import com.example.fitchallenge.service.AiUsageService;
 import com.example.fitchallenge.service.SmartMealPlanService;
 import com.example.fitchallenge.service.impl.WorkoutWeekGenerationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +27,7 @@ public class AIGatewayController {
     private final AIGatewayService aiGatewayService;
     private final SmartMealPlanService smartMealPlanService;
     private final WorkoutWeekGenerationService workoutWeekGenerationService;
+    private final AiUsageService aiUsageService;
 
     /**
      * AI Food Scanner - Analyze food image
@@ -115,7 +118,9 @@ public class AIGatewayController {
     @PostMapping("/ai-plans/workout/{utId}/generate-next-week")
     @Operation(summary = "Generate next workout week", description = "Generate the next 7 days from the stored program template without calling AI")
     public ResponseEntity<NotificationResponse> generateNextWorkoutWeek(
-            @Parameter(description = "UserTraining ID") @PathVariable Long utId) {
+            @Parameter(description = "UserTraining ID") @PathVariable Long utId,
+            @Parameter(description = "User ID") @RequestHeader("userId") Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.PLAN_GENERATE);
         NotificationResponse response = workoutWeekGenerationService.generateNextWeek(utId);
         if (response.isSuccess()) {
             return ResponseEntity.ok(response);

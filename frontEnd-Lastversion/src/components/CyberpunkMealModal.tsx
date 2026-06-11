@@ -8,9 +8,10 @@ interface Props {
   onClose: () => void;
   onSuccess: (data: any) => void;
   defaultBudget: number;
+  onQuotaExceeded?: () => void;
 }
 
-export default function CyberpunkMealModal({ onClose, onSuccess, defaultBudget }: Props) {
+export default function CyberpunkMealModal({ onClose, onSuccess, defaultBudget, onQuotaExceeded }: Props) {
   const { user } = useAuthContext();
   const [budget, setBudget] = useState(defaultBudget.toString());
   const [inventoryItems, setInventoryItems] = useState<SelectedFoodInventoryItem[]>([]);
@@ -51,6 +52,12 @@ export default function CyberpunkMealModal({ onClose, onSuccess, defaultBudget }
         const clientPayload = notif?.data ?? notif ?? {};
         onSuccess(clientPayload);
       } else {
+        // 429 → mở upgrade modal
+        if (response.error?.code === 'QUOTA_EXCEEDED') {
+          onClose();
+          onQuotaExceeded?.();
+          return;
+        }
         setError(response.error?.message || 'Failed to generate plan');
       }
     } catch (err: any) {

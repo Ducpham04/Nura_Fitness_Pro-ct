@@ -61,6 +61,27 @@ public class User {
     @Column(name="is_active", length = 20)
     private String status;
 
+    // ── AI Package / Credit ──────────────────────────────────────────────────
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ai_package_id")
+    private AiPackage aiPackage;
+
+    /** Snapshot quota của gói hiện tại; -1 = vô hạn */
+    @Column(name = "ai_quota")
+    private Integer aiQuota = 25;
+
+    /** Credit đã dùng trong chu kỳ hiện tại */
+    @Column(name = "ai_used")
+    private Integer aiUsed = 0;
+
+    /** Mốc reset chu kỳ kế tiếp */
+    @Column(name = "ai_reset_at")
+    private java.time.ZonedDateTime aiResetAt;
+
+    /** Gói hết hạn lúc (null = Free / không hết hạn) */
+    @Column(name = "ai_package_expires_at")
+    private java.time.ZonedDateTime aiPackageExpiresAt;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<UserBodyProfile> userBodyProfiles;
 

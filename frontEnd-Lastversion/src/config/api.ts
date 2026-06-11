@@ -87,6 +87,17 @@ export const API_ENDPOINTS = {
     AUTO_REGULATE_WORKOUT: '/ai-plans/auto-regulate',
     LOG_FOOD_NATURAL: '/ai-plans/log-food-natural',
   },
+  // AI Usage & Packages
+  AI_USAGE: {
+    ME: '/ai-usage/me',
+  },
+  AI_PACKAGES: {
+    LIST: '/ai-packages',
+    DETAIL: (id: number) => `/ai-packages/${id}`,
+    SUBSCRIBE: (id: number) => `/ai-packages/${id}/subscribe`,
+    VALIDATE_PROMO: '/ai-packages/promo/validate',
+    PAYMENT_RESULT: '/ai-packages/payment/result',
+  },
   // Notifications
   NOTIFICATIONS: {
     LIST: (userId: number) => `/notifications/${userId}`,

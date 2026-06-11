@@ -12,6 +12,9 @@ import { aiService } from '../services/aiService';
 import { useAuthContext } from '../context/AuthContext';
 import AIFoodScanner from './AIFoodScanner';
 import CyberpunkMealModal from './CyberpunkMealModal';
+import { AiUsageBadge } from './AiUsageBadge';
+import { AiUpgradeModal } from './AiUpgradeModal';
+import { useAiUsage } from '../hooks/useAiUsage';
 import { useSearchParams } from 'react-router-dom';
 import { API_CONFIG } from '../config/api';
 
@@ -240,7 +243,9 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
   const [shoppingOpen, setShoppingOpen] = useState(false);
   const [swappingMealId, setSwappingMealId] = useState<number | null>(null);
   const [cyberpunkModalOpen, setCyberpunkModalOpen] = useState(false);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [activePlanLoaded, setActivePlanLoaded] = useState(false);
+  const { usage, packages, refresh: refreshUsage } = useAiUsage(user?.id ?? null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [naturalLogText, setNaturalLogText] = useState('');
   const [naturalLogMealTime, setNaturalLogMealTime] = useState('BREAKFAST');
@@ -575,9 +580,12 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
           <h2 className="font-grotesk font-bold italic uppercase text-2xl sm:text-[1.9rem] text-white leading-[0.92] tracking-tight">Kế hoạch dinh dưỡng</h2>
           <p className="text-neutral-500 text-sm mt-1.5">Lên thực đơn thông minh theo ngân sách và tủ lạnh.</p>
         </div>
-        <button onClick={() => setCyberpunkModalOpen(true)} className="btn-lime shrink-0 px-5 py-3 text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-          <Brain className="w-4 h-4" /> Tạo kế hoạch AI
-        </button>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <button onClick={() => setCyberpunkModalOpen(true)} className="btn-lime px-5 py-3 text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+            <Brain className="w-4 h-4" /> Tạo kế hoạch AI
+          </button>
+          <AiUsageBadge usage={usage} actionCost={5} onUpgradeClick={() => setUpgradeModalOpen(true)} />
+        </div>
       </div>
       {naturalLogPanel}
       <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-12 text-center">
@@ -829,7 +837,22 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
 
       {/* ── Modals ── */}
       {cyberpunkModalOpen && (
-        <CyberpunkMealModal defaultBudget={budget} onClose={() => setCyberpunkModalOpen(false)} onSuccess={handleAiSuccess} />
+        <CyberpunkMealModal
+          defaultBudget={budget}
+          onClose={() => setCyberpunkModalOpen(false)}
+          onSuccess={handleAiSuccess}
+          onQuotaExceeded={() => { setCyberpunkModalOpen(false); setUpgradeModalOpen(true); }}
+        />
+      )}
+      {upgradeModalOpen && user?.id && (
+        <AiUpgradeModal
+          isOpen={upgradeModalOpen}
+          onClose={() => setUpgradeModalOpen(false)}
+          usage={usage}
+          packages={packages}
+          userId={user.id}
+          onUpgradeSuccess={() => { refreshUsage(); setUpgradeModalOpen(false); }}
+        />
       )}
 
       {shoppingOpen && (

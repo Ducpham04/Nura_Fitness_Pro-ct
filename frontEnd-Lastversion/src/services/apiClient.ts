@@ -89,6 +89,19 @@ class ApiClient {
         }
       }
 
+      // ── 429: AI quota exceeded ──────────────────────────────────────────
+      if (response.status === 429) {
+        let msg = 'Bạn đã hết lượt AI tháng này. Nâng cấp gói để tiếp tục.';
+        try {
+          const body = await response.json();
+          if (body?.message) msg = body.message;
+        } catch { /* ignore */ }
+        return {
+          success: false,
+          error: { code: 'QUOTA_EXCEEDED', message: msg, timestamp: new Date().toISOString() },
+        };
+      }
+
       // Handle non-JSON responses
       const contentType = response.headers.get('content-type');
       if (!contentType?.includes('application/json')) {

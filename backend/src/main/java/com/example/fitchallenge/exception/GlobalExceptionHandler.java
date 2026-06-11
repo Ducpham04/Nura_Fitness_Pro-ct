@@ -98,6 +98,15 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, "CONFLICT", ex.getMessage(), request);
     }
 
+    // ── 429 Too Many Requests (AI quota exceeded) ─────────────────────────────
+
+    @ExceptionHandler(QuotaExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleQuotaExceeded(
+            QuotaExceededException ex, WebRequest request) {
+        log.warn("AI quota exceeded [{}]: {}", path(request), ex.getMessage());
+        return build(HttpStatus.TOO_MANY_REQUESTS, "QUOTA_EXCEEDED", ex.getMessage(), request);
+    }
+
     // ── 503 Service Unavailable (AI service down, etc.) ───────────────────────
 
     @ExceptionHandler(ExternalServiceException.class)

@@ -101,6 +101,9 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/challenges/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/training-plans/**").permitAll()
                                 .requestMatchers("/api/files/**", "/uploads/**").permitAll()
+                                // AI Packages: list public, VNPay callbacks public
+                                .requestMatchers(HttpMethod.GET, "/api/ai-packages", "/api/ai-packages/**").permitAll()
+                                .requestMatchers("/api/ai-packages/payment/**").permitAll()
 
                                 // ── Admin: requires ADMIN authority ──────────────────────────
                                 // Authority stored as "ADMIN" (no ROLE_ prefix) in CustomUserDetailService

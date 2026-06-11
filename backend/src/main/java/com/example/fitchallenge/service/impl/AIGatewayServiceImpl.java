@@ -7,6 +7,8 @@ import com.example.fitchallenge.Entity.*;
 import com.example.fitchallenge.repository.*;
 import com.example.fitchallenge.repository.User.UserRepository;
 import com.example.fitchallenge.service.AIGatewayService;
+import com.example.fitchallenge.service.AiCreditCost;
+import com.example.fitchallenge.service.AiUsageService;
 import com.example.fitchallenge.service.PersonalizationService;
 import com.example.fitchallenge.service.SmartMealPlanTransactionService;
 import com.example.fitchallenge.service.UserPreferenceService;
@@ -76,12 +78,14 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     private final DailyNutritionLogRepository dailyNutritionLogRepository;
     private final WorkoutWeekGenerationService workoutWeekGenerationService;
     private final UserPreferenceService userPreferenceService;
+    private final AiUsageService aiUsageService;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Override
     public NotificationResponse scanFoodImage(MultipartFile image, Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.SCAN_IMAGE);
         log.info("Scanning food image for user: {}", userId);
         try {
             String endpoint = aiServiceUrl + "/track-food";
@@ -109,6 +113,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
 
     @Override
     public NotificationResponse scanInventoryImage(MultipartFile image, Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.SCAN_IMAGE);
         log.info("Scanning inventory image for user: {}", userId);
         try {
             // Using same vision model but with context
@@ -132,6 +137,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
 
     @Override
     public NotificationResponse generateMealPlan(Map<String, Object> request, Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.PLAN_GENERATE);
         log.info("[SmartMeal] Master-data meal flow for user {}", userId);
         try {
             UserBodyProfile profile = bodyProfileRepository.findByUser_Id(userId).orElse(null);
@@ -354,6 +360,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     @Override
     @Transactional
     public NotificationResponse generateWorkoutPlan(Map<String, Object> request, Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.PLAN_GENERATE);
         log.info("Generating intelligent workout plan for user: {}", userId);
         try {
             UserBodyProfile profile = bodyProfileRepository.findByUser_Id(userId).orElse(null);
@@ -1292,6 +1299,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     @Override
     @Transactional(readOnly = true)
     public NotificationResponse chatWithCoach(Map<String, Object> chatRequest, Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.CHAT);
         log.info("AI Coach chat for user: {}", userId);
         try {
             String endpoint = aiServiceUrl + "/chat";
@@ -1315,6 +1323,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     // ── v2.1: Natural Language Food Logging ──────────────────────────────────
     @Override
     public NotificationResponse logFoodNatural(Map<String, Object> body, Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.CHAT);
         log.info("[v2.1] Natural language food log for user: {}", userId);
         try {
             body.put("user_id", userId.toString());
@@ -1334,6 +1343,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     // ── Gợi ý món ăn từ nguyên liệu ──────────────────────────────────────────
     @Override
     public NotificationResponse suggestDishesFromIngredients(Map<String, Object> body, Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.CHAT);
         log.info("Suggest dishes for user: {}", userId);
         try {
             ResponseEntity<Map> resp = restTemplate.postForEntity(aiServiceUrl + "/suggest-dishes", body, Map.class);
@@ -1350,6 +1360,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
 
     @Override
     public NotificationResponse suggestShoppingList(Map<String, Object> body, Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.CHAT);
         log.info("Suggest shopping for user: {}", userId);
         try {
             ResponseEntity<Map> resp = restTemplate.postForEntity(aiServiceUrl + "/suggest-shopping", body, Map.class);
