@@ -56,6 +56,22 @@ services:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-${PUBLIC_ORIGIN:?PUBLIC_ORIGIN là bắt buộc (vd https://fitnit.com)}}
       APP_PUBLIC_BASE_URL: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN là bắt buộc}
       UPLOAD_PATH: /app/uploads/
+      # Email (forgot password) — để trống MAIL_USERNAME nếu chưa setup,
+      # endpoint vẫn hoạt động (token log ra console thay vì gửi mail)
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-noreply@fitnit.vn}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Fitnit Challenge}
+      # Link reset-password trong email trỏ về frontend public
+      FRONTEND_URL: ${PUBLIC_ORIGIN}
+      # VNPay — sandbox mặc định; đổi VNPAY_URL sang production khi có merchant
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
+      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
+      VNPAY_URL: ${VNPAY_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      VNPAY_RETURN_URL: ${PUBLIC_ORIGIN}/payment/result
+      VNPAY_IPN_URL: ${PUBLIC_ORIGIN}/api/payment/vnpay-ipn
     volumes:
       - backend_uploads:/app/uploads
       - backend_logs:/app/logs
