@@ -15,9 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class CustomerDashboardController {
 
     private final DashboardService dashboardService;
+    private final com.example.fitchallenge.Security.AuthenticatedUserIdResolver authUser;
 
     @GetMapping("/{userId}/dashboard")
     public ResponseEntity<DashboardDTO.CustomerDashboardResponse> getCustomerDashboard(@PathVariable Long userId) {
+        userId = authUser.resolve(userId); // chống xem dashboard người khác
         return ResponseEntity.ok(dashboardService.getCustomerDashboard(userId));
     }
 }

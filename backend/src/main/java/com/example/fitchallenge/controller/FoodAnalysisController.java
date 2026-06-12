@@ -47,6 +47,9 @@ public class FoodAnalysisController {
     @Autowired
     private RestTemplate restTemplate; // bean có timeout từ RestTemplateConfig
 
+    @Autowired
+    private com.example.fitchallenge.Security.AuthenticatedUserIdResolver authUser;
+
     /**
      * 📸 POST /api/food-analysis/analyze - Phân tích món ăn từ ảnh
      * Frontend upload ảnh → Java BE verify token → gọi AI Service → trả kết quả
@@ -60,6 +63,7 @@ public class FoodAnalysisController {
             @RequestParam("userId") Long userId,
             @RequestParam(value = "language", defaultValue = "vi") String language) {
 
+        userId = authUser.resolve(userId);
         try {
             // ✅ 1. Verify user tồn tại (JWT đã được verify ở Security Filter)
             userService.getUserById(userId);
@@ -128,6 +132,7 @@ public class FoodAnalysisController {
             @Valid @RequestBody AnalyzeBase64Request request,
             @RequestParam("userId") Long userId) {
 
+        userId = authUser.resolve(userId);
         try {
             // ✅ Verify user
             userService.getUserById(userId);
@@ -181,6 +186,7 @@ public class FoodAnalysisController {
             @RequestParam Long userId,
             @Valid @RequestBody FoodLogRequest request) {
 
+        userId = authUser.resolve(userId);
         try {
             // TODO: Implement food log saving
             // This would save to a UserFoodLog entity (to be created)

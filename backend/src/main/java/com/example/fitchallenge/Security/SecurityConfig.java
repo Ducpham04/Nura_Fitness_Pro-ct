@@ -111,6 +111,10 @@ public class SecurityConfig {
                                 // ── Admin: requires ADMIN authority ──────────────────────────
                                 // Authority stored as "ADMIN" (no ROLE_ prefix) in CustomUserDetailService
                                 .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
+                                // Reward redemptions: user chỉ được tạo (POST) đơn đổi thưởng;
+                                // xem toàn bộ đơn + đổi trạng thái (duyệt/huỷ→hoàn điểm) là của ADMIN
+                                .requestMatchers(HttpMethod.GET, "/api/reward-redemptions").hasAuthority("ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/api/reward-redemptions/*/status").hasAuthority("ADMIN")
 
                                 // ── AI / Personalized: must be authenticated ──────────────────
                                 .requestMatchers("/api/ai-plans/**", "/api/ai-analysis/**",

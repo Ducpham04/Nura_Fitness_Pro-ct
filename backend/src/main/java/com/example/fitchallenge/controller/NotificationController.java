@@ -32,6 +32,9 @@ public class NotificationController {
     @Autowired
     private com.example.fitchallenge.service.UserService userService;
 
+    @Autowired
+    private com.example.fitchallenge.Security.AuthenticatedUserIdResolver authUser;
+
     /**
      * 📋 GET /api/notifications/{userId} - Lấy tất cả thông báo của user
      * Hỗ trợ phân trang: ?page=0&size=20
@@ -41,6 +44,7 @@ public class NotificationController {
             @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+        userId = authUser.resolve(userId);
         try {
             // Verify user exists
             userService.getUserEntityById(userId);
@@ -58,6 +62,7 @@ public class NotificationController {
      */
     @GetMapping("/{userId}/unread")
     public ResponseEntity<?> getUnreadNotifications(@PathVariable Long userId) {
+        userId = authUser.resolve(userId);
         try {
             List<Notification> notifications = notificationService.getUnreadNotifications(userId);
             return ResponseEntity.ok(notifications);
@@ -72,6 +77,7 @@ public class NotificationController {
      */
     @GetMapping("/{userId}/count-unread")
     public ResponseEntity<?> countUnreadNotifications(@PathVariable Long userId) {
+        userId = authUser.resolve(userId);
         try {
             Long count = notificationService.countUnreadNotifications(userId);
             Map<String, Object> response = new HashMap<>();
@@ -89,6 +95,7 @@ public class NotificationController {
     public ResponseEntity<?> markAsRead(
             @PathVariable Long notificationId,
             @RequestParam Long userId) {
+        userId = authUser.resolve(userId);
         try {
             notificationService.markAsRead(notificationId, userId);
             return ResponseEntity.ok(createSuccessResponse("Notification marked as read"));
@@ -102,6 +109,7 @@ public class NotificationController {
      */
     @PutMapping("/{userId}/read-all")
     public ResponseEntity<?> markAllAsRead(@PathVariable Long userId) {
+        userId = authUser.resolve(userId);
         try {
             notificationService.markAllAsRead(userId);
             return ResponseEntity.ok(createSuccessResponse("All notifications marked as read"));
@@ -116,6 +124,7 @@ public class NotificationController {
      */
     @GetMapping("/{userId}/recent")
     public ResponseEntity<?> getRecentNotifications(@PathVariable Long userId) {
+        userId = authUser.resolve(userId);
         try {
             List<Notification> notifications = notificationService.getRecentNotifications(userId);
             return ResponseEntity.ok(notifications);
@@ -131,6 +140,7 @@ public class NotificationController {
     public ResponseEntity<?> deleteNotification(
             @PathVariable Long notificationId,
             @RequestParam Long userId) {
+        userId = authUser.resolve(userId);
         try {
             notificationService.deleteNotification(notificationId, userId);
             return ResponseEntity.ok(createSuccessResponse("Notification deleted"));
@@ -146,6 +156,7 @@ public class NotificationController {
     public ResponseEntity<?> cleanupOldNotifications(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "30") int daysToKeep) {
+        userId = authUser.resolve(userId);
         try {
             notificationService.cleanupOldNotifications(userId, daysToKeep);
             return ResponseEntity.ok(createSuccessResponse("Old notifications cleaned up"));

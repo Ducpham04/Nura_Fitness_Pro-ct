@@ -2,6 +2,7 @@ package com.example.fitchallenge.controller;
 
 import com.example.fitchallenge.Entity.DailyNutritionLog;
 import com.example.fitchallenge.Entity.User;
+import com.example.fitchallenge.Security.AuthenticatedUserIdResolver;
 import com.example.fitchallenge.config.NotificationResponse;
 import com.example.fitchallenge.repository.DailyNutritionLogRepository;
 import com.example.fitchallenge.repository.User.UserRepository;
@@ -20,13 +21,15 @@ public class DailyNutritionLogController {
 
     private final DailyNutritionLogRepository logRepository;
     private final UserRepository userRepository;
+    private final AuthenticatedUserIdResolver authUser;
 
     @PostMapping("/log")
     public ResponseEntity<NotificationResponse> logMeal(
             @RequestHeader(value = "userId", required = false) Long headerUserId,
             @RequestBody Map<String, Object> request) {
         
-        Long userId = headerUserId != null ? headerUserId : ((Number) request.get("userId")).longValue();
+        // userId từ JWT — không tin header/body để chống ghi log vào tài khoản người khác
+        Long userId = authUser.resolve(headerUserId);
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
         DailyNutritionLog log = DailyNutritionLog.builder()

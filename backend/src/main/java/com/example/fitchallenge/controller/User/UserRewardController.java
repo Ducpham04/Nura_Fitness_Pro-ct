@@ -1,5 +1,6 @@
 package com.example.fitchallenge.controller.User;
 
+import com.example.fitchallenge.Security.AuthenticatedUserIdResolver;
 import com.example.fitchallenge.config.NotificationResponse;
 import com.example.fitchallenge.repository.User.UserRepository;
 import com.example.fitchallenge.service.RewardService;
@@ -19,6 +20,7 @@ public class UserRewardController {
 
     private final RewardService rewardService;
     private final UserRepository userRepository;
+    private final AuthenticatedUserIdResolver authUser;
 
     /** Danh sách phần thưởng để user duyệt & đổi (kèm tồn kho/điểm cần). */
     @GetMapping
@@ -29,6 +31,7 @@ public class UserRewardController {
     /** Số dư điểm hiện tại của user — để cửa hàng đổi thưởng hiển thị. */
     @GetMapping("/balance/{userId}")
     public NotificationResponse balance(@PathVariable Long userId) {
+        userId = authUser.resolve(userId); // số dư điểm của chính mình
         int points = userRepository.findById(userId)
                 .map(u -> u.getPoints() != null ? u.getPoints() : 0)
                 .orElse(0);

@@ -67,6 +67,9 @@ public class PersonalizedNutritionPlanController {
     @Autowired
     private com.example.fitchallenge.service.SmartMealPlanService smartMealPlanService;
 
+    @Autowired
+    private com.example.fitchallenge.Security.AuthenticatedUserIdResolver authUser;
+
     /**
      * 📋 GET /api/personalized-plans/{userId} - Lấy tất cả plans của user
      */
@@ -162,6 +165,7 @@ public class PersonalizedNutritionPlanController {
      */
     @PostMapping("/{userId}/create")
     public ResponseEntity<?> createPlan(@PathVariable Long userId, @Valid @RequestBody CreatePlanRequest request) {
+        userId = authUser.resolve(userId); // chống tạo plan dưới tài khoản người khác
         try {
             PersonalizedNutritionPlan plan = planService.createPlan(
                 userId,
@@ -304,6 +308,7 @@ public class PersonalizedNutritionPlanController {
             @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        userId = authUser.resolve(userId); // chống đọc báo cáo ngân sách người khác
         try {
             PersonalizedNutritionPlanService.BudgetReport report = planService.getBudgetReport(userId, startDate, endDate);
             return ResponseEntity.ok(report);
@@ -317,6 +322,7 @@ public class PersonalizedNutritionPlanController {
      */
     @DeleteMapping("/{userId}/{planId}")
     public ResponseEntity<?> deletePlan(@PathVariable Long userId, @PathVariable Long planId) {
+        userId = authUser.resolve(userId); // chống xoá plan người khác (service scope theo userId)
         try {
             planService.deletePlan(planId, userId);
             return ResponseEntity.ok(createSuccessResponse("Plan deleted successfully"));
