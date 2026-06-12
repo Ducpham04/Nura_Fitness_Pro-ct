@@ -79,8 +79,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     private final WorkoutWeekGenerationService workoutWeekGenerationService;
     private final UserPreferenceService userPreferenceService;
     private final AiUsageService aiUsageService;
-
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate; // injected bean có timeout (RestTemplateConfig)
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Override

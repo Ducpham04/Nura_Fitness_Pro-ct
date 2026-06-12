@@ -6,6 +6,7 @@ import com.example.fitchallenge.Entity.Transaction;
 import com.example.fitchallenge.Entity.User;
 import com.example.fitchallenge.repository.AiPackageRepository;
 import com.example.fitchallenge.repository.AiPromoCodeRepository;
+import com.example.fitchallenge.repository.TransactionRepository;
 import com.example.fitchallenge.repository.User.UserRepository;
 import com.example.fitchallenge.service.AiPackageService;
 import com.example.fitchallenge.service.AiUsageService;
@@ -36,6 +37,7 @@ public class AiPackageServiceImpl implements AiPackageService {
     private final AiPromoCodeRepository promoRepo;
     private final UserRepository userRepo;
     private final AiUsageService aiUsageService;
+    private final TransactionRepository txRepo;
 
     @Value("${vnpay.tmn-code:}")
     private String vnpayTmnCode;
@@ -117,8 +119,7 @@ public class AiPackageServiceImpl implements AiPackageService {
         res.put("packageCode", pkg.getCode());
         res.put("bonusCredits", bonusCredits);
 
-        // Lưu txnRef vào session/state để sau confirm biết user mua gói nào
-        // (dùng description của Transaction làm scratchpad)
+        // Lưu pending transaction để confirm sau
         Transaction tx = new Transaction();
         tx.setUser(user);
         tx.setType("ai_package_pending");
@@ -128,8 +129,7 @@ public class AiPackageServiceImpl implements AiPackageService {
         tx.setDescription("pkg:" + packageId + ";bonus:" + bonusCredits
                           + (promo != null ? ";promo:" + promo.getId() : ""));
         tx.setCreatedAt(ZonedDateTime.now());
-        // Lưu transaction — cần TransactionRepository; tạm dùng JPQL trực tiếp qua userRepo context
-        // → Sẽ thêm TransactionRepository sau. Hiện tại log và return URL trước.
+        txRepo.save(tx);
         log.info("VNPay subscription initiated: txnRef={} userId={} pkg={} amount={}",
                  txnRef, userId, pkg.getCode(), finalPrice);
 
@@ -158,14 +158,57 @@ public class AiPackageServiceImpl implements AiPackageService {
             return Map.of("success", false, "message", "Mã giao dịch không hợp lệ.");
         }
         try {
-            String[] parts = txnRef.split("_");
-            Long userId = Long.parseLong(parts[1]);
-            // TODO: lookup pending transaction by txnRef to get packageId & bonusCredits
-            // Hiện tại trả success — FE redirect về dashboard; admin confirm gói qua admin endpoint
-            return Map.of("success", true, "message", "Thanh toán thành công.", "txnRef", txnRef, "userId", userId);
+            // Lookup pending transaction để lấy packageId & bonusCredits
+            Transaction pendingTx = txRepo.findByReferenceAndStatus(txnRef, Transaction.TransactionStatus.PENDING)
+                    .orElse(null);
+
+            if (pendingTx == null) {
+                // Có thể đã confirm trước (IPN gọi trước returnUrl) → kiểm tra COMPLETED
+                Transaction completedTx = txRepo.findByReference(txnRef).orElse(null);
+                if (completedTx != null && completedTx.getStatus() == Transaction.TransactionStatus.COMPLETED) {
+                    AiPackage pkg = completedTx.getUser().getAiPackage();
+                    return Map.of("success", true, "message", "Gói đã được kích hoạt.",
+                                  "packageCode", pkg != null ? pkg.getCode() : "");
+                }
+                log.warn("VNPay confirm: no pending tx found for txnRef={}", txnRef);
+                return Map.of("success", false, "message", "Không tìm thấy giao dịch đang chờ.");
+            }
+
+            // Parse description: "pkg:{packageId};bonus:{bonusCredits}[;promo:{promoId}]"
+            String desc = pendingTx.getDescription();
+            long parsedPackageId = 0;
+            int parsedBonus = 0;
+            Long parsedPromoId = null;
+            for (String part : desc.split(";")) {
+                if (part.startsWith("pkg:"))   parsedPackageId = Long.parseLong(part.substring(4));
+                if (part.startsWith("bonus:")) parsedBonus     = Integer.parseInt(part.substring(6));
+                if (part.startsWith("promo:")) parsedPromoId   = Long.parseLong(part.substring(6));
+            }
+            final long packageId = parsedPackageId;
+            final int bonusCredits = parsedBonus;
+            final Long promoId = parsedPromoId;
+
+            AiPackage pkg = packageRepo.findById(packageId)
+                    .orElseThrow(() -> new EntityNotFoundException("Package not found: " + packageId));
+            User user = pendingTx.getUser();
+            AiPromoCode promo = promoId != null ? promoRepo.findById(promoId).orElse(null) : null;
+
+            applyPackageToUser(user, pkg, bonusCredits, promo);
+
+            // Mark transaction COMPLETED
+            pendingTx.setStatus(Transaction.TransactionStatus.COMPLETED);
+            txRepo.save(pendingTx);
+
+            log.info("VNPay confirmed: txnRef={} userId={} pkg={}", txnRef, user.getId(), pkg.getCode());
+            Map<String, Object> res = new LinkedHashMap<>();
+            res.put("success", true);
+            res.put("message", "Gói AI đã được kích hoạt thành công!");
+            res.put("packageCode", pkg.getCode());
+            res.put("txnRef", txnRef);
+            return res;
         } catch (Exception e) {
-            log.error("VNPay confirm parse error: txnRef={}", txnRef, e);
-            return Map.of("success", false, "message", "Không thể xác nhận giao dịch.");
+            log.error("VNPay confirm error: txnRef={}", txnRef, e);
+            return Map.of("success", false, "message", "Không thể xác nhận giao dịch: " + e.getMessage());
         }
     }
 

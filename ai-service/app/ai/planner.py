@@ -165,7 +165,7 @@ class AIPlanner:
             self.client = OpenAI(
                 base_url="https://api.groq.com/openai/v1",
                 api_key=api_key,
-                http_client=httpx.Client()
+                http_client=httpx.Client(timeout=90.0)
             )
             self.model_name = "llama-3.1-8b-instant"
         except Exception as e:

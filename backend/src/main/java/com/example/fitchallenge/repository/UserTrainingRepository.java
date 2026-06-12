@@ -4,6 +4,7 @@ import com.example.fitchallenge.DTO.UserTrainingDTO.UserRequestDTO;
 import com.example.fitchallenge.Entity.UserTraining;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
@@ -30,4 +31,13 @@ public interface UserTrainingRepository extends JpaRepository<UserTraining, Long
               AND ut.weekNumber < ut.totalWeeks
             """)
     List<UserTraining> findActiveProgramsWithWeeksRemaining();
+
+    // Ownership check: utId có thuộc userId không?
+    boolean existsByUtIdAndUser_Id(Long utId, Long userId);
+
+    // Dashboard: lọc trainings theo period — tránh findAll() toàn bảng
+    List<UserTraining> findByStartDateAfter(LocalDate since);
+
+    // Dashboard: đếm theo status
+    long countByStatusIgnoreCase(String status);
 }

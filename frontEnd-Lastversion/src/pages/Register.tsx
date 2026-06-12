@@ -254,13 +254,13 @@ export default function Register() {
               />
               <label htmlFor="terms" className="text-neutral-400 text-xs leading-relaxed cursor-pointer">
                 {t('auth.agreePrefix')}{' '}
-                <button type="button" className="text-lime hover:text-white transition-colors underline">
+                <Link to="/terms" target="_blank" className="text-lime hover:text-white transition-colors underline">
                   {t('auth.terms')}
-                </button>
+                </Link>
                 {' '}{t('auth.and')}{' '}
-                <button type="button" className="text-lime hover:text-white transition-colors underline">
+                <Link to="/privacy" target="_blank" className="text-lime hover:text-white transition-colors underline">
                   {t('auth.privacy')}
-                </button>
+                </Link>
               </label>
             </div>
 

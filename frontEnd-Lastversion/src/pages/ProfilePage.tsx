@@ -3,12 +3,14 @@ import {
   LogOut, User, Target, Award, Flame, Dumbbell,
   TrendingUp, Scale, Loader2, ChevronRight,
   Edit3, Check, Star, Zap,
-  Activity,
+  Activity, Sparkles, ArrowUpRight,
 } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { userService } from '../services/userService';
 import { useDashboard } from '../hooks/useDashboard';
+import { useAiUsage } from '../hooks/useAiUsage';
+import { AiUpgradeModal } from '../components/AiUpgradeModal';
 
 const GOAL_LABELS: Record<string, string> = {
   weight_loss: 'Giảm mỡ',
@@ -56,6 +58,8 @@ export default function ProfilePage() {
   const { data: dashData } = useDashboard();
   const [bodyProfile, setBodyProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const { usage, packages: aiPackages, loading: usageLoading, refresh: refreshUsage } = useAiUsage(user?.id ?? null);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -187,6 +191,97 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* ── AI Package ── */}
+      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-lime" />
+            Gói AI
+          </h3>
+          {usage && usage.packageCode !== 'PRO' && (
+            <button
+              onClick={() => setUpgradeModalOpen(true)}
+              className="flex items-center gap-1 text-[10px] text-lime hover:text-lime/80 transition-colors font-semibold"
+            >
+              <ArrowUpRight className="w-3 h-3" /> Nâng cấp
+            </button>
+          )}
+        </div>
+
+        {usageLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-5 h-5 text-neutral-600 animate-spin" />
+          </div>
+        ) : usage ? (
+          <div className="space-y-3">
+            {/* Package badge */}
+            <div className="flex items-center gap-3">
+              <div className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                usage.packageCode === 'PRO'
+                  ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                  : usage.packageCode === 'PLUS'
+                  ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                  : 'bg-zinc-700/50 text-zinc-400 border-zinc-600/50'
+              }`}>
+                {usage.packageCode === 'PRO' ? '⚡ PRO' : usage.packageCode === 'PLUS' ? '✦ PLUS' : '○ FREE'}
+              </div>
+              {usage.packageExpiresAt && (
+                <span className="text-[11px] text-neutral-600">
+                  Hết hạn {new Date(usage.packageExpiresAt).toLocaleDateString('vi-VN')}
+                </span>
+              )}
+            </div>
+
+            {/* Credits bar */}
+            <div>
+              <div className="flex items-center justify-between text-[11px] text-neutral-500 mb-1.5">
+                <span>Lượt AI đã dùng</span>
+                <span className="font-semibold text-white">
+                  {usage.used} / {usage.isUnlimited ? '∞' : usage.quota}
+                </span>
+              </div>
+              {!usage.isUnlimited && (
+                <div className="h-1.5 bg-white/[0.07] rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${
+                      usage.used / usage.quota > 0.8
+                        ? 'bg-red-400'
+                        : usage.used / usage.quota > 0.5
+                        ? 'bg-yellow-400'
+                        : 'bg-lime'
+                    }`}
+                    style={{ width: `${Math.min(100, (usage.used / usage.quota) * 100)}%` }}
+                  />
+                </div>
+              )}
+              {usage.isUnlimited && (
+                <div className="h-1.5 bg-purple-500/30 rounded-full overflow-hidden">
+                  <div className="h-full w-full bg-gradient-to-r from-purple-400 to-blue-400 rounded-full" />
+                </div>
+              )}
+              {usage.resetAt && (
+                <p className="text-[10px] text-neutral-700 mt-1">
+                  Reset vào {new Date(usage.resetAt).toLocaleDateString('vi-VN')}
+                </p>
+              )}
+            </div>
+
+            {/* Upgrade CTA nếu đang dùng FREE */}
+            {usage.packageCode === 'FREE' && (
+              <button
+                onClick={() => setUpgradeModalOpen(true)}
+                className="w-full mt-1 py-2.5 rounded-xl border border-lime/25 bg-lime/5 text-lime text-xs font-bold hover:bg-lime/10 transition-colors flex items-center justify-center gap-2"
+              >
+                <Zap className="w-3.5 h-3.5" fill="currentColor" />
+                Nâng cấp lên PLUS / PRO
+              </button>
+            )}
+          </div>
+        ) : (
+          <p className="text-neutral-600 text-sm">Không thể tải thông tin gói AI.</p>
+        )}
+      </div>
+
       {/* ── Quick actions ── */}
       <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] overflow-hidden">
         <div className="px-5 py-3.5 border-b border-white/[0.04]">
@@ -223,6 +318,16 @@ export default function ProfilePage() {
         <LogOut className="w-4 h-4" />
         Đăng xuất
       </button>
+
+      {/* ── Modals ── */}
+      <AiUpgradeModal
+        isOpen={upgradeModalOpen}
+        userId={user?.id ?? 0}
+        usage={usage ?? null}
+        packages={aiPackages}
+        onClose={() => setUpgradeModalOpen(false)}
+        onUpgradeSuccess={() => { refreshUsage(); setUpgradeModalOpen(false); }}
+      />
     </div>
   );
 }

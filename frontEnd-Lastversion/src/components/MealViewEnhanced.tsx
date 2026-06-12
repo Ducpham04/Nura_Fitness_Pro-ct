@@ -886,7 +886,10 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
               <h3 className="font-grotesk font-bold text-white">Quét thực phẩm AI</h3>
               <button onClick={() => setScannerOpen(false)} className="text-neutral-500 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
-            <AIFoodScanner onAnalysisComplete={() => setScannerOpen(false)} />
+            <AIFoodScanner
+              onAnalysisComplete={() => setScannerOpen(false)}
+              onQuotaExceeded={() => { setScannerOpen(false); setUpgradeModalOpen(true); }}
+            />
           </div>
         </div>
       )}

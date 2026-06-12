@@ -4,6 +4,7 @@ import {
   Loader2, Zap, Brain, Utensils, Flame, Beef, Apple
 } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
+import { apiClient } from '../services/apiClient';
 
 interface FoodAnalysisResult {
   foodName: string;
@@ -19,9 +20,10 @@ interface FoodAnalysisResult {
 
 interface Props {
   onAnalysisComplete?: (result: FoodAnalysisResult) => void;
+  onQuotaExceeded?: () => void;
 }
 
-export default function AIFoodScanner({ onAnalysisComplete }: Props) {
+export default function AIFoodScanner({ onAnalysisComplete, onQuotaExceeded }: Props) {
   const [isScanning, setIsScanning] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<FoodAnalysisResult | null>(null);
@@ -101,56 +103,53 @@ export default function AIFoodScanner({ onAnalysisComplete }: Props) {
     setError(null);
     
     try {
-      // Convert base64 to blob for API call
+      // Convert base64 to blob
       const base64Data = imageData.split(',')[1];
       const byteCharacters = atob(base64Data);
-      const byteNumbers = new Array(byteCharacters.length);
+      const byteArray = new Uint8Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+        byteArray[i] = byteCharacters.charCodeAt(i);
       }
-      const byteArray = new Uint8Array(byteNumbers);
       const blob = new Blob([byteArray], { type: 'image/jpeg' });
-      
-      // Create FormData for API call
+
       const formData = new FormData();
       formData.append('image', blob, 'food-image.jpg');
-      
-      // Call AI Gateway API
-      const response = await fetch('/api/food-analysis/scan', {
-        method: 'POST',
-        headers: {
-          'userId': user?.id?.toString() || '1',
-        },
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to analyze food image');
+
+      // Dùng apiClient để có Bearer token + 429 handling
+      const res = await apiClient.postFormData<any>(
+        '/food-analysis/scan',
+        formData,
+        { headers: { userId: user?.id?.toString() || '' } }
+      );
+
+      if (!res.success) {
+        if (res.error?.code === 'QUOTA_EXCEEDED') {
+          onQuotaExceeded?.();
+          return;
+        }
+        throw new Error(res.error?.message || 'Analysis failed');
       }
-      
-      const data = await response.json();
-      
-      if (data.success && data.data) {
+
+      const payload = (res.data as any)?.data || res.data;
+      if (payload) {
         const analysisResult: FoodAnalysisResult = {
-          foodName: data.data.foodName || 'Unknown Food',
-          calories: data.data.calories || 0,
-          protein: data.data.protein || 0,
-          carbs: data.data.carbs || 0,
-          fat: data.data.fat || 0,
-          fiber: data.data.fiber || 0,
-          confidence: data.data.confidence || 0,
-          description: data.data.description || '',
-          ingredients: data.data.ingredients || []
+          foodName: payload.foodName || 'Unknown Food',
+          calories: payload.calories || 0,
+          protein: payload.protein || 0,
+          carbs: payload.carbs || 0,
+          fat: payload.fat || 0,
+          fiber: payload.fiber || 0,
+          confidence: payload.confidence || 0,
+          description: payload.description || '',
+          ingredients: payload.ingredients || [],
         };
-        
         setResult(analysisResult);
         onAnalysisComplete?.(analysisResult);
       } else {
-        throw new Error(data.message || 'Analysis failed');
+        throw new Error('Không thể phân tích ảnh, thử lại nhé');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze image');
-      console.error('Analysis error:', err);
     } finally {
       setIsAnalyzing(false);
     }

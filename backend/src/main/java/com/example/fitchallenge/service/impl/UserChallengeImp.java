@@ -66,6 +66,21 @@ public class UserChallengeImp implements UserChallengeService {
 
     @Override
     @Transactional(readOnly = true)
+    public NotificationResponse getByUserId(Long userId, String status) {
+        List<UserChallenge> raw = userChallengeRepository.findByUser_Id(userId);
+
+        // Lọc theo status nếu có
+        List<UserChallengeDTO> list = raw.stream()
+                .filter(uc -> status == null || status.isBlank()
+                        || (uc.getStatus() != null && uc.getStatus().name().equalsIgnoreCase(status)))
+                .map(this::toDto)
+                .collect(Collectors.toList());
+
+        return new NotificationResponse(true, "Danh sách challenges của user", list);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public NotificationResponse getById(Long id) {
         Optional<UserChallenge> found = userChallengeRepository.findById(id);
         return found.map(uc -> new NotificationResponse(true, "Tìm thấy bản ghi", toDto(uc)))

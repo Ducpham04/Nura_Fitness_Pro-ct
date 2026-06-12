@@ -50,7 +50,6 @@ export default function SetupWizard({ userId, userName, onComplete }: Props) {
       const userGoal = profile?.goal || "maintenance";
 
       // 4. Trigger AI Meal Plan
-      console.log(`[AI] Initializing Meal Plan for user ${userId} with budget ${budget} and goal ${userGoal}`);
       const mealPlanResponse = await userService.generateAiMealPlan(userId, {
         preferences: ["balanced"],
         budget: budget,
@@ -58,7 +57,6 @@ export default function SetupWizard({ userId, userName, onComplete }: Props) {
         goal: userGoal,
         days: 7
       });
-      console.log('[AI] Meal Plan Response:', mealPlanResponse);
       if (!mealPlanResponse.success) {
         throw new Error(mealPlanResponse.error?.message || mealPlanResponse.message || 'Failed to generate meal plan');
       }
@@ -75,9 +73,7 @@ export default function SetupWizard({ userId, userName, onComplete }: Props) {
     setIsSaving(true);
     try {
       // Trigger AI Workout Plan
-      console.log(`[AI] Initializing Workout Plan for user ${userId}`);
       const workoutPlanResponse = await userService.generateAiWorkoutPlan(userId);
-      console.log('[AI] Workout Plan Response:', workoutPlanResponse);
       if (!workoutPlanResponse.success) {
         throw new Error(workoutPlanResponse.error?.message || workoutPlanResponse.message || 'Failed to generate workout plan');
       }

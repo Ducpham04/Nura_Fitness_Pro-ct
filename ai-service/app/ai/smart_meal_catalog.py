@@ -53,7 +53,7 @@ def generate_smart_catalog_plan(req: SmartMealCatalogRequest) -> SmartMealCatalo
     client = OpenAI(
         base_url="https://api.groq.com/openai/v1",
         api_key=api_key,
-        http_client=httpx.Client(),
+        http_client=httpx.Client(timeout=90.0),
     )
 
     user_blob: Dict[str, Any] = {

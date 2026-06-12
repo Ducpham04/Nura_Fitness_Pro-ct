@@ -1,10 +1,12 @@
 package com.example.fitchallenge.controller.User;
 
 import com.example.fitchallenge.config.NotificationResponse;
+import com.example.fitchallenge.repository.UserTrainingRepository;
 import com.example.fitchallenge.service.PersonalizationService;
 import com.example.fitchallenge.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,6 +22,7 @@ public class PersonalizedTrainingController {
 
     private final PersonalizationService personalizationService;
     private final UserService userService;
+    private final UserTrainingRepository userTrainingRepository;
 
     /**
      * GET /api/user/training/{utId}/day/{dayNumber}
@@ -31,14 +34,16 @@ public class PersonalizedTrainingController {
             @PathVariable Long utId,
             @PathVariable Integer dayNumber) {
         try {
-            // Verify user owns this training plan
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth == null || auth.getName() == null) {
-                return ResponseEntity.ok(new NotificationResponse(false, "Unauthorized: No authentication found"));
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new NotificationResponse(false, "Unauthorized"));
             }
-            // Long currentUserId = userService.getUserByEmail(auth.getName()).getId();
-            // TODO: Add verification that utId belongs to currentUserId
-            
+            Long currentUserId = userService.getUserByEmail(auth.getName()).getId();
+            if (!userTrainingRepository.existsByUtIdAndUser_Id(utId, currentUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new NotificationResponse(false, "Bạn không có quyền truy cập training plan này"));
+            }
             return ResponseEntity.ok(personalizationService.getPersonalizedDayDetails(utId, dayNumber));
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -161,18 +166,17 @@ public class PersonalizedTrainingController {
     public ResponseEntity<NotificationResponse> regeneratePersonalizedPlanDetails(
             @PathVariable Long utId) {
         try {
-            // Verify user owns this training plan
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth == null || auth.getName() == null) {
-                return ResponseEntity.ok(new NotificationResponse(false, "Unauthorized: No authentication found"));
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new NotificationResponse(false, "Unauthorized"));
             }
-            // Long currentUserId = userService.getUserByEmail(auth.getName()).getId();
-            // TODO: Add verification that utId belongs to currentUserId
-            
-            // Delete existing personalized details first (if any)
-            // Then create new ones
+            Long currentUserId = userService.getUserByEmail(auth.getName()).getId();
+            if (!userTrainingRepository.existsByUtIdAndUser_Id(utId, currentUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new NotificationResponse(false, "Bạn không có quyền truy cập training plan này"));
+            }
             NotificationResponse response = personalizationService.createPersonalizedPlanDetails(utId);
-            
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Unexpected error", e);

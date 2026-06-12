@@ -95,4 +95,18 @@ public interface PersonalizedNutritionPlanRepository extends JpaRepository<Perso
     @Modifying
     @Query("UPDATE PersonalizedNutritionPlan pnp SET pnp.actualTotalCost = :actualCost WHERE pnp.pnpId = :id")
     void updateActualCost(@Param("id") Long id, @Param("actualCost") Integer actualCost);
+
+    // ── Dashboard admin stats — tránh findAll() toàn bảng ─────────────────
+
+    /** Đếm plans theo status (không filter isDeleted — khớp hành vi cũ) */
+    @Query("SELECT COUNT(pnp) FROM PersonalizedNutritionPlan pnp WHERE pnp.status = :status")
+    long countByPlanStatus(@Param("status") PersonalizedNutritionPlan.PlanStatus status);
+
+    /** Đếm distinct users có plan bắt đầu sau ngày cho trước */
+    @Query("SELECT COUNT(DISTINCT pnp.user.id) FROM PersonalizedNutritionPlan pnp WHERE pnp.startDate > :since")
+    long countDistinctUsersByStartDateAfter(@Param("since") LocalDate since);
+
+    /** Đếm distinct users có ít nhất một plan */
+    @Query("SELECT COUNT(DISTINCT pnp.user.id) FROM PersonalizedNutritionPlan pnp")
+    long countDistinctUsers();
 }

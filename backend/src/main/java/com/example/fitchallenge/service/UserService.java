@@ -30,4 +30,17 @@ public interface UserService {
     UserDTO updateUser(Long id, RegisterRequestAdmin request);
     UserDTO updateUserAvatar(Long id, String avatarUrl);
     NotificationResponse deleteUser(Long id);
+
+    // ── Forgot / Reset password ───────────────────────────────────────────────
+    /**
+     * Tạo token và gửi email đặt lại mật khẩu.
+     * Luôn trả về bình thường (không tiết lộ email có tồn tại hay không).
+     */
+    void forgotPassword(String email);
+
+    /**
+     * Đặt lại mật khẩu bằng token từ email.
+     * @throws IllegalArgumentException nếu token không hợp lệ / hết hạn / đã dùng
+     */
+    void resetPassword(String token, String newPassword);
 }

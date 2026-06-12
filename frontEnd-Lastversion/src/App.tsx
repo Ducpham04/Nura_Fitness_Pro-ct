@@ -21,6 +21,10 @@ const AICoachPage = lazy(() => import('./pages/AICoachPage'));
 const LogbookPage = lazy(() => import('./pages/LogbookPage'));
 const ProfileEditPage = lazy(() => import('./pages/ProfileEditPage'));
 const PaymentResultPage = lazy(() => import('./pages/PaymentResultPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
 
 function PageSpinner() {
   return (
@@ -90,6 +94,14 @@ function AppContent() {
           <Route path="coach" element={<AICoachPage />} />
           <Route path="logbook" element={<LogbookPage />} />
         </Route>
+
+        {/* Password reset (public) */}
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password"  element={<ResetPasswordPage />} />
+
+        {/* Legal pages (public) */}
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms"   element={<TermsPage />} />
 
         {/* Payment result (public — VNPay redirect) */}
         <Route path="/payment/result" element={<PaymentResultPage />} />

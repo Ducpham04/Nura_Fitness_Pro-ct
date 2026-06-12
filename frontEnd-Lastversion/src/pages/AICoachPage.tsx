@@ -5,6 +5,9 @@ import { useAuthContext } from '../context/AuthContext';
 import { useDashboard } from '../hooks/useDashboard';
 import { userService } from '../services/userService';
 import { aiService } from '../services/aiService';
+import { useAiUsage } from '../hooks/useAiUsage';
+import { AiUsageBadge } from '../components/AiUsageBadge';
+import { AiUpgradeModal } from '../components/AiUpgradeModal';
 
 interface Message {
   id: number;
@@ -36,8 +39,10 @@ export default function AICoachPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [goalText, setGoalText] = useState<string>('');
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const greetedRef = useRef(false);
+  const { usage, packages: aiPackages, refresh: refreshUsage } = useAiUsage(user?.id ?? null);
 
   const storageKey = user?.id ? `coach_chat_${user.id}` : 'coach_chat';
 
@@ -119,6 +124,10 @@ export default function AICoachPage() {
           timestamp: new Date(),
           type: 'analysis',
         }]);
+        refreshUsage(); // cập nhật credit sau mỗi tin nhắn
+      } else if (response.error?.code === 'QUOTA_EXCEEDED') {
+        // Hết credit → mở modal nâng cấp
+        setUpgradeModalOpen(true);
       } else {
         setMessages(prev => [...prev, {
           id: Date.now() + 1,
@@ -242,9 +251,20 @@ export default function AICoachPage() {
         {/* Sidebar — DỮ LIỆU THẬT */}
         <div className="w-full lg:w-72 flex flex-col gap-5">
           <div className="glass rounded-[2rem] p-6 border border-white/5">
-            <h3 className="font-grotesk font-bold text-white text-base mb-5 flex items-center gap-2.5">
+            <h3 className="font-grotesk font-bold text-white text-base mb-3 flex items-center gap-2.5">
               <Zap className="w-4 h-4 text-lime" /> Chỉ số của bạn
             </h3>
+            {/* AI credit badge */}
+            {usage && (
+              <div className="mb-4">
+                <AiUsageBadge
+                  usage={usage}
+                  actionCost={1}
+                  onUpgradeClick={() => setUpgradeModalOpen(true)}
+                />
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-neutral-500 text-[10px] uppercase font-bold tracking-widest mb-1">Cấp độ</div>
@@ -302,6 +322,16 @@ export default function AICoachPage() {
           </div>
         </div>
       </div>
+
+      {/* Upgrade modal */}
+      <AiUpgradeModal
+        isOpen={upgradeModalOpen}
+        userId={user?.id ?? 0}
+        usage={usage ?? null}
+        packages={aiPackages}
+        onClose={() => setUpgradeModalOpen(false)}
+        onUpgradeSuccess={() => { refreshUsage(); setUpgradeModalOpen(false); }}
+      />
     </div>
   );
 }

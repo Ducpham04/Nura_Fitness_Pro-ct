@@ -6,6 +6,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface UserChallengeService {
     NotificationResponse getAll();
+
+    /** Lấy challenges của một user, lọc theo status nếu status != null */
+    NotificationResponse getByUserId(Long userId, String status);
     NotificationResponse getById(Long id);
     NotificationResponse create(UserChallengeDTO dto);
     NotificationResponse update(Long id, UserChallengeDTO dto);

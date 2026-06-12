@@ -7,9 +7,11 @@ import com.example.fitchallenge.Security.JWT.JwtTokenProvider;
 import com.example.fitchallenge.config.NotificationResponse;
 import com.example.fitchallenge.repository.*;
 import com.example.fitchallenge.repository.User.UserRepository;
+import com.example.fitchallenge.service.EmailService;
 import com.example.fitchallenge.service.UserService;
 import com.example.fitchallenge.exception.DuplicateResourceException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -28,6 +30,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -37,6 +40,10 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final RoleRepository roleRepository;
+
+    // Password reset
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailService emailService;
 
     // Supporting services for better separation of concerns
     private final UserChallengeRepository userChallengeRepository;
@@ -756,6 +763,71 @@ public class UserServiceImpl implements UserService {
 
         userRepository.deleteById(id);
         return new NotificationResponse(true, "User deleted successfully");
+    }
+
+    // ── Forgot / Reset password ───────────────────────────────────────────────
+
+    @Override
+    @Transactional
+    public void forgotPassword(String email) {
+        // Tìm user — nếu không có thì im lặng (không tiết lộ email có tồn tại)
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            log.info("[ForgotPassword] Email không tồn tại, bỏ qua: {}", email);
+            return;
+        }
+        User user = userOpt.get();
+
+        // Xóa token cũ của user (mỗi lần chỉ có 1 token active)
+        passwordResetTokenRepository.deleteByUser(user);
+
+        // Tạo token mới (UUID 36 chars)
+        String tokenValue = java.util.UUID.randomUUID().toString();
+        PasswordResetToken token = PasswordResetToken.builder()
+                .user(user)
+                .token(tokenValue)
+                .expiresAt(ZonedDateTime.now().plusMinutes(30))
+                .used(false)
+                .createdAt(ZonedDateTime.now())
+                .build();
+        passwordResetTokenRepository.save(token);
+
+        // Gửi email
+        String displayName = user.getFullName() != null ? user.getFullName() : user.getUserName();
+        emailService.sendPasswordResetEmail(email, displayName, tokenValue);
+        log.info("[ForgotPassword] Token tạo thành công cho userId={}", user.getId());
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("Token không hợp lệ");
+        }
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new IllegalArgumentException("Mật khẩu phải có ít nhất 6 ký tự");
+        }
+
+        PasswordResetToken prt = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Token không hợp lệ hoặc đã hết hạn"));
+
+        if (prt.isUsed()) {
+            throw new IllegalArgumentException("Token này đã được sử dụng. Vui lòng yêu cầu đặt lại mật khẩu mới.");
+        }
+        if (ZonedDateTime.now().isAfter(prt.getExpiresAt())) {
+            throw new IllegalArgumentException("Token đã hết hạn. Vui lòng yêu cầu đặt lại mật khẩu mới.");
+        }
+
+        // Cập nhật mật khẩu
+        User user = prt.getUser();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // Đánh dấu token đã dùng
+        prt.setUsed(true);
+        passwordResetTokenRepository.save(prt);
+
+        log.info("[ResetPassword] Đặt lại mật khẩu thành công cho userId={}", user.getId());
     }
 
 }

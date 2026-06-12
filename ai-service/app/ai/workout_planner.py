@@ -93,7 +93,7 @@ class WorkoutPlanner:
         self.client = OpenAI(
             base_url="https://api.groq.com/openai/v1",
             api_key=api_key,
-            http_client=httpx.Client(),
+            http_client=httpx.Client(timeout=90.0),
         )
         # ── Fallback chain — tất cả text-gen models free của Groq ──────────────
         # Thứ tự: mới/mạnh nhất trước, nhỏ/cũ nhất sau.

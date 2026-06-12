@@ -152,9 +152,9 @@ export default function Login() {
 
             {/* Forgot password */}
             <div className="flex justify-end">
-              <button type="button" className="text-electric text-xs font-grotesk font-medium hover:text-white transition-colors">
+              <Link to="/forgot-password" className="text-electric text-xs font-grotesk font-medium hover:text-white transition-colors">
                 {t('auth.forgotPassword')}
-              </button>
+              </Link>
             </div>
 
             {/* Submit button */}

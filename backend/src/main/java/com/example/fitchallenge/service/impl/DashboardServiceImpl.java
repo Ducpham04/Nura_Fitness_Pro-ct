@@ -46,66 +46,47 @@ public class DashboardServiceImpl implements DashboardService {
     @Transactional(readOnly = true)
     public DashboardDTO.UserStatsResponse getUserStats(String period) {
         ZonedDateTime startDate = getStartDate(period);
-        
-        long totalUsers = userRepository.count();
-        long activeUsers = userRepository.findAll().stream()
-                .filter(u -> "active".equalsIgnoreCase(u.getStatus()))
-                .count();
-        long inactiveUsers = userRepository.findAll().stream()
-                .filter(u -> "inactive".equalsIgnoreCase(u.getStatus()))
-                .count();
-        long bannedUsers = userRepository.findAll().stream()
-                .filter(u -> "banned".equalsIgnoreCase(u.getStatus()))
-                .count();
 
-        // Daily new users
+        // COUNT queries — không load toàn bảng users vào memory
+        long totalUsers    = userRepository.count();
+        long activeUsers   = userRepository.countByStatusIgnoreCase("active");
+        long inactiveUsers = userRepository.countByStatusIgnoreCase("inactive");
+        long bannedUsers   = userRepository.countByStatusIgnoreCase("banned");
+
+        // Daily new users — chỉ tải bản ghi trong khoảng period
         List<DashboardDTO.DailyUserCount> dailyNewUsers = new ArrayList<>();
         if (startDate != null) {
-            List<User> users = userRepository.findAll().stream()
-                    .filter(u -> u.getCreatedAt() != null && 
-                            ZonedDateTime.ofInstant(u.getCreatedAt().toInstant(), 
-                                    java.time.ZoneId.systemDefault()).isAfter(startDate))
-                    .collect(Collectors.toList());
-            
+            List<User> users = userRepository.findByCreatedAtAfter(startDate);
             Map<String, Long> dailyCount = users.stream()
+                    .filter(u -> u.getCreatedAt() != null)
                     .collect(Collectors.groupingBy(
-                            u -> ZonedDateTime.ofInstant(u.getCreatedAt().toInstant(), 
-                                    java.time.ZoneId.systemDefault())
-                                    .toLocalDate().toString(),
+                            u -> u.getCreatedAt().toLocalDate().toString(),
                             Collectors.counting()
                     ));
-            
             dailyCount.forEach((date, count) -> {
-                    DashboardDTO.DailyUserCount dailyUserCount = new DashboardDTO.DailyUserCount();
-                    dailyUserCount.setDate(date);
-                    dailyUserCount.setCount(count);
-                    dailyNewUsers.add(dailyUserCount);
-                });
+                DashboardDTO.DailyUserCount dailyUserCount = new DashboardDTO.DailyUserCount();
+                dailyUserCount.setDate(date);
+                dailyUserCount.setCount(count);
+                dailyNewUsers.add(dailyUserCount);
+            });
         }
 
-        // Daily active users (users who logged in)
+        // Daily active users (users who logged in) — chỉ tải bản ghi trong khoảng period
         List<DashboardDTO.DailyActiveUsers> dailyActiveUsers = new ArrayList<>();
         if (startDate != null) {
-            List<User> activeUsersList = userRepository.findAll().stream()
-                    .filter(u -> u.getLastLoginAt() != null && 
-                            ZonedDateTime.ofInstant(u.getLastLoginAt().toInstant(), 
-                                    java.time.ZoneId.systemDefault()).isAfter(startDate))
-                    .collect(Collectors.toList());
-            
+            List<User> activeUsersList = userRepository.findByLastLoginAtAfter(startDate);
             Map<String, Long> dailyActiveCount = activeUsersList.stream()
+                    .filter(u -> u.getLastLoginAt() != null)
                     .collect(Collectors.groupingBy(
-                            u -> ZonedDateTime.ofInstant(u.getLastLoginAt().toInstant(), 
-                                    java.time.ZoneId.systemDefault())
-                                    .toLocalDate().toString(),
+                            u -> u.getLastLoginAt().toLocalDate().toString(),
                             Collectors.counting()
                     ));
-            
             dailyActiveCount.forEach((date, count) -> {
-                    DashboardDTO.DailyActiveUsers dailyActiveUser = new DashboardDTO.DailyActiveUsers();
-                    dailyActiveUser.setDate(date);
-                    dailyActiveUser.setCount(count);
-                    dailyActiveUsers.add(dailyActiveUser);
-                });
+                DashboardDTO.DailyActiveUsers dailyActiveUser = new DashboardDTO.DailyActiveUsers();
+                dailyActiveUser.setDate(date);
+                dailyActiveUser.setCount(count);
+                dailyActiveUsers.add(dailyActiveUser);
+            });
         }
 
         DashboardDTO.UserStatsResponse userResponse = new DashboardDTO.UserStatsResponse();
@@ -122,20 +103,16 @@ public class DashboardServiceImpl implements DashboardService {
     @Transactional(readOnly = true)
     public DashboardDTO.ChallengeStatsResponse getChallengeStats(String period) {
         ZonedDateTime startDate = getStartDate(period);
-        
-        long totalChallenges = challengeRepository.count();
-        long activeChallenges = challengeRepository.findAll().stream()
-                .filter(c -> c.getStatus() != null && 
-                        c.getStatus() == com.example.fitchallenge.Entity.Challenges.Status.ACTIVE)
-                .count();
-        
-        List<UserChallenge> allSubmissions = userChallengeRepository.findAll();
-        if (startDate != null) {
-            allSubmissions = allSubmissions.stream()
-                    .filter(uc -> uc.getSubmittedAt() != null && 
-                            uc.getSubmittedAt().isAfter(startDate))
-                    .collect(Collectors.toList());
-        }
+
+        // COUNT queries — không load toàn bảng vào memory
+        long totalChallenges  = challengeRepository.count();
+        long activeChallenges = challengeRepository.countByStatus(
+                com.example.fitchallenge.Entity.Challenges.Status.ACTIVE);
+
+        // Submissions — chỉ tải bản ghi trong khoảng period
+        List<UserChallenge> allSubmissions = startDate != null
+                ? userChallengeRepository.findBySubmittedAtAfter(startDate)
+                : userChallengeRepository.findAll();
         
         long totalSubmissions = allSubmissions.size();
         long completedSubmissions = allSubmissions.stream()
@@ -200,20 +177,15 @@ public class DashboardServiceImpl implements DashboardService {
     @Transactional(readOnly = true)
     public DashboardDTO.TrainingStatsResponse getTrainingStats(String period) {
         ZonedDateTime startDate = getStartDate(period);
-        
-        long totalPlans = trainingPlanRepository.count();
-        long activePlans = trainingPlanRepository.findAll().stream()
-                .filter(tp -> tp.getCreatedAt() != null)
-                .count(); // Có thể thêm status field nếu cần
-        
-        List<UserTraining> allUserTrainings = userTrainingRepository.findAll();
-        if (startDate != null) {
-            allUserTrainings = allUserTrainings.stream()
-                    .filter(ut -> ut.getStartDate() != null && 
-                            ut.getStartDate().atStartOfDay()
-                                    .isAfter(startDate.toLocalDateTime()))
-                    .collect(Collectors.toList());
-        }
+
+        // COUNT queries — tất cả plans đều có createdAt, activePlans ≈ totalPlans
+        long totalPlans  = trainingPlanRepository.count();
+        long activePlans = totalPlans; // TrainingPlan chưa có status field; mọi plan đều "active"
+
+        // UserTrainings — chỉ tải bản ghi trong khoảng period
+        List<UserTraining> allUserTrainings = startDate != null
+                ? userTrainingRepository.findByStartDateAfter(startDate.toLocalDate())
+                : userTrainingRepository.findAll();
         
         long totalParticipants = allUserTrainings.size();
         long completedParticipants = allUserTrainings.stream()
@@ -273,38 +245,23 @@ public class DashboardServiceImpl implements DashboardService {
     @Transactional(readOnly = true)
     public DashboardDTO.NutritionStatsResponse getNutritionStats(String period) {
         ZonedDateTime startDate = getStartDate(period);
-        
-        List<PersonalizedNutritionPlan> nutritionPlans = personalizedNutritionPlanRepository.findAll();
-        long totalPlans = nutritionPlans.size();
-        long activePlans = nutritionPlans.stream()
-                .filter(plan -> plan.getStatus() == PersonalizedNutritionPlan.PlanStatus.ACTIVE)
-                .count();
-        
-        List<PersonalizedNutritionPlan> participantPlans = nutritionPlans;
-        if (startDate != null) {
-            participantPlans = participantPlans.stream()
-                    .filter(plan -> plan.getStartDate() != null &&
-                            plan.getStartDate().atStartOfDay()
-                                    .isAfter(startDate.toLocalDateTime()))
-                    .collect(Collectors.toList());
-        }
-        
-        long totalParticipants = participantPlans.stream()
-                .map(plan -> plan.getUser().getId())
-                .distinct()
-                .count();
-        
-        // Average daily calories (từ UserBodyProfile - Single Source of Truth)
-        List<BigDecimal> caloriesList = userBodyProfileRepository.findAll().stream()
-                .filter(p -> p.getRecommendedCalories() != null
-                        && p.getRecommendedCalories().compareTo(BigDecimal.ZERO) > 0)
-                .map(UserBodyProfile::getRecommendedCalories)
-                .collect(Collectors.toList());
-        
-        BigDecimal averageDailyCalories = caloriesList.isEmpty() ? BigDecimal.ZERO :
-                caloriesList.stream()
-                        .reduce(BigDecimal.ZERO, BigDecimal::add)
-                        .divide(BigDecimal.valueOf(caloriesList.size()), 2, RoundingMode.HALF_UP);
+
+        // COUNT queries — không load toàn bảng vào memory
+        long totalPlans  = personalizedNutritionPlanRepository.count();
+        long activePlans = personalizedNutritionPlanRepository.countByPlanStatus(
+                PersonalizedNutritionPlan.PlanStatus.ACTIVE);
+
+        // Distinct users có plan trong khoảng period
+        long totalParticipants = startDate != null
+                ? personalizedNutritionPlanRepository.countDistinctUsersByStartDateAfter(
+                        startDate.toLocalDate())
+                : personalizedNutritionPlanRepository.countDistinctUsers();
+
+        // Average daily calories — AVG query thay vì findAll() + stream
+        BigDecimal avgCalories = userBodyProfileRepository.avgRecommendedCalories();
+        BigDecimal averageDailyCalories = avgCalories != null
+                ? avgCalories.setScale(2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
 
         // Total meals completed (có thể tính từ meal logs nếu có)
         long totalMealsCompleted = 0; // TODO: Tính từ meal completion logs nếu có
@@ -327,19 +284,15 @@ public class DashboardServiceImpl implements DashboardService {
     @Transactional(readOnly = true)
     public DashboardDTO.RewardStatsResponse getRewardStats(String period) {
         ZonedDateTime startDate = getStartDate(period);
-        
-        long totalRewards = rewardRepository.count();
-        long activeRewards = rewardRepository.findAll().stream()
-                .filter(r -> "active".equalsIgnoreCase(r.getStatus()))
-                .count();
-        
-        List<RewardRedemption> allRedemptions = rewardRedemptionRepository.findAll();
-        if (startDate != null) {
-            allRedemptions = allRedemptions.stream()
-                    .filter(rr -> rr.getCreatedAt() != null && 
-                            rr.getCreatedAt().isAfter(startDate))
-                    .collect(Collectors.toList());
-        }
+
+        // COUNT queries — không load toàn bảng vào memory
+        long totalRewards  = rewardRepository.count();
+        long activeRewards = rewardRepository.countByStatusIgnoreCase("active");
+
+        // Redemptions — chỉ tải bản ghi trong khoảng period
+        List<RewardRedemption> allRedemptions = startDate != null
+                ? rewardRedemptionRepository.findByCreatedAtAfter(startDate)
+                : rewardRedemptionRepository.findAll();
         
         long totalRedemptions = allRedemptions.size();
         long pendingRedemptions = allRedemptions.stream()

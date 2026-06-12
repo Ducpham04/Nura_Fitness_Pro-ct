@@ -95,7 +95,10 @@ public class SecurityConfig {
                                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
 
                                 // ── Public unauthenticated endpoints ─────────────────────────
-                                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                                .requestMatchers(
+                                    "/api/auth/login", "/api/auth/register",
+                                    "/api/auth/forgot-password", "/api/auth/reset-password"
+                                ).permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/goals", "/api/goals/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/foods", "/api/foods/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/challenges/**").permitAll()

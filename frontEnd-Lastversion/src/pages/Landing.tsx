@@ -14,7 +14,7 @@ import {
   Dumbbell,
   Flame,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Lenis from 'lenis';
 import LanguageSelector from '../components/LanguageSelector';
@@ -79,7 +79,6 @@ export default function Landing() {
   }, []);
 
   const onEnter = () => navigate(user ? '/dashboard' : '/login');
-  const onAdmin = () => navigate('/admin');
 
   const navItems = [
     { label: t('landing.features'), href: '#features' },
@@ -169,9 +168,6 @@ export default function Landing() {
 
           <div className="hidden items-center gap-4 lg:flex">
             <LanguageSelector />
-            <button onClick={onAdmin} className="text-[11px] font-bold uppercase tracking-widest text-neutral-500 hover:text-white transition-colors">
-              {t('landing.admin')}
-            </button>
             <button onClick={onEnter} className="btn-lime px-6 py-2.5 text-xs font-bold uppercase tracking-widest">
               {t('landing.getStarted')}
             </button>
@@ -233,12 +229,12 @@ export default function Landing() {
           {/* Stats */}
           <div className="reveal mx-auto mt-20 grid max-w-lg grid-cols-3 gap-px overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.06]">
             {[
-              ['2.4k', t('landing.activeOps')],
-              ['98%', t('landing.accuracy')],
-              ['4.9 ★', t('landing.rating')],
+              ['AI', t('landing.activeOps')],
+              ['Việt', t('landing.accuracy')],
+              ['Beta', t('landing.rating')],
             ].map(([value, label]) => (
               <div key={String(label)} className="bg-[#0c0d11] px-4 py-5 text-center">
-                <div className="font-grotesk text-2xl font-bold text-white md:text-3xl">{value}</div>
+                <div className="font-grotesk text-2xl font-bold text-lime md:text-3xl">{value}</div>
                 <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-neutral-600">{label}</div>
               </div>
             ))}
@@ -686,14 +682,20 @@ export default function Landing() {
           </div>
           <div className="flex flex-wrap justify-center gap-8">
             {[
-              { label: t('landing.privacy'), href: 'mailto:hello@fitnit.vn?subject=Quyền riêng tư' },
-              { label: t('landing.security'), href: 'mailto:hello@fitnit.vn?subject=Bảo mật' },
+              { label: t('landing.privacy'), href: '/privacy' },
+              { label: t('landing.terms'), href: '/terms' },
               { label: t('landing.intel'), href: '#intel' },
               { label: t('landing.support'), href: 'mailto:hello@fitnit.vn?subject=Hỗ trợ' },
             ].map(({ label, href }) => (
-              <a key={label} href={href} className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-600 hover:text-neutral-300 transition-colors">
-                {label}
-              </a>
+              href.startsWith('/') ? (
+                <Link key={label} to={href} className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-600 hover:text-neutral-300 transition-colors">
+                  {label}
+                </Link>
+              ) : (
+                <a key={label} href={href} className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-600 hover:text-neutral-300 transition-colors">
+                  {label}
+                </a>
+              )
             ))}
           </div>
           <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">© 2026 Fitnit</div>

@@ -121,7 +121,7 @@ class AIVision:
             self.client = OpenAI(
                 base_url="https://api.groq.com/openai/v1",
                 api_key=api_key,
-                http_client=httpx.Client()
+                http_client=httpx.Client(timeout=90.0)
             )
             # Groq vision model (llama-3.2-vision đã bị khai tử). Mặc định Llama 4 Scout
             # (đa phương thức); có thể override bằng env GROQ_VISION_MODEL.

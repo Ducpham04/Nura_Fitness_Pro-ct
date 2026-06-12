@@ -60,7 +60,7 @@ def generate_smart_dish_plan(req: SmartDishPlanRequest) -> SmartDishPlanResponse
     client = OpenAI(
         base_url="https://api.groq.com/openai/v1",
         api_key=api_key,
-        http_client=httpx.Client(),
+        http_client=httpx.Client(timeout=90.0),
     )
     context = {
         "days": req.days,

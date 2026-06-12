@@ -155,6 +155,45 @@ class ApiClient {
     });
   }
 
+  /** POST multipart/form-data — dùng cho file upload. Browser tự set Content-Type+boundary. */
+  postFormData<T>(endpoint: string, formData: FormData, options?: ApiRequestInit) {
+    const url = `${this.baseUrl}${endpoint}`;
+    const { skipAuth, ...fetchOptions } = options ?? {};
+    const token = localStorage.getItem('accessToken');
+
+    // Không đặt Content-Type — browser tự set multipart/form-data với boundary
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      ...((fetchOptions.headers as Record<string, string>) || {}),
+    };
+    if (token && !skipAuth) headers['Authorization'] = `Bearer ${token}`;
+
+    return fetch(url, {
+      ...fetchOptions,
+      method: 'POST',
+      headers,
+      body: formData,
+      credentials: 'include',
+    }).then(async (response): Promise<ApiResponse<T>> => {
+      if (response.status === 429) {
+        let msg = 'Bạn đã hết lượt AI tháng này. Nâng cấp gói để tiếp tục.';
+        try { const b = await response.json(); if (b?.message) msg = b.message; } catch { /* ignore */ }
+        return { success: false, error: { code: 'QUOTA_EXCEEDED', message: msg, timestamp: new Date().toISOString() } };
+      }
+      if (!response.ok) {
+        let errMsg = `HTTP ${response.status}`;
+        try { const b = await response.json(); errMsg = b?.message || b?.error || errMsg; } catch { /* ignore */ }
+        return { success: false, error: { code: `HTTP_${response.status}`, message: errMsg, timestamp: new Date().toISOString() } };
+      }
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : null;
+      return { success: true, data };
+    }).catch((err): ApiResponse<T> => ({
+      success: false,
+      error: { code: 'NETWORK_ERROR', message: err?.message || 'Network error', timestamp: new Date().toISOString() },
+    }));
+  }
+
   put<T>(endpoint: string, body: unknown, options?: ApiRequestInit) {
     return this.request<T>(endpoint, {
       ...options,

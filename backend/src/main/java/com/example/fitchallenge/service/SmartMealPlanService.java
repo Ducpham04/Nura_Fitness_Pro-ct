@@ -8,6 +8,7 @@ import com.example.fitchallenge.repository.*;
 import com.example.fitchallenge.repository.User.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
@@ -51,7 +52,8 @@ public class SmartMealPlanService {
     private final PersonalizedMealDetailRepository mealDetailRepository;
     private final PersonalizedMealItemRepository mealItemRepository;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Autowired
+    private RestTemplate restTemplate; // bean có timeout từ RestTemplateConfig
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Transactional
