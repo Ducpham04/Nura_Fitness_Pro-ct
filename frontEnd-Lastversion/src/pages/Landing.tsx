@@ -128,20 +128,48 @@ export default function Landing() {
     { title: t('landing.intelStepThreeTitle'), description: t('landing.intelStepThreeDesc'), icon: BarChart3 },
   ];
 
+  // Giá phải khớp với bảng ai_packages trong DB (FREE 0đ / PLUS 49k / PRO 99k)
   const plans = [
     {
-      name: t('landing.studentPlan'),
-      price: '99k',
-      description: t('landing.studentPlanDesc'),
-      features: [t('landing.poseSessions'), t('landing.basicMealPlanner'), t('landing.progressTracking')],
+      name: 'Free',
+      price: '0đ',
+      credits: '25 credit AI / tháng',
+      description: 'Trải nghiệm đầy đủ tính năng cốt lõi — không cần thẻ.',
+      features: [
+        'Kế hoạch ăn & tập AI cá nhân hoá',
+        'Quét món ăn bằng AI',
+        'Thử thách + bảng xếp hạng',
+        t('landing.progressTracking'),
+      ],
       highlight: false,
+      cta: 'Bắt đầu miễn phí',
     },
     {
-      name: t('landing.proPlan'),
-      price: '249k',
-      description: t('landing.proPlanDesc'),
-      features: [t('landing.unlimitedAi'), t('landing.smartMealBudget'), t('landing.advancedAnalytics')],
+      name: 'Plus',
+      price: '49.000đ',
+      credits: '200 credit AI / tháng',
+      description: 'Cho người tập nghiêm túc, dùng AI hằng ngày.',
+      features: [
+        'Mọi tính năng của Free',
+        'Gấp 8 lần lượt AI mỗi tháng',
+        'AI Coach chat thoải mái',
+        t('landing.smartMealBudget'),
+      ],
       highlight: true,
+      cta: 'Nâng cấp Plus',
+    },
+    {
+      name: 'Pro',
+      price: '99.000đ',
+      credits: 'Credit AI không giới hạn',
+      description: 'Dùng AI không cần đếm lượt — tối ưu tối đa.',
+      features: [
+        'Mọi tính năng của Plus',
+        t('landing.unlimitedAi'),
+        'Tạo lại kế hoạch bao nhiêu lần tuỳ thích',
+      ],
+      highlight: false,
+      cta: 'Lên Pro',
     },
   ];
 
@@ -584,11 +612,11 @@ export default function Landing() {
           <p className="mt-4 mx-auto max-w-xl text-neutral-400 leading-relaxed">{t('landing.pricingCopy')}</p>
           <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-lime/30 bg-lime/[0.08] px-4 py-2">
             <Zap className="w-3.5 h-3.5 text-lime" fill="currentColor" />
-            <span className="text-xs font-bold text-lime">Miễn phí toàn bộ trong giai đoạn beta — giá dưới đây chỉ là dự kiến</span>
+            <span className="text-xs font-bold text-lime">Bắt đầu miễn phí — thanh toán VNPay, kích hoạt ngay lập tức</span>
           </div>
         </div>
 
-        <div className="mx-auto grid max-w-3xl gap-5 md:grid-cols-2">
+        <div className="mx-auto grid max-w-5xl gap-5 md:grid-cols-3">
           {plans.map((plan) => (
             <article
               key={plan.name}
@@ -596,19 +624,19 @@ export default function Landing() {
             >
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-grotesk text-xl font-bold text-white">{plan.name}</h3>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 bg-white/[0.06] border border-white/10 px-2.5 py-1 rounded-full">
-                  Sắp ra mắt
-                </span>
+                {plan.highlight && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-lime bg-lime/15 border border-lime/25 px-2.5 py-1 rounded-full">
+                    Phổ biến nhất
+                  </span>
+                )}
               </div>
               <p className="text-sm text-neutral-400 mb-6 leading-relaxed">{plan.description}</p>
               <div className="mb-7">
                 <div className="flex items-baseline gap-2">
-                  <span className="font-grotesk text-4xl font-bold text-lime">Miễn phí</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-lime bg-lime/15 border border-lime/25 px-2 py-0.5 rounded-full">Beta</span>
+                  <span className="font-grotesk text-4xl font-bold text-lime">{plan.price}</span>
+                  {plan.price !== '0đ' && <span className="text-sm text-neutral-500">/tháng</span>}
                 </div>
-                <span className="mt-1.5 block text-xs text-neutral-500">
-                  Giá dự kiến: <span className="line-through">{plan.price} VND/tháng</span>
-                </span>
+                <span className="mt-1.5 block text-xs font-bold text-neutral-400">{plan.credits}</span>
               </div>
               <div className="space-y-3 mb-8 flex-1">
                 {plan.features.map(feature => (
@@ -626,7 +654,7 @@ export default function Landing() {
                     : 'border border-white/10 text-white hover:bg-white/[0.07]'
                 }`}
               >
-                Dùng miễn phí ngay
+                {plan.cta}
               </button>
             </article>
           ))}
