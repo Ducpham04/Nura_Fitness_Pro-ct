@@ -10,12 +10,24 @@
 # nội bộ trong mạng docker (không expose ra host).
 # =====================================================================
 
+# Log rotation cho mọi service — không có sẽ đầy disk sau vài tuần chạy
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # ── PostgreSQL ──────────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
     container_name: fit-prod-db
     restart: always
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 384m
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-fit_challenge}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -39,10 +51,17 @@ services:
       target: production
     container_name: fit-prod-backend
     restart: always
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 900m
     depends_on:
       db:
         condition: service_healthy
     environment:
+      # Heap JVM = 60% của trần 900m -> ~540m, chừa chỗ cho metaspace/threads
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=60"
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-fit_challenge}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
@@ -91,6 +110,11 @@ services:
       dockerfile: Dockerfile
     container_name: fit-prod-ai
     restart: always
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 256m
     env_file:
       - ./ai-service/.env        # GROQ_API_KEY, ...
     environment:
@@ -111,6 +135,11 @@ services:
       dockerfile: Dockerfile
     container_name: fit-prod-pose-ai
     restart: always
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     environment:
       HOST: 0.0.0.0
       PORT: 5001
@@ -138,12 +167,53 @@ services:
         VITE_API_URL: "${VITE_API_URL-}"
     container_name: fit-prod-frontend
     restart: always
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 128m
     depends_on:
       - backend
       - fitness-ai
     ports:
       - "80:80"
       # - "443:443"   # bật khi đã gắn TLS (xem DEPLOY.md)
+    networks:
+      - fit-network
+
+  # ── DB backup → S3 (tự lên lịch hằng đêm, verify + xoá bản cũ) ──────
+  # BẮT BUỘC trước khi nhận tiền: dữ liệu sức khoẻ + giao dịch không được
+  # mất khi hỏng volume. Để trống BACKUP_S3_BUCKET sẽ tắt service này.
+  db-backup:
+    image: postgres:16-alpine
+    container_name: fit-prod-db-backup
+    restart: always
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD là bắt buộc}
+      PGDATABASE: ${POSTGRES_DB:-fit_challenge}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:?BACKUP_S3_BUCKET là bắt buộc (vd fitnit-db-backups)}
+      BACKUP_PREFIX: ${BACKUP_PREFIX:-daily}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-19}   # 19h UTC = 2h sáng VN
+      AWS_REGION: ${AWS_REGION:-ap-southeast-1}
+      AWS_DEFAULT_REGION: ${AWS_REGION:-ap-southeast-1}
+      # Để trống nếu chạy trên EC2 có IAM role; điền nếu VPS thường:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+    volumes:
+      - ./scripts/backup-entrypoint.sh:/backup.sh:ro
+    # aws-cli cài lúc start (sidecar long-running nên 1 lần là đủ)
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache aws-cli >/dev/null 2>&1 && exec /backup.sh loop"]
     networks:
       - fit-network
 
