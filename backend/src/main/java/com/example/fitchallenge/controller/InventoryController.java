@@ -2,6 +2,7 @@ package com.example.fitchallenge.controller;
 
 import com.example.fitchallenge.DTO.InventoryDTO.InventoryItemDTO;
 import com.example.fitchallenge.DTO.InventoryDTO.InventoryRequest;
+import com.example.fitchallenge.Security.AuthenticatedUserIdResolver;
 import com.example.fitchallenge.config.NotificationResponse;
 import com.example.fitchallenge.service.InventoryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +27,7 @@ import java.util.List;
 public class InventoryController {
 
     private final InventoryService inventoryService;
+    private final AuthenticatedUserIdResolver authUser;
 
     /**
      * Get all inventory items for user
@@ -43,6 +45,7 @@ public class InventoryController {
             @Parameter(description = "Filter by status") @RequestParam(required = false) String status,
             @Parameter(description = "Page number") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
+        userId = authUser.resolve(userId);
         try {
             Pageable pageable = PageRequest.of(page, size);
             NotificationResponse response = inventoryService.getInventoryItems(userId, category, status, pageable);
@@ -67,6 +70,7 @@ public class InventoryController {
     public ResponseEntity<NotificationResponse> addInventoryItem(
             @Parameter(description = "Inventory item data") @Valid @RequestBody InventoryRequest request,
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = inventoryService.addInventoryItem(userId, request);
             return ResponseEntity.ok(response);
@@ -92,6 +96,7 @@ public class InventoryController {
             @Parameter(description = "Item ID") @PathVariable Long id,
             @Parameter(description = "Updated item data") @Valid @RequestBody InventoryRequest request,
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = inventoryService.updateInventoryItem(userId, id, request);
             return ResponseEntity.ok(response);
@@ -115,6 +120,7 @@ public class InventoryController {
     public ResponseEntity<NotificationResponse> deleteInventoryItem(
             @Parameter(description = "Item ID") @PathVariable Long id,
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = inventoryService.deleteInventoryItem(userId, id);
             return ResponseEntity.ok(response);
@@ -137,6 +143,7 @@ public class InventoryController {
     public ResponseEntity<NotificationResponse> getExpiringItems(
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId,
             @Parameter(description = "Days until expiry") @RequestParam(defaultValue = "7") int days) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = inventoryService.getExpiringItems(userId, days);
             return ResponseEntity.ok(response);
@@ -159,6 +166,7 @@ public class InventoryController {
     public ResponseEntity<NotificationResponse> getLowStockItems(
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId,
             @Parameter(description = "Minimum quantity threshold") @RequestParam(defaultValue = "1") double minQuantity) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = inventoryService.getLowStockItems(userId, minQuantity);
             return ResponseEntity.ok(response);
@@ -184,6 +192,7 @@ public class InventoryController {
             @Parameter(description = "Barcode number") @RequestParam String barcode,
             @Parameter(description = "Quantity") @RequestParam(defaultValue = "1") double quantity,
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = inventoryService.scanBarcode(userId, barcode, quantity);
             return ResponseEntity.ok(response);
@@ -206,6 +215,7 @@ public class InventoryController {
     public ResponseEntity<NotificationResponse> generateShoppingList(
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId,
             @Parameter(description = "Days ahead") @RequestParam(defaultValue = "7") int daysAhead) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = inventoryService.generateShoppingList(userId, daysAhead);
             return ResponseEntity.ok(response);

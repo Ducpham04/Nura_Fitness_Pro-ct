@@ -1,5 +1,6 @@
 package com.example.fitchallenge.controller;
 
+import com.example.fitchallenge.Security.AuthenticatedUserIdResolver;
 import com.example.fitchallenge.service.AiUsageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +21,7 @@ import java.util.Map;
 public class AiUsageController {
 
     private final AiUsageService aiUsageService;
+    private final AuthenticatedUserIdResolver authUser;
 
     /**
      * GET /api/ai-usage/me?userId={userId}
@@ -29,6 +31,6 @@ public class AiUsageController {
     @Operation(summary = "Lấy thông tin lượt AI của user hiện tại")
     public ResponseEntity<Map<String, Object>> getMyUsage(
             @RequestHeader("userId") Long userId) {
-        return ResponseEntity.ok(aiUsageService.getUsageInfo(userId));
+        return ResponseEntity.ok(aiUsageService.getUsageInfo(authUser.resolve(userId)));
     }
 }

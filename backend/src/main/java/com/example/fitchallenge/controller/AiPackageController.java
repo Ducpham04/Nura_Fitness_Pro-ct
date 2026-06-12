@@ -1,5 +1,6 @@
 package com.example.fitchallenge.controller;
 
+import com.example.fitchallenge.Security.AuthenticatedUserIdResolver;
 import com.example.fitchallenge.service.AiPackageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class AiPackageController {
 
     private final AiPackageService aiPackageService;
+    private final AuthenticatedUserIdResolver authUser;
 
     // ── Public ────────────────────────────────────────────────────────────────
 
@@ -52,6 +54,7 @@ public class AiPackageController {
             @PathVariable Long id,
             @RequestHeader("userId") Long userId,
             @RequestBody(required = false) Map<String, Object> body) {
+        userId = authUser.resolve(userId);
         String promoCode  = body != null ? (String) body.get("promoCode")  : null;
         String returnUrl  = body != null ? (String) body.get("returnUrl")  : null;
         return ResponseEntity.ok(

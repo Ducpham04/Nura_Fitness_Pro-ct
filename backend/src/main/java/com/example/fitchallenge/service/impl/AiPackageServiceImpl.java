@@ -425,7 +425,12 @@ public class AiPackageServiceImpl implements AiPackageService {
     }
 
     private boolean verifyVnpayHash(Map<String, String> params, String receivedHash) {
-        if (vnpayHashSecret == null || vnpayHashSecret.isBlank()) return true; // sandbox skip
+        // Fail-closed: không có secret thì không thể xác minh chữ ký → từ chối,
+        // tránh kích hoạt gói bằng callback giả khi env thiếu VNPAY_HASH_SECRET
+        if (vnpayHashSecret == null || vnpayHashSecret.isBlank()) {
+            log.error("VNPay hash secret chưa cấu hình — từ chối xác nhận thanh toán.");
+            return false;
+        }
         Map<String, String> sorted = new TreeMap<>(params);
         StringBuilder data = new StringBuilder();
         for (Map.Entry<String, String> e : sorted.entrySet()) {

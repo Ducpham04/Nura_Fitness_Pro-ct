@@ -1,5 +1,6 @@
 package com.example.fitchallenge.controller;
 
+import com.example.fitchallenge.Security.AuthenticatedUserIdResolver;
 import com.example.fitchallenge.config.NotificationResponse;
 import com.example.fitchallenge.service.AIGatewayService;
 import com.example.fitchallenge.service.AiCreditCost;
@@ -28,6 +29,7 @@ public class AIGatewayController {
     private final SmartMealPlanService smartMealPlanService;
     private final WorkoutWeekGenerationService workoutWeekGenerationService;
     private final AiUsageService aiUsageService;
+    private final AuthenticatedUserIdResolver authUser;
 
     /**
      * AI Food Scanner - Analyze food image
@@ -43,6 +45,7 @@ public class AIGatewayController {
     public ResponseEntity<NotificationResponse> scanFood(
             @Parameter(description = "Food image file") @RequestParam("image") MultipartFile image,
             @Parameter(description = "User ID for personalization") @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = aiGatewayService.scanFoodImage(image, userId);
             return ResponseEntity.ok(response);
@@ -67,6 +70,7 @@ public class AIGatewayController {
     public ResponseEntity<NotificationResponse> generateMealPlan(
             @Parameter(description = "Meal generation request") @RequestBody Map<String, Object> request,
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = aiGatewayService.generateMealPlan(request, userId);
             return ResponseEntity.ok(response);
@@ -82,6 +86,8 @@ public class AIGatewayController {
     public ResponseEntity<NotificationResponse> generateHybridMealPlan(
             @Parameter(description = "Hybrid meal generation request") @RequestBody Map<String, Object> request,
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.PLAN_GENERATE);
         try {
             int days = ((Number) request.getOrDefault("days", 7)).intValue();
             int budget = ((Number) request.getOrDefault("budget", 80000)).intValue();
@@ -105,6 +111,7 @@ public class AIGatewayController {
     public ResponseEntity<NotificationResponse> generateWorkoutPlan(
             @Parameter(description = "Workout generation request") @RequestBody Map<String, Object> request,
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = aiGatewayService.generateWorkoutPlan(request, userId);
             return ResponseEntity.ok(response);
@@ -120,6 +127,7 @@ public class AIGatewayController {
     public ResponseEntity<NotificationResponse> generateNextWorkoutWeek(
             @Parameter(description = "UserTraining ID") @PathVariable Long utId,
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         aiUsageService.ensureAndConsume(userId, AiCreditCost.PLAN_GENERATE);
         NotificationResponse response = workoutWeekGenerationService.generateNextWeek(utId);
         if (response.isSuccess()) {
@@ -143,6 +151,7 @@ public class AIGatewayController {
             @Parameter(description = "Exercise video/image file") @RequestParam(value = "media", required = false) MultipartFile media,
             @Parameter(description = "Exercise type") @RequestParam(value = "exerciseType", required = false) String exerciseType,
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         // ── Validate input → trả 400 rõ ràng thay vì 500 ──────────────────────
         if (media == null || media.isEmpty()) {
             return ResponseEntity.badRequest().body(
@@ -175,6 +184,7 @@ public class AIGatewayController {
     public ResponseEntity<NotificationResponse> calculateNutrition(
             @Parameter(description = "Food items list") @RequestBody Map<String, Object> foodData,
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = aiGatewayService.calculateNutrition(foodData, userId);
             return ResponseEntity.ok(response);
@@ -190,6 +200,7 @@ public class AIGatewayController {
     public ResponseEntity<NotificationResponse> scanInventory(
             @RequestParam("image") MultipartFile image,
             @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = aiGatewayService.scanInventoryImage(image, userId);
             return ResponseEntity.ok(response);
@@ -205,6 +216,7 @@ public class AIGatewayController {
     public ResponseEntity<NotificationResponse> chatWithCoach(
             @RequestBody Map<String, Object> chatRequest,
             @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = aiGatewayService.chatWithCoach(chatRequest, userId);
             return ResponseEntity.ok(response);
@@ -222,6 +234,7 @@ public class AIGatewayController {
     public ResponseEntity<NotificationResponse> logFoodNatural(
             @RequestBody Map<String, Object> body,
             @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = aiGatewayService.logFoodNatural(body, userId);
             return ResponseEntity.ok(response);
@@ -238,6 +251,7 @@ public class AIGatewayController {
     public ResponseEntity<NotificationResponse> suggestDishes(
             @RequestBody Map<String, Object> body,
             @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = aiGatewayService.suggestDishesFromIngredients(body, userId);
             return ResponseEntity.ok(response);
@@ -254,6 +268,7 @@ public class AIGatewayController {
     public ResponseEntity<NotificationResponse> suggestShopping(
             @RequestBody Map<String, Object> body,
             @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         try {
             return ResponseEntity.ok(aiGatewayService.suggestShoppingList(body, userId));
         } catch (Exception e) {
@@ -270,6 +285,7 @@ public class AIGatewayController {
     public ResponseEntity<NotificationResponse> autoRegulate(
             @RequestBody Map<String, Object> body,
             @RequestHeader("userId") Long userId) {
+        userId = authUser.resolve(userId);
         try {
             NotificationResponse response = aiGatewayService.autoRegulate(body, userId);
             return ResponseEntity.ok(response);
