@@ -193,8 +193,10 @@ public class PersonalizedNutritionPlanController {
             @PathVariable Long planId,
             @Valid @RequestBody List<PersonalizedNutritionPlanService.MealDetailRequest> meals) {
         try {
-            planService.addMealDetails(planId, meals);
+            planService.addMealDetails(planId, authUser.resolve(null), meals);
             return ResponseEntity.ok(createSuccessResponse("Meals added successfully"));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         }
@@ -280,8 +282,10 @@ public class PersonalizedNutritionPlanController {
             @PathVariable Long planId,
             @Valid @RequestBody ActualCostRequest request) {
         try {
-            planService.updateActualCost(planId, request.actualCost);
+            planService.updateActualCost(planId, authUser.resolve(null), request.actualCost);
             return ResponseEntity.ok(createSuccessResponse("Actual cost updated successfully"));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         }
@@ -293,8 +297,10 @@ public class PersonalizedNutritionPlanController {
     @PostMapping("/{planId}/complete")
     public ResponseEntity<?> completePlan(@PathVariable Long planId) {
         try {
-            planService.completePlan(planId);
+            planService.completePlan(planId, authUser.resolve(null));
             return ResponseEntity.ok(createSuccessResponse("Plan marked as completed"));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         }
@@ -337,8 +343,10 @@ public class PersonalizedNutritionPlanController {
     @PostMapping("/{planId}/restore")
     public ResponseEntity<?> restorePlan(@PathVariable Long planId) {
         try {
-            planService.restorePlan(planId);
+            planService.restorePlan(planId, authUser.resolve(null));
             return ResponseEntity.ok(createSuccessResponse("Plan restored successfully"));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         }

@@ -51,6 +51,9 @@ public class AiPackageServiceImpl implements AiPackageService {
     @Value("${vnpay.return-url:http://localhost:5173/payment/result}")
     private String returnUrl;
 
+    @Value("${vnpay.ipn-url:http://localhost:8080/api/ai-packages/payment/ipn}")
+    private String vnpayIpnUrl;
+
     // ── List packages ─────────────────────────────────────────────────────────
 
     @Override
@@ -71,7 +74,8 @@ public class AiPackageServiceImpl implements AiPackageService {
     @Override
     @Transactional
     public Map<String, Object> initiateVnpaySubscription(Long userId, Long packageId,
-                                                          String promoCode, String clientReturnUrl) {
+                                                          String promoCode, String clientReturnUrl,
+                                                          String clientIp) {
         User user = findUser(userId);
         AiPackage pkg = packageRepo.findById(packageId)
                 .orElseThrow(() -> new EntityNotFoundException("Package not found: " + packageId));
@@ -106,9 +110,11 @@ public class AiPackageServiceImpl implements AiPackageService {
 
         // Build VNPay URL
         String txnRef = "AI_" + userId + "_" + System.currentTimeMillis();
+        String resolvedIp = (clientIp != null && !clientIp.isBlank()) ? clientIp : "127.0.0.1";
         String paymentUrl = buildVnpayUrl(txnRef, finalPrice,
                 "Nang cap goi " + pkg.getName() + " - User " + userId,
-                clientReturnUrl != null ? clientReturnUrl : returnUrl);
+                clientReturnUrl != null ? clientReturnUrl : returnUrl,
+                resolvedIp);
 
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("success", true);
@@ -392,7 +398,7 @@ public class AiPackageServiceImpl implements AiPackageService {
 
     // ── VNPay helpers ─────────────────────────────────────────────────────────
 
-    private String buildVnpayUrl(String txnRef, int amount, String orderInfo, String callbackUrl) {
+    private String buildVnpayUrl(String txnRef, int amount, String orderInfo, String callbackUrl, String clientIp) {
         if (vnpayTmnCode == null || vnpayTmnCode.isBlank()) {
             throw new IllegalStateException("VNPay chưa được cấu hình. Liên hệ admin.");
         }
@@ -407,7 +413,10 @@ public class AiPackageServiceImpl implements AiPackageService {
         params.put("vnp_OrderType",  "billpayment");
         params.put("vnp_Locale",     "vn");
         params.put("vnp_ReturnUrl",  callbackUrl);
-        params.put("vnp_IpAddr",     "127.0.0.1");
+        params.put("vnp_IpAddr",     clientIp);
+        if (vnpayIpnUrl != null && !vnpayIpnUrl.isBlank()) {
+            params.put("vnp_NotifyUrl", vnpayIpnUrl);
+        }
         params.put("vnp_CreateDate", new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()));
 
         // Build query string

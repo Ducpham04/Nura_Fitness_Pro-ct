@@ -21,6 +21,7 @@ import {
   Leaf,
   Apple,
   AlertTriangle,
+  Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { userService } from '../services/userService';
@@ -35,6 +36,7 @@ interface FormData {
   activityLevel: string;
   injuries: string[];
   equipment: string[];
+  sessionDuration: number; // phút/buổi
   dietType: string;
 }
 
@@ -62,6 +64,13 @@ const equipmentList = [
   { id: 'machine', label: 'Máy tập' },
   { id: 'bodyweight', label: 'Chỉ trọng lượng cơ thể' },
   { id: 'bands', label: 'Dây kháng lực' },
+];
+
+const durationOptions = [
+  { id: 15, label: '15 phút', desc: 'Bận rộn, tập nhanh' },
+  { id: 30, label: '30 phút', desc: 'Vừa phải, đều đặn' },
+  { id: 45, label: '45 phút', desc: 'Tiêu chuẩn' },
+  { id: 60, label: '60 phút', desc: 'Tập kỹ, nhiều thời gian' },
 ];
 
 const dietTypes: Array<{ id: string; label: string; icon: LucideIcon }> = [
@@ -94,7 +103,8 @@ const steps: Array<{
   { title: 'Mục tiêu chính', subtitle: 'Bạn đang tập luyện vì điều gì?', icon: Target },
   { title: 'Mức độ vận động', subtitle: 'Hiện tại bạn tập luyện thường xuyên thế nào?', icon: Heart },
   { title: 'Có chấn thương không?', subtitle: 'Giúp chúng tôi tạo bài tập an toàn cho bạn.', icon: AlertTriangle },
-  { title: 'Thiết bị sẵn có', subtitle: 'Bạn có thể sử dụng những gì?', icon: Dumbbell },
+  { title: 'Thiết bị sẵn có', subtitle: 'Bạn tập ở đâu, có thể dùng những gì?', icon: Dumbbell },
+  { title: 'Thời lượng mỗi buổi', subtitle: 'Bạn có bao nhiêu phút cho mỗi buổi tập?', icon: Clock },
   { title: 'Chế độ ăn', subtitle: 'Chúng tôi sẽ điều chỉnh thực đơn phù hợp.', icon: UtensilsCrossed },
 ];
 
@@ -130,6 +140,7 @@ export default function Onboarding() {
     activityLevel: 'moderate',
     injuries: [],
     equipment: [],
+    sessionDuration: 45,
     dietType: '',
   });
 
@@ -165,7 +176,8 @@ export default function Onboarding() {
       case 1: return !!form.goal;
       case 2: return !!form.activityLevel;
       case 4: return form.equipment.length > 0;
-      case 5: return !!form.dietType;
+      case 5: return !!form.sessionDuration;
+      case 6: return !!form.dietType;
       default: return true;
     }
   };
@@ -210,6 +222,7 @@ export default function Onboarding() {
         dailyActivityLevel: form.activityLevel,
         currentInjuries: form.injuries.length > 0 ? form.injuries.join(', ') : 'none',
         availableEquipment: form.equipment.length > 0 ? form.equipment.join(', ') : 'none',
+        preferredWorkoutDurationMinutes: form.sessionDuration,
         currentDietType: form.dietType,
         primaryGoal: form.goal,
       };
@@ -414,8 +427,25 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* Step 5: Diet */}
+          {/* Step 5: Thời lượng mỗi buổi */}
           {step === 5 && (
+            <div className="grid grid-cols-2 gap-3">
+              {durationOptions.map(d => {
+                const selected = form.sessionDuration === d.id;
+                return (
+                  <button key={d.id} onClick={() => update('sessionDuration', d.id)}
+                    className={`p-4 rounded-2xl text-left border transition-all ${selected ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'}`}>
+                    <Clock className={`w-6 h-6 mb-2 ${selected ? 'text-lime' : 'text-neutral-300'}`} />
+                    <div className="font-grotesk font-semibold text-sm">{d.label}</div>
+                    <div className="text-xs text-neutral-400 mt-0.5">{d.desc}</div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Step 6: Diet */}
+          {step === 6 && (
             <div className="grid grid-cols-2 gap-3">
               {dietTypes.map(d => {
                 const selected = form.dietType === d.id;

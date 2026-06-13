@@ -31,14 +31,15 @@ public class LoginAttemptService {
 
     private final ConcurrentHashMap<String, Bucket> cache = new ConcurrentHashMap<>();
 
-    /** Trả về true nếu IP đang bị khoá. */
+    /** Trả về true nếu IP đang bị khoá. Dùng compute() để tránh race với recordFailure(). */
     public boolean isBlocked(String ip) {
-        Bucket b = cache.get(ip);
-        if (b == null || b.blockedUntil == null) return false;
-        if (ZonedDateTime.now().isBefore(b.blockedUntil)) return true;
-        // Hết hạn khoá — reset
-        cache.remove(ip);
-        return false;
+        boolean[] blocked = {false};
+        cache.compute(ip, (k, b) -> {
+            if (b == null || b.blockedUntil == null) return b;
+            if (ZonedDateTime.now().isBefore(b.blockedUntil)) { blocked[0] = true; return b; }
+            return null; // hết hạn — xóa atomically
+        });
+        return blocked[0];
     }
 
     /** Ghi nhận một lần đăng nhập thất bại cho IP. */
@@ -76,16 +77,11 @@ public class LoginAttemptService {
     @Scheduled(fixedDelay = 3_600_000)
     public void cleanExpiredEntries() {
         ZonedDateTime now = ZonedDateTime.now();
-        int removed = 0;
-        for (var entry : cache.entrySet()) {
-            Bucket b = entry.getValue();
-            boolean expired = (b.blockedUntil != null && now.isAfter(b.blockedUntil))
+        boolean removed = cache.entrySet().removeIf(e -> {
+            Bucket b = e.getValue();
+            return (b.blockedUntil != null && now.isAfter(b.blockedUntil))
                     || (b.firstFailAt != null && now.isAfter(b.firstFailAt.plusMinutes(WINDOW_MINUTES * 2)));
-            if (expired) {
-                cache.remove(entry.getKey());
-                removed++;
-            }
-        }
-        if (removed > 0) log.debug("[BruteForce] Cleaned {} expired IP buckets", removed);
+        });
+        if (removed) log.debug("[BruteForce] Cleaned expired IP buckets");
     }
 }

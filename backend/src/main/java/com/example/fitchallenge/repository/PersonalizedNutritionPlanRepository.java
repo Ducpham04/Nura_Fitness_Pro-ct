@@ -109,4 +109,15 @@ public interface PersonalizedNutritionPlanRepository extends JpaRepository<Perso
     /** Đếm distinct users có ít nhất một plan */
     @Query("SELECT COUNT(DISTINCT pnp.user.id) FROM PersonalizedNutritionPlan pnp")
     long countDistinctUsers();
+
+    // ── getAiStats: COUNT queries thay thế findAll() ──────────────────────
+
+    long countByStartDate(LocalDate startDate);
+
+    long countByStartDateGreaterThanEqual(LocalDate startDate);
+
+    @Query("SELECT p.user.id, COUNT(p) FROM PersonalizedNutritionPlan p WHERE p.user IS NOT NULL GROUP BY p.user.id")
+    List<Object[]> countGroupByUser();
+
+    List<PersonalizedNutritionPlan> findTop20ByStartDateNotNullAndUserNotNullOrderByStartDateDesc();
 }

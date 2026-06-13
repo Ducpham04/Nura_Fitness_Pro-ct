@@ -31,4 +31,19 @@ public interface UserChallengeRepository extends JpaRepository<UserChallenge, Lo
     @Query("SELECT COUNT(uc) FROM UserChallenge uc WHERE uc.submittedAt > :since AND uc.status = :status")
     long countBySubmittedAtAfterAndStatus(@Param("since") ZonedDateTime since,
                                           @Param("status") UserChallenge.UserChallengeStatus status);
+
+    // ── getAiStats: COUNT queries thay thế findAll() ──────────────────────
+
+    @Query("SELECT COUNT(uc) FROM UserChallenge uc WHERE uc.status <> :status")
+    long countByStatusNot(@Param("status") UserChallenge.UserChallengeStatus status);
+
+    @Query("SELECT COUNT(uc) FROM UserChallenge uc WHERE uc.submittedAt >= :since AND uc.status <> :status")
+    long countBySubmittedAtAfterAndStatusNot(@Param("since") ZonedDateTime since,
+                                             @Param("status") UserChallenge.UserChallengeStatus status);
+
+    @Query("SELECT uc.user.id, COUNT(uc) FROM UserChallenge uc WHERE uc.user IS NOT NULL AND uc.status <> :status GROUP BY uc.user.id")
+    List<Object[]> countNonPendingGroupByUser(@Param("status") UserChallenge.UserChallengeStatus status);
+
+    List<UserChallenge> findTop20ByStatusNotAndSubmittedAtNotNullAndUserNotNullOrderBySubmittedAtDesc(
+            UserChallenge.UserChallengeStatus status);
 }

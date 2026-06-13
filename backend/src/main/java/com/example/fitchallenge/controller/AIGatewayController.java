@@ -92,13 +92,19 @@ public class AIGatewayController {
             int days = ((Number) request.getOrDefault("days", 7)).intValue();
             int budget = ((Number) request.getOrDefault("budget", 80000)).intValue();
             var plan = smartMealPlanService.generateHybridPlan(userId, days, budget);
-            return ResponseEntity.ok(new NotificationResponse(true, "Hybrid meal plan generated successfully", Map.of(
-                    "planId", plan.getPnpId(),
-                    "aiPlanId", plan.getAiPlanId(),
-                    "durationDays", plan.getDurationDays(),
-                    "estimatedTotalCost", plan.getEstimatedTotalCost(),
-                    "targetBudgetPerDay", plan.getTargetBudgetPerDay()
-            )));
+            var safety = smartMealPlanService.safetyAdviceFor(userId);
+            var body = new java.util.LinkedHashMap<String, Object>();
+            body.put("planId", plan.getPnpId());
+            body.put("aiPlanId", plan.getAiPlanId());
+            body.put("durationDays", plan.getDurationDays());
+            body.put("estimatedTotalCost", plan.getEstimatedTotalCost());
+            body.put("targetBudgetPerDay", plan.getTargetBudgetPerDay());
+            body.put("requiresMedicalClearance", safety.isRequiresMedicalClearance());
+            if (safety.isRequiresMedicalClearance()) {
+                body.put("medicalDisclaimer", safety.getDisclaimer());
+                body.put("medicalConditions", safety.getConditions());
+            }
+            return ResponseEntity.ok(new NotificationResponse(true, "Hybrid meal plan generated successfully", body));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(
                 new NotificationResponse(false, "Hybrid meal generation failed: " + e.getMessage())

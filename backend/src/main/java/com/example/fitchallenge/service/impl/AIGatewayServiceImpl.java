@@ -67,6 +67,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     private final ExerciseRepository exerciseRepository;
     private final GoalRepository goalRepository;
     private final com.example.fitchallenge.workout.PersonalizationResolver personalizationResolver;
+    private final com.example.fitchallenge.nutrition.NutritionSafetyResolver nutritionSafetyResolver;
     private final FoodRepository foodRepository;
     private final UserInventoryRepository userInventoryRepository;
     private final SmartMealPlanTransactionService smartMealPlanTransactionService;
@@ -171,9 +172,23 @@ public class AIGatewayServiceImpl implements AIGatewayService {
                     .toList();
             List<String> prefs = toStringList(request.get("preferences"));
 
+            // An toàn dinh dưỡng: dị ứng/bệnh nền từ HealthProfile (Java enforce, AI chỉ nhận context)
+            HealthProfile healthProfile = healthProfileRepository.findByUser_Id(userId).orElse(null);
+            com.example.fitchallenge.nutrition.NutritionSafetyAdvice safety =
+                    nutritionSafetyResolver.resolve(healthProfile, userPreferenceService.getFoodsToAvoid(userId));
+
             List<Food> catalog = new ArrayList<>(
                     foodRepository.findAll(PageRequest.of(0, SMART_MEAL_CATALOG_LIMIT)).getContent());
             catalog.sort(Comparator.comparing(Food::getFoodId));
+            if (!safety.getAvoidKeywords().isEmpty()) {
+                List<Food> safeCatalog = catalog.stream()
+                        .filter(f -> !matchesAvoidKeyword(f.getName(), safety.getAvoidKeywords()))
+                        .collect(Collectors.toCollection(ArrayList::new));
+                // Chỉ áp filter khi catalog còn đủ món để lập thực đơn
+                if (safeCatalog.size() >= 10) {
+                    catalog = safeCatalog;
+                }
+            }
             if (catalog.isEmpty()) {
                 return new NotificationResponse(false, "Master foods catalog is empty. Seed foods via admin/import first.");
             }
@@ -188,7 +203,11 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             aiPayload.put("target_calories_daily",
                     profile.getRecommendedCalories() != null ? profile.getRecommendedCalories().intValue() : 2000);
             aiPayload.put("inventory", inventoryTags);
-            aiPayload.put("preferences_negative", prefs);
+            List<String> negative = new ArrayList<>(prefs);
+            negative.addAll(safety.getAvoidKeywords());
+            aiPayload.put("preferences_negative", negative.stream().distinct().toList());
+            aiPayload.put("diet_rules", safety.getDietRules());
+            aiPayload.put("medical_conditions", safety.getConditions());
             aiPayload.put("user_profile", buildUserProfileHints(profile, dailyBudget));
             aiPayload.put("food_catalog", slim);
 
@@ -211,6 +230,13 @@ public class AIGatewayServiceImpl implements AIGatewayService {
 
             Map<String, Object> clientEnvelope = buildLegacyDailyPlansEnvelope(
                     hydrated, details, days, dailyBudget, inventoryTags, catalog);
+
+            // Minh bạch an toàn y khoa (đồng bộ với luồng workout)
+            clientEnvelope.put("requiresMedicalClearance", safety.isRequiresMedicalClearance());
+            if (safety.isRequiresMedicalClearance()) {
+                clientEnvelope.put("medicalDisclaimer", safety.getDisclaimer());
+                clientEnvelope.put("medicalConditions", safety.getConditions());
+            }
 
             return new NotificationResponse(true, "Meal plan generated from master catalog", clientEnvelope);
         } catch (Exception e) {
@@ -251,6 +277,15 @@ public class AIGatewayServiceImpl implements AIGatewayService {
         userProfile.put("activity_level", activityLevel);
         userProfile.put("budget_per_day", dailyBudget);
         return userProfile;
+    }
+
+    /** So khớp tên thực phẩm với từ khóa loại trừ (đã chuẩn hóa bỏ dấu, lowercase). */
+    private boolean matchesAvoidKeyword(String foodName, List<String> avoidKeywords) {
+        if (foodName == null) return false;
+        String name = java.text.Normalizer.normalize(foodName, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .toLowerCase(Locale.ROOT);
+        return avoidKeywords.stream().anyMatch(name::contains);
     }
 
     @SuppressWarnings("unchecked")
@@ -411,7 +446,17 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             int totalProgramDays = totalWeeks * 7;
             int currentWeek = 1;
 
-            int durationMinutes = ((Number) request.getOrDefault("duration", 45)).intValue();
+            // Thời lượng buổi tập: ưu tiên giá trị truyền lúc generate; nếu không có
+            // thì lấy từ hồ sơ (onboarding đã hỏi "phút/buổi"); cuối cùng mới mặc định 45.
+            int profileDuration = healthProfile.getPreferredWorkoutDurationMinutes() != null
+                    ? healthProfile.getPreferredWorkoutDurationMinutes() : 45;
+            int durationMinutes = ((Number) request.getOrDefault("duration", profileDuration)).intValue();
+            // Nếu user đổi thời lượng lúc generate → lưu lại làm mặc định cho lần sau
+            if (request.get("duration") != null
+                    && !Integer.valueOf(durationMinutes).equals(healthProfile.getPreferredWorkoutDurationMinutes())) {
+                healthProfile.setPreferredWorkoutDurationMinutes(durationMinutes);
+                healthProfileRepository.save(healthProfile);
+            }
             double weightKg = profile.getWeight() != null ? profile.getWeight().doubleValue() : 70.0;
 
             Map<String, Object> aiRequest = new HashMap<>();

@@ -224,8 +224,10 @@ public class UserPreferenceController {
     @DeleteMapping("/{preferenceId}")
     public ResponseEntity<?> deactivatePreference(@PathVariable Long preferenceId) {
         try {
-            preferenceService.deactivatePreference(preferenceId);
+            preferenceService.deactivatePreference(preferenceId, authUser.resolve(null));
             return ResponseEntity.ok(createSuccessResponse("Preference deactivated"));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         }

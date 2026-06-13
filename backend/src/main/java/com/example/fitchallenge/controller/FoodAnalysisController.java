@@ -50,6 +50,9 @@ public class FoodAnalysisController {
     @Autowired
     private com.example.fitchallenge.Security.AuthenticatedUserIdResolver authUser;
 
+    @Autowired
+    private com.example.fitchallenge.service.AiUsageService aiUsageService;
+
     /**
      * 📸 POST /api/food-analysis/analyze - Phân tích món ăn từ ảnh
      * Frontend upload ảnh → Java BE verify token → gọi AI Service → trả kết quả
@@ -84,6 +87,10 @@ public class FoodAnalysisController {
                 return ResponseEntity.badRequest().body(createErrorResponse("Image size must be less than 5MB"));
             }
 
+            // 💳 3.5 Trừ AI credit (sau khi validate ảnh để không tính phí request hỏng)
+            // Chống lỗ hổng đốt credit qua /analyze — trước đây chỉ /scan mới trừ.
+            aiUsageService.ensureAndConsume(userId, com.example.fitchallenge.service.AiCreditCost.SCAN_IMAGE);
+
             // 🚀 4. Forward ảnh đến AI Service
             String aiUrl = aiServiceUrl + "/track-food";
 
@@ -117,6 +124,8 @@ public class FoodAnalysisController {
 
             return ResponseEntity.ok(enrichedResponse);
 
+        } catch (com.example.fitchallenge.exception.QuotaExceededException e) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(createErrorResponse("Failed to analyze food image: " + e.getMessage()));
@@ -141,6 +150,9 @@ public class FoodAnalysisController {
             if (request.base64Image == null || request.base64Image.isEmpty()) {
                 return ResponseEntity.badRequest().body(createErrorResponse("Base64 image is required"));
             }
+
+            // 💳 Trừ AI credit (sau khi validate) — chống đốt credit qua /analyze-base64
+            aiUsageService.ensureAndConsume(userId, com.example.fitchallenge.service.AiCreditCost.SCAN_IMAGE);
 
             // 🚀 Forward đến AI Service
             String aiUrl = aiServiceUrl + "/track-food-base64";
@@ -171,6 +183,8 @@ public class FoodAnalysisController {
 
             return ResponseEntity.ok(enrichedResponse);
 
+        } catch (com.example.fitchallenge.exception.QuotaExceededException e) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(createErrorResponse("Failed to analyze food image: " + e.getMessage()));

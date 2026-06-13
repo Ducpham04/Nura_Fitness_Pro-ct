@@ -83,12 +83,26 @@ public class PersonalizedNutritionPlanService {
     }
 
     /**
+     * 🔒 Lấy plan theo id và xác thực thuộc về user đang đăng nhập.
+     * Dùng cho các thao tác định danh bằng planId (không có userId trên URL) để
+     * chặn IDOR — user không thể thao tác plan của người khác nếu đoán được id.
+     * Không lọc isDeleted vì restorePlan cần thao tác cả plan đã soft-delete.
+     */
+    private PersonalizedNutritionPlan requireOwnedPlan(Long planId, Long userId) {
+        PersonalizedNutritionPlan plan = planRepository.findById(planId)
+            .orElseThrow(() -> new RuntimeException("Plan not found"));
+        if (plan.getUser() == null || !plan.getUser().getId().equals(userId)) {
+            throw new SecurityException("Forbidden: Plan does not belong to user");
+        }
+        return plan;
+    }
+
+    /**
      * 🍽️ Thêm meal details vào plan
      */
     @Transactional
-    public void addMealDetails(Long planId, List<MealDetailRequest> meals) {
-        PersonalizedNutritionPlan plan = planRepository.findById(planId)
-            .orElseThrow(() -> new RuntimeException("Plan not found"));
+    public void addMealDetails(Long planId, Long userId, List<MealDetailRequest> meals) {
+        PersonalizedNutritionPlan plan = requireOwnedPlan(planId, userId);
 
         for (MealDetailRequest mealReq : meals) {
             PersonalizedMealDetail detail = new PersonalizedMealDetail();
@@ -195,7 +209,8 @@ public class PersonalizedNutritionPlanService {
      * 💰 Cập nhật actual cost
      */
     @Transactional
-    public void updateActualCost(Long planId, Integer actualCost) {
+    public void updateActualCost(Long planId, Long userId, Integer actualCost) {
+        requireOwnedPlan(planId, userId);
         planRepository.updateActualCost(planId, actualCost);
     }
 
@@ -203,7 +218,8 @@ public class PersonalizedNutritionPlanService {
      * ✅ Complete plan
      */
     @Transactional
-    public void completePlan(Long planId) {
+    public void completePlan(Long planId, Long userId) {
+        requireOwnedPlan(planId, userId);
         planRepository.markAsCompleted(planId);
     }
 
@@ -225,7 +241,8 @@ public class PersonalizedNutritionPlanService {
      * 🔄 Restore plan
      */
     @Transactional
-    public void restorePlan(Long planId) {
+    public void restorePlan(Long planId, Long userId) {
+        requireOwnedPlan(planId, userId);
         planRepository.restoreById(planId);
     }
 

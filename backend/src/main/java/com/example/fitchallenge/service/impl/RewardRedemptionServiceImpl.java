@@ -47,25 +47,30 @@ public class RewardRedemptionServiceImpl implements RewardRedemptionService {
         Reward reward = rewardRepository.findById(request.getRewardId())
                 .orElseThrow(() -> new RuntimeException("Reward not found"));
 
-        // ── Validate tồn kho ──────────────────────────────────────────────
-        int stock = reward.getStock() != null ? reward.getStock() : 0;
-        if (stock <= 0) {
-            return new NotificationResponse(false, "Phần thưởng đã hết hàng");
-        }
-
-        // ── Validate đủ điểm ──────────────────────────────────────────────
         int cost = reward.getCostPoints() != null ? reward.getCostPoints() : 0;
         int userPoints = user.getPoints() != null ? user.getPoints() : 0;
+
+        // ── Validate sơ bộ để trả lỗi thân thiện (không thay cho khóa atomic) ──
+        if ((reward.getStock() != null ? reward.getStock() : 0) <= 0) {
+            return new NotificationResponse(false, "Phần thưởng đã hết hàng");
+        }
         if (userPoints < cost) {
             return new NotificationResponse(false,
                     "Không đủ điểm. Cần " + cost + " điểm, bạn có " + userPoints);
         }
 
-        // ── Trừ điểm + giảm tồn kho (nguyên tử nhờ @Transactional) ─────────
-        user.setPoints(userPoints - cost);
-        userRepository.save(user);
-        reward.setStock(stock - 1);
-        rewardRepository.save(reward);
+        // ── Trừ tồn kho + điểm bằng conditional UPDATE (atomic tại DB) ────────
+        // Chống double-spend/oversell khi nhiều request đổi thưởng chạy song song:
+        // mỗi update chỉ thành công khi điều kiện (stock>=1 / points>=cost) còn đúng.
+        if (rewardRepository.decrementStockIfAvailable(reward.getRewardId()) == 0) {
+            return new NotificationResponse(false, "Phần thưởng đã hết hàng");
+        }
+        if (userRepository.deductPointsIfEnough(user.getId(), cost) == 0) {
+            // Trừ điểm thất bại (đã bị trừ bởi request khác) → hoàn lại tồn kho vừa giảm
+            rewardRepository.incrementStock(reward.getRewardId());
+            return new NotificationResponse(false,
+                    "Không đủ điểm. Cần " + cost + " điểm, bạn có " + userPoints);
+        }
 
         RewardRedemption redemption = new RewardRedemption();
         redemption.setUser(user);

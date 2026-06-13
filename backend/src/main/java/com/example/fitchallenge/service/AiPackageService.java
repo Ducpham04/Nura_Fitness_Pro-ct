@@ -7,8 +7,8 @@ public interface AiPackageService {
     List<Map<String, Object>> listActivePackages();
     Map<String, Object> getPackageById(Long id);
 
-    /** Mua gói bằng VNPay — trả về payment URL */
-    Map<String, Object> initiateVnpaySubscription(Long userId, Long packageId, String promoCode, String returnUrl);
+    /** Mua gói bằng VNPay — trả về payment URL. clientIp dùng cho vnp_IpAddr. */
+    Map<String, Object> initiateVnpaySubscription(Long userId, Long packageId, String promoCode, String returnUrl, String clientIp);
 
     /** Xác nhận thanh toán thành công từ VNPay callback */
     Map<String, Object> confirmVnpayPayment(Map<String, String> vnpayParams);

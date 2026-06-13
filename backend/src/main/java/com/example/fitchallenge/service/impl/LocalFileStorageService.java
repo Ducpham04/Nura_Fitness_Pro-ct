@@ -1,6 +1,7 @@
 package com.example.fitchallenge.service.impl;
 
 import com.example.fitchallenge.service.FileStorageService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -14,6 +15,7 @@ import java.nio.file.Paths;
 import java.util.Objects;
 
 @Service("localFileStorageService")
+@ConditionalOnProperty(name = "storage.provider", havingValue = "local", matchIfMissing = true)
 public class LocalFileStorageService implements FileStorageService {
 
     @Value("${upload.path}")

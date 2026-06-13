@@ -279,7 +279,12 @@ public class UserPreferenceService {
      * 🗑️ Deactivate preference
      */
     @Transactional
-    public void deactivatePreference(Long preferenceId) {
+    public void deactivatePreference(Long preferenceId, Long userId) {
+        UserPreference pref = preferenceRepository.findById(preferenceId)
+            .orElseThrow(() -> new RuntimeException("Preference not found"));
+        if (pref.getUser() == null || !pref.getUser().getId().equals(userId)) {
+            throw new SecurityException("Forbidden: Preference does not belong to user");
+        }
         preferenceRepository.deactivate(preferenceId);
     }
 

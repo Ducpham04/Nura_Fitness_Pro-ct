@@ -59,21 +59,14 @@ public class PersonalizedTrainingController {
     @GetMapping("/personalized/today")
     public ResponseEntity<NotificationResponse> getTodayPersonalizedWorkout(
             @RequestParam(required = false) Integer dayNumber,
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestHeader(value = "userId", required = false) Long headerUserId) {
+            @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long userId = null;
-            if (userDetails != null) {
-                userId = userService.getUserByEmail(userDetails.getUsername()).getId();
-            } else if (headerUserId != null) {
-                userId = headerUserId;
-            }
-
-            if (userId == null) {
+            if (userDetails == null) {
                 return ResponseEntity.status(401).body(
                     new NotificationResponse(false, "Unauthorized")
                 );
             }
+            Long userId = userService.getUserByEmail(userDetails.getUsername()).getId();
             
             // Nếu không có dayNumber, mặc định là day 1
             if (dayNumber == null) {
@@ -97,21 +90,14 @@ public class PersonalizedTrainingController {
      */
     @GetMapping("/personalized/schedule")
     public ResponseEntity<NotificationResponse> getPersonalizedWorkoutSchedule(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestHeader(value = "userId", required = false) Long headerUserId) {
+            @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long userId = null;
-            if (userDetails != null) {
-                userId = userService.getUserByEmail(userDetails.getUsername()).getId();
-            } else if (headerUserId != null) {
-                userId = headerUserId;
-            }
-
-            if (userId == null) {
+            if (userDetails == null) {
                 return ResponseEntity.status(401).body(
                     new NotificationResponse(false, "Unauthorized")
                 );
             }
+            Long userId = userService.getUserByEmail(userDetails.getUsername()).getId();
 
             return ResponseEntity.ok(
                 personalizationService.getAllPersonalizedPlanDetails(userId)

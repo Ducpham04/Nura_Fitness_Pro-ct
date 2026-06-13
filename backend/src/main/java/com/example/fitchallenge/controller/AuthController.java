@@ -77,13 +77,23 @@ public class AuthController {
         }
     }
 
-    /** Lấy IP thực của client — hỗ trợ reverse proxy (X-Forwarded-For). */
+    /**
+     * Lấy IP thực của client.
+     * X-Forwarded-For chỉ được tin khi request đến từ reverse proxy nội bộ (127.x hoặc ::1).
+     * Điều này ngăn attacker giả mạo header để bypass brute-force protection.
+     */
     private String getClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+        String remoteAddr = request.getRemoteAddr();
+        boolean fromTrustedProxy = "127.0.0.1".equals(remoteAddr)
+                || "0:0:0:0:0:0:0:1".equals(remoteAddr)
+                || "::1".equals(remoteAddr);
+        if (fromTrustedProxy) {
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                return forwarded.split(",")[0].trim();
+            }
         }
-        return request.getRemoteAddr();
+        return remoteAddr;
     }
 
     // ── Forgot / Reset password ─────────────────────────────────────────────

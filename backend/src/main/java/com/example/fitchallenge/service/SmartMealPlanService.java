@@ -4,6 +4,8 @@ import com.example.fitchallenge.DTO.SmartMealDTO.DishCatalogEntryDTO;
 import com.example.fitchallenge.DTO.SmartMealDTO.SmartDishMealAiDTO;
 import com.example.fitchallenge.DTO.SmartMealDTO.SmartDishPlanAiResponseDTO;
 import com.example.fitchallenge.Entity.*;
+import com.example.fitchallenge.nutrition.NutritionSafetyAdvice;
+import com.example.fitchallenge.nutrition.NutritionSafetyResolver;
 import com.example.fitchallenge.repository.*;
 import com.example.fitchallenge.repository.User.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,6 +53,9 @@ public class SmartMealPlanService {
     private final PersonalizedNutritionPlanRepository planRepository;
     private final PersonalizedMealDetailRepository mealDetailRepository;
     private final PersonalizedMealItemRepository mealItemRepository;
+    private final HealthProfileRepository healthProfileRepository;
+    private final UserPreferenceService userPreferenceService;
+    private final NutritionSafetyResolver nutritionSafetyResolver;
 
     @Autowired
     private RestTemplate restTemplate; // bean có timeout từ RestTemplateConfig
@@ -66,8 +71,9 @@ public class SmartMealPlanService {
         int days = Math.max(1, Math.min(requestedDays, MAX_DAYS));
         int budgetPerDay = Math.max(50_000, requestedBudget);
 
-        Map<Dish.DishRole, List<Dish>> topDishes = prefilterTopDishes();
-        SmartDishPlanAiResponseDTO aiPlan = callGroqDishPlanner(days, budgetPerDay, profile, topDishes, user);
+        NutritionSafetyAdvice safety = safetyAdviceFor(userId);
+        Map<Dish.DishRole, List<Dish>> topDishes = applySafetyFilter(prefilterTopDishes(), safety);
+        SmartDishPlanAiResponseDTO aiPlan = callGroqDishPlanner(days, budgetPerDay, profile, topDishes, user, safety);
 
         Map<Long, Dish> dishById = topDishes.values().stream()
                 .flatMap(Collection::stream)
@@ -154,8 +160,12 @@ public class SmartMealPlanService {
             throw new IllegalStateException("Meal detail has no associated dish to swap");
         }
 
+        NutritionSafetyAdvice safety = safetyAdviceFor(authenticatedUserId);
         List<Dish> catalog = dishRepository.findActiveByRole(
-                currentDish.getDishRole(), PageRequest.of(0, TOP_DISH_PER_ROLE + 1));
+                        currentDish.getDishRole(), PageRequest.of(0, TOP_DISH_PER_ROLE + 1)).stream()
+                .filter(d -> d.getDishId().equals(currentDish.getDishId())
+                        || !matchesAvoidKeyword(d.getDishName(), safety.getAvoidKeywords()))
+                .toList();
         if (catalog.size() <= 1) {
             throw new IllegalStateException("No alternative dishes available for role: " + currentDish.getDishRole());
         }
@@ -225,17 +235,57 @@ public class SmartMealPlanService {
         return result;
     }
 
+    /**
+     * Ràng buộc an toàn dinh dưỡng của user (dị ứng, bệnh nền) — Java enforce
+     * bằng hard-filter catalog, AI chỉ nhận thêm context. Public để controller
+     * gắn disclaimer vào response.
+     */
+    public NutritionSafetyAdvice safetyAdviceFor(Long userId) {
+        HealthProfile health = healthProfileRepository.findByUser_Id(userId).orElse(null);
+        List<String> dislikedFoods = userPreferenceService.getFoodsToAvoid(userId);
+        return nutritionSafetyResolver.resolve(health, dislikedFoods);
+    }
+
+    /** Loại món có tên khớp từ khóa dị ứng/không ăn ra khỏi catalog trước khi đưa cho Groq. */
+    private Map<Dish.DishRole, List<Dish>> applySafetyFilter(
+            Map<Dish.DishRole, List<Dish>> topDishes, NutritionSafetyAdvice safety) {
+        if (safety.getAvoidKeywords().isEmpty()) {
+            return topDishes;
+        }
+        Map<Dish.DishRole, List<Dish>> filtered = new EnumMap<>(Dish.DishRole.class);
+        for (var entry : topDishes.entrySet()) {
+            List<Dish> kept = entry.getValue().stream()
+                    .filter(dish -> !matchesAvoidKeyword(dish.getDishName(), safety.getAvoidKeywords()))
+                    .toList();
+            // Không để trống role (solver cần fallback) — chỉ áp filter khi còn món thay thế
+            filtered.put(entry.getKey(), kept.isEmpty() ? entry.getValue() : kept);
+        }
+        return filtered;
+    }
+
+    private boolean matchesAvoidKeyword(String dishName, List<String> avoidKeywords) {
+        if (dishName == null) return false;
+        String name = java.text.Normalizer.normalize(dishName, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .toLowerCase(Locale.ROOT);
+        return avoidKeywords.stream().anyMatch(name::contains);
+    }
+
     private SmartDishPlanAiResponseDTO callGroqDishPlanner(
             int days,
             int budgetPerDay,
             UserBodyProfile profile,
             Map<Dish.DishRole, List<Dish>> topDishes,
-            User user
+            User user,
+            NutritionSafetyAdvice safety
     ) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("days", days);
         payload.put("budget_per_day", budgetPerDay);
         payload.put("user_goal", profile.getGoal() != null ? profile.getGoal() : "maintenance");
+        payload.put("avoid_keywords", safety.getAvoidKeywords());
+        payload.put("diet_rules", safety.getDietRules());
+        payload.put("medical_conditions", safety.getConditions());
         payload.put("inventory", userInventoryRepository.findAvailableItemsForAI(user).stream()
                 .map(UserInventory::getDisplayName)
                 .filter(Objects::nonNull)

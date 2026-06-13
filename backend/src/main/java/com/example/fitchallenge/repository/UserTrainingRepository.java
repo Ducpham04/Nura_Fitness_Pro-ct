@@ -40,4 +40,15 @@ public interface UserTrainingRepository extends JpaRepository<UserTraining, Long
 
     // Dashboard: đếm theo status
     long countByStatusIgnoreCase(String status);
+
+    // ── getAiStats: COUNT queries thay thế findAll() ──────────────────────
+
+    long countByStartDate(LocalDate startDate);
+
+    long countByStartDateGreaterThanEqual(LocalDate startDate);
+
+    @org.springframework.data.jpa.repository.Query("SELECT ut.user.id, COUNT(ut) FROM UserTraining ut WHERE ut.user IS NOT NULL GROUP BY ut.user.id")
+    List<Object[]> countGroupByUser();
+
+    List<UserTraining> findTop20ByStartDateNotNullAndUserNotNullOrderByStartDateDesc();
 }

@@ -4,6 +4,7 @@ import com.example.fitchallenge.Security.AuthenticatedUserIdResolver;
 import com.example.fitchallenge.service.AiPackageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -53,12 +54,28 @@ public class AiPackageController {
     public ResponseEntity<Map<String, Object>> subscribe(
             @PathVariable Long id,
             @RequestHeader("userId") Long userId,
-            @RequestBody(required = false) Map<String, Object> body) {
+            @RequestBody(required = false) Map<String, Object> body,
+            HttpServletRequest request) {
         userId = authUser.resolve(userId);
         String promoCode  = body != null ? (String) body.get("promoCode")  : null;
         String returnUrl  = body != null ? (String) body.get("returnUrl")  : null;
+        String clientIp   = getClientIp(request);
         return ResponseEntity.ok(
-                aiPackageService.initiateVnpaySubscription(userId, id, promoCode, returnUrl));
+                aiPackageService.initiateVnpaySubscription(userId, id, promoCode, returnUrl, clientIp));
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String remoteAddr = request.getRemoteAddr();
+        boolean fromProxy = "127.0.0.1".equals(remoteAddr)
+                || "0:0:0:0:0:0:0:1".equals(remoteAddr)
+                || "::1".equals(remoteAddr);
+        if (fromProxy) {
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                return forwarded.split(",")[0].trim();
+            }
+        }
+        return remoteAddr;
     }
 
     /**
