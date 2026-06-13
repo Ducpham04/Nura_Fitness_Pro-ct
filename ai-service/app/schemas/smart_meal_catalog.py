@@ -20,6 +20,11 @@ class SmartMealCatalogRequest(BaseModel):
     preferences_negative: List[str] = Field(
         default_factory=list, description="Foods user dislikes — avoid matching catalog names"
     )
+    diet_rules: List[str] = Field(
+        default_factory=list,
+        description="Medical diet constraints resolved by Java (Vietnamese, prompt-ready)",
+    )
+    medical_conditions: List[str] = Field(default_factory=list)
     user_profile: dict = Field(default_factory=dict)
     food_catalog: List[FoodCatalogItem] = Field(
         ..., min_length=1, description="Subset of master foods (id + name only)"

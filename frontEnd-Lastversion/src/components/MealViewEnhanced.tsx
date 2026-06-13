@@ -252,6 +252,7 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
   const [naturalLogLoading, setNaturalLogLoading] = useState(false);
   const [naturalLogResult, setNaturalLogResult] = useState<NaturalFoodLogResult | null>(null);
   const [naturalLogError, setNaturalLogError] = useState<string | null>(null);
+  const [medicalDisclaimer, setMedicalDisclaimer] = useState<string | null>(null);
 
   // Hôm nay là ngày mấy trong plan?
   const todayPlanDay = planMeta?.startDate
@@ -388,6 +389,7 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
   const handleAiSuccess = async (data: any) => {
     setSelectedDay(1);
     setCyberpunkModalOpen(false);
+    setMedicalDisclaimer(data?.requiresMedicalClearance ? (data?.medicalDisclaimer || null) : null);
     await fetchActivePlan(1);
     window.dispatchEvent(new CustomEvent('trigger-confetti', {
       detail: { calories: data.total_calories || 2400, spent: data.total_cost || 0, budget },
@@ -817,6 +819,13 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
           <Utensils className="w-3.5 h-3.5" />
           Lịch ăn hôm nay
         </h3>
+        {medicalDisclaimer && (
+          <div className="mb-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-amber-200 text-xs leading-relaxed flex items-start gap-3">
+            <span className="text-base leading-none">⚠️</span>
+            <span>{medicalDisclaimer}</span>
+          </div>
+        )}
+
         <div>
           {MEALS.map(({ key, label, time, emoji, pct: mPct }) => {
             const meals = (currentDay as any)[key] || [];
@@ -833,6 +842,11 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
             );
           })}
         </div>
+
+        <p className="mt-4 text-neutral-600 text-[11px] leading-relaxed text-center px-4">
+          Thực đơn do AI tạo chỉ mang tính tham khảo, không thay thế tư vấn y tế. Nếu bạn có bệnh nền
+          hoặc dị ứng thực phẩm, hãy cập nhật hồ sơ sức khỏe và tham khảo ý kiến bác sĩ trước khi áp dụng.
+        </p>
       </div>
 
       {/* ── Modals ── */}

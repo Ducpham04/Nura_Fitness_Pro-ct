@@ -30,6 +30,15 @@ class SmartDishPlanRequest(BaseModel):
     inventory: List[str] = Field(default_factory=list)
     user_goal: str = "maintenance"
     budget_per_day: int = Field(..., ge=30000)
+    avoid_keywords: List[str] = Field(
+        default_factory=list,
+        description="Allergens/foods the user must never eat (Java also hard-filters the catalog)",
+    )
+    diet_rules: List[str] = Field(
+        default_factory=list,
+        description="Medical diet constraints resolved by Java (Vietnamese, prompt-ready)",
+    )
+    medical_conditions: List[str] = Field(default_factory=list)
     dish_catalog_by_role: Dict[DishRole, List[DishCatalogItem]]
 
 
