@@ -105,29 +105,18 @@ class AIVision:
     """
     
     def __init__(self):
-        """Initialize Groq client for Vision"""
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise ValueError("GROQ_API_KEY environment variable not set")
-        
+        """Initialize LLM vision client (provider-agnostic, env-driven)"""
         try:
-            import httpx
-            from openai import OpenAI
-            # Ensure no proxy environment variables interfere with OpenAI client
-            os.environ.pop("HTTP_PROXY", None)
-            os.environ.pop("HTTPS_PROXY", None)
-            os.environ.pop("ALL_PROXY", None)
-            
-            self.client = OpenAI(
-                base_url="https://api.groq.com/openai/v1",
-                api_key=api_key,
-                http_client=httpx.Client(timeout=90.0)
+            from ..core.llm import make_client
+            self.client = make_client(timeout=90.0)
+            # Vision cần model đa phương thức. Mặc định Llama 4 Scout trên Groq;
+            # override bằng env GROQ_VISION_MODEL (hoặc LLM_VISION_MODEL).
+            self.model_name = (
+                os.getenv("LLM_VISION_MODEL")
+                or os.getenv("GROQ_VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
             )
-            # Groq vision model (llama-3.2-vision đã bị khai tử). Mặc định Llama 4 Scout
-            # (đa phương thức); có thể override bằng env GROQ_VISION_MODEL.
-            self.model_name = os.getenv("GROQ_VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
         except Exception as e:
-            print(f"❌ Could not initialize Groq Vision client: {e}")
+            print(f"❌ Could not initialize LLM Vision client: {e}")
             raise e
         
         # Calorie thresholds for advice

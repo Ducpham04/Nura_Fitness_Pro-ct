@@ -20,10 +20,10 @@ class IntegratedPlanner:
     
     def __init__(self):
         """Initialize component planners"""
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise ValueError("GROQ_API_KEY environment variable not set")
-        
+        from ..core.llm import has_provider
+        if not has_provider():
+            raise ValueError("Chưa cấu hình provider LLM. Đặt GROQ_API_KEY (hoặc LLM_API_KEY).")
+
         self.meal_planner = AIPlanner()
         self.workout_planner = WorkoutPlanner()
     

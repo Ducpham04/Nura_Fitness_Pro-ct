@@ -9,9 +9,7 @@ import os
 import uuid
 from typing import Dict, List, Set
 
-import httpx
-from openai import OpenAI
-
+from app.core.llm import make_client
 from app.schemas.smart_meal_dish import (
     DishCatalogItem,
     SelectedDay,
@@ -52,16 +50,9 @@ def generate_smart_dish_plan(req: SmartDishPlanRequest) -> SmartDishPlanResponse
     if not allowed_ids:
         raise ValueError("dish_catalog_by_role is empty")
 
-    # Use the OpenAI-compatible Groq endpoint to avoid requiring the separate
-    # `groq` package in local environments.
-    os.environ.pop("HTTP_PROXY", None)
-    os.environ.pop("HTTPS_PROXY", None)
-    os.environ.pop("ALL_PROXY", None)
-    client = OpenAI(
-        base_url="https://api.groq.com/openai/v1",
-        api_key=api_key,
-        http_client=httpx.Client(timeout=90.0),
-    )
+    # Provider-agnostic client (env-driven, auto fail-over). Vẫn dùng giao thức
+    # OpenAI-compatible để không cần package `groq` riêng.
+    client = make_client(timeout=90.0)
     context = {
         "days": req.days,
         "inventory": req.inventory,

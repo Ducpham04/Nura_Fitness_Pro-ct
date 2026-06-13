@@ -154,28 +154,14 @@ class AIPlanner:
     """
     
     def __init__(self):
-        """Initialize Groq client"""
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise ValueError("GROQ_API_KEY environment variable not set")
-        
+        """Initialize LLM client (provider-agnostic, env-driven, auto fail-over)"""
         try:
-            import httpx
-            from openai import OpenAI
-            # Ensure no proxy environment variables interfere with OpenAI client
-            os.environ.pop("HTTP_PROXY", None)
-            os.environ.pop("HTTPS_PROXY", None)
-            os.environ.pop("ALL_PROXY", None)
-            
-            self.client_type = "groq"
-            self.client = OpenAI(
-                base_url="https://api.groq.com/openai/v1",
-                api_key=api_key,
-                http_client=httpx.Client(timeout=90.0)
-            )
-            self.model_name = "llama-3.1-8b-instant"
+            from ..core.llm import make_client
+            self.client_type = "llm"
+            self.client = make_client(timeout=90.0)
+            self.model_name = os.getenv("LLM_MEAL_MODEL", "llama-3.1-8b-instant")
         except Exception as e:
-            print(f"❌ Could not initialize Groq client: {e}")
+            print(f"❌ Could not initialize LLM client: {e}")
             raise e
     
     def _parse_json_response(self, response_text: str) -> dict:

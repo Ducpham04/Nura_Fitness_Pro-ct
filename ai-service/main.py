@@ -563,17 +563,15 @@ async def log_food_natural(body: dict):
     Input:  { "text": "Sáng ăn 2 trứng luộc và 1 bát phở bò", "meal_time": "breakfast" }
     Output: { "items": [...], "total_calories": ..., "macros": {...}, "meal_time": "..." }
     """
-    import json as _json, os as _os, httpx as _httpx
-    from openai import OpenAI as _OAI
+    import json as _json
+    from app.core.llm import make_client
 
     text      = str(body.get("text", "")).strip()
     meal_time = str(body.get("meal_time", "unknown"))
     if not text:
         raise HTTPException(status_code=400, detail="text is required")
 
-    api_key = _os.getenv("GROQ_API_KEY")
-    client  = _OAI(base_url="https://api.groq.com/openai/v1", api_key=api_key,
-                   http_client=_httpx.Client())
+    client = make_client()
 
     system_prompt = """Bạn là chuyên gia dinh dưỡng. Phân tích đoạn text mô tả bữa ăn thành JSON.
 RULES:
@@ -631,8 +629,8 @@ async def auto_regulate(body: dict):
       "reasoning": "..."
     }
     """
-    import json as _json, os as _os, httpx as _httpx
-    from openai import OpenAI as _OAI
+    import json as _json
+    from app.core.llm import make_client
 
     user_profile     = body.get("user_profile", {})
     current_template = body.get("current_template", {})
@@ -645,9 +643,7 @@ async def auto_regulate(body: dict):
     if not last_week:
         raise HTTPException(status_code=400, detail="last_week_log is required")
 
-    api_key = _os.getenv("GROQ_API_KEY")
-    client  = _OAI(base_url="https://api.groq.com/openai/v1", api_key=api_key,
-                   http_client=_httpx.Client())
+    client = make_client()
 
     # Auto-derive next week's base phase
     from app.ai.workout_planner import WorkoutPlanner

@@ -7,6 +7,7 @@ import os
 import uuid
 from typing import Any, Dict, List
 
+from app.core.llm import make_client
 from app.schemas.smart_meal_catalog import (
     FoodCatalogItem,
     SmartMealCatalogRequest,
@@ -43,22 +44,7 @@ def _catalog_lines(catalog: List[FoodCatalogItem], max_preview: int = 400) -> st
 
 
 def generate_smart_catalog_plan(req: SmartMealCatalogRequest) -> SmartMealCatalogResponse:
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        raise ValueError("GROQ_API_KEY is not set")
-
-    import httpx
-    from openai import OpenAI
-
-    os.environ.pop("HTTP_PROXY", None)
-    os.environ.pop("HTTPS_PROXY", None)
-    os.environ.pop("ALL_PROXY", None)
-
-    client = OpenAI(
-        base_url="https://api.groq.com/openai/v1",
-        api_key=api_key,
-        http_client=httpx.Client(timeout=90.0),
-    )
+    client = make_client(timeout=90.0)
 
     user_blob: Dict[str, Any] = {
         "days": req.days,
