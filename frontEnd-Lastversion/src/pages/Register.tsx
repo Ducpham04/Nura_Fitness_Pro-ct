@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { Zap, Mail, Lock, Check, ArrowRight, Eye, EyeOff, AlertCircle, User } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
+import { trackEvent } from '../analytics';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
 
@@ -88,7 +89,10 @@ export default function Register() {
     setLoading(true);
     try {
       const success = await register({ email, password, fullName: name });
-      if (success) onRegister();
+      if (success) {
+        trackEvent('Signup'); // funnel: acquisition → activation
+        onRegister();
+      }
       else setError(authError || t('auth.registerFailed'));
     } catch (err) {
       // Hiển thị message thật từ backend (vd "Email này đã được đăng ký!")

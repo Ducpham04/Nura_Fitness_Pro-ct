@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Zap, Check, Loader2, Gift } from 'lucide-react';
 import { AiPackage, AiUsageInfo, aiUsageService } from '../services/aiUsageService';
+import { trackEvent } from '../analytics';
 
 interface AiUpgradeModalProps {
   isOpen: boolean;
@@ -111,11 +112,13 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
     const data = res.data;
     if (data?.method === 'direct') {
       // Gói miễn phí hoặc đã xử lý xong
+      trackEvent('Upgrade', { package: selectedPkg.code, method: 'direct' });
       alert(data.message ?? 'Gói đã được kích hoạt!');
       onUpgradeSuccess?.();
       onClose();
     } else if (data?.paymentUrl) {
-      // Redirect tới VNPay
+      // funnel: revenue intent — bắt đầu thanh toán VNPay
+      trackEvent('UpgradeCheckout', { package: selectedPkg.code, amount: data.amount ?? selectedPkg.priceVnd });
       window.location.href = data.paymentUrl;
     }
   };

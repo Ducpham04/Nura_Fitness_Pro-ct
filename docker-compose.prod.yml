@@ -169,6 +169,8 @@ services:
         VITE_API_URL: "${VITE_API_URL-}"
         # Sentry FE — trống = tắt; dán DSN để bật (phải rebuild frontend khi đổi)
         VITE_SENTRY_DSN: "${VITE_SENTRY_DSN-}"
+        # Plausible analytics — trống = tắt; điền domain để bật
+        VITE_PLAUSIBLE_DOMAIN: "${VITE_PLAUSIBLE_DOMAIN-}"
     container_name: fit-prod-frontend
     restart: always
     logging: *default-logging

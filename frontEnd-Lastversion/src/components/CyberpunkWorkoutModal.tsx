@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Zap, X, Dumbbell, Timer, Activity, CalendarDays, Target, Check } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { trainingService } from '../services/trainingService';
+import { trackEvent } from '../analytics';
 
 // Vùng cơ ưu tiên → keyword nhóm cơ (primary_muscle) backend hiểu
 const focusOptions: { label: string; muscles: string[] }[] = [
@@ -89,6 +90,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
       });
 
       if (response.success) {
+        trackEvent('PlanGenerated', { type: 'workout' }); // activation aha-moment
         onSuccess(response.data);
       } else {
         if (response.error?.code === 'QUOTA_EXCEEDED') {

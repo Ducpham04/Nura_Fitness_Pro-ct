@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Brain, Zap, X, DollarSign } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
+import { trackEvent } from '../analytics';
 import FoodInventoryPicker, { SelectedFoodInventoryItem } from './FoodInventoryPicker';
 
 interface Props {
@@ -50,6 +51,7 @@ export default function CyberpunkMealModal({ onClose, onSuccess, defaultBudget, 
           return;
         }
         const clientPayload = notif?.data ?? notif ?? {};
+        trackEvent('PlanGenerated', { type: 'meal' }); // activation aha-moment
         onSuccess(clientPayload);
       } else {
         // 429 → mở upgrade modal

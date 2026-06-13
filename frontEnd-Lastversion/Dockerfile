@@ -16,6 +16,9 @@ ENV VITE_API_URL=$VITE_API_URL
 # Sentry FE — bake DSN lúc build (Vite env là build-time). Trống = tắt.
 ARG VITE_SENTRY_DSN=
 ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
+# Plausible analytics — bake domain lúc build. Trống = tắt.
+ARG VITE_PLAUSIBLE_DOMAIN=
+ENV VITE_PLAUSIBLE_DOMAIN=$VITE_PLAUSIBLE_DOMAIN
 
 # Copy source và build
 COPY . .
