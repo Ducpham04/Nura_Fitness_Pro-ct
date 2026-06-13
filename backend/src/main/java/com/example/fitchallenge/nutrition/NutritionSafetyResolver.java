@@ -28,12 +28,14 @@ public class NutritionSafetyResolver {
     private static final Pattern ALLERGY_PATTERN =
             Pattern.compile("(?:di ung|allergy|allergic to)[:\\s]+([^.;\\n]+)");
 
-    /** Chuẩn hóa: lowercase + bỏ dấu tiếng Việt để so khớp từ khóa. */
+    /** Chuẩn hóa: lowercase + bỏ dấu tiếng Việt để so khớp từ khóa.
+     * Lưu ý: NFD KHÔNG tách 'đ'/'Đ' (là chữ cái riêng, không phải dấu) nên phải
+     * thay tay → 'd'; nếu không "tiểu đường", "đậu phộng", "đột quỵ" sẽ bị bỏ sót. */
     private static String norm(String s) {
         if (s == null) return "";
         String n = Normalizer.normalize(s, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "");
-        return n.toLowerCase(Locale.ROOT).trim();
+        return n.toLowerCase(Locale.ROOT).replace('đ', 'd').trim();
     }
 
     private static boolean containsAny(String hay, String... needles) {
