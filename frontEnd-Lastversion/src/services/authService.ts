@@ -32,6 +32,21 @@ class AuthService {
     throw new Error(response.error?.message || 'Đăng nhập thất bại');
   }
 
+  // Login with Google — gửi ID token từ Google Identity Services, BE verify rồi trả JWT
+  async loginWithGoogle(idToken: string): Promise<boolean> {
+    const response = await apiClient.post<BEAuthResponse>(
+      API_ENDPOINTS.AUTH.GOOGLE,
+      { idToken }
+    );
+
+    if (response.success && response.data) {
+      const feData = this.mapBEToFE(response.data);
+      this.saveAuthData(feData);
+      return true;
+    }
+    throw new Error(response.error?.message || 'Đăng nhập Google thất bại');
+  }
+
   // Register
   async register(data: RegisterRequest): Promise<boolean> {
     const response = await apiClient.post<BEAuthResponse>(

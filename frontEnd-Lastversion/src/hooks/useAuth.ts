@@ -11,6 +11,7 @@ interface UseAuthReturn {
   isAuthenticated: boolean;
   error: string | null;
   login: (credentials: LoginRequest) => Promise<boolean>;
+  loginWithGoogle: (idToken: string) => Promise<boolean>;
   register: (data: RegisterRequest) => Promise<boolean>;
   logout: () => Promise<void>;
   refresh: () => Promise<boolean>;
@@ -80,6 +81,26 @@ export function useAuth(): UseAuthReturn {
     }
   }, []);
 
+  const loginWithGoogle = useCallback(async (idToken: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const success = await authService.loginWithGoogle(idToken);
+      if (success) {
+        const user = await authService.getCurrentUser(true);
+        setUser(user);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'An error occurred';
+      setError(msg);
+      throw new Error(msg); // ném tiếp để trang Login hiển thị đúng message
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const register = useCallback(async (data: RegisterRequest): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -130,6 +151,7 @@ export function useAuth(): UseAuthReturn {
     isAuthenticated: !!user,
     error,
     login,
+    loginWithGoogle,
     register,
     logout,
     refresh,

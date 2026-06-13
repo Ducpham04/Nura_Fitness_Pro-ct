@@ -17,6 +17,10 @@ public interface UserService {
     JwtResponse register(RegisterRequestAdmin registerRequestAdmin);
     JwtResponse registerCustomer(RegisterRequestCustomer registerRequestCustomer ) ;
     JwtResponse login(LoginRequest loginRequest);
+
+    /** Đăng nhập / tự đăng ký bằng Google: verify ID token rồi phát JWT của hệ thống. */
+    JwtResponse loginWithGoogle(String idToken);
+
     NotificationResponse logout(String token);
     UserDetails loadUserByEmail(String username);
     NotificationResponse getAllUsers();

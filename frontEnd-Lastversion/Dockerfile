@@ -19,6 +19,9 @@ ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
 # Plausible analytics — bake domain lúc build. Trống = tắt.
 ARG VITE_PLAUSIBLE_DOMAIN=
 ENV VITE_PLAUSIBLE_DOMAIN=$VITE_PLAUSIBLE_DOMAIN
+# Google login — bake client-id lúc build. Trống = ẩn nút Google.
+ARG VITE_GOOGLE_CLIENT_ID=
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 
 # Copy source và build
 COPY . .

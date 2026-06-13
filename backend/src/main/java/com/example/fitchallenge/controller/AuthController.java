@@ -96,6 +96,31 @@ public class AuthController {
         return remoteAddr;
     }
 
+    // ── Google login ────────────────────────────────────────────────────────
+
+    /** Request body cho đăng nhập Google — chứa ID token lấy từ Google Identity Services */
+    public record GoogleLoginRequest(String idToken) {}
+
+    @PostMapping("/auth/google")
+    @Operation(summary = "Login or register with a Google ID token")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Login successful"),
+        @ApiResponse(responseCode = "400", description = "Missing or invalid Google token")
+    })
+    public ResponseEntity<?> googleLogin(@RequestBody GoogleLoginRequest body) {
+        if (body == null || body.idToken() == null || body.idToken().isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(new NotificationResponse(false, "Thiếu Google idToken"));
+        }
+        try {
+            JwtResponse jwtResponse = userService.loginWithGoogle(body.idToken());
+            return ResponseEntity.ok(jwtResponse);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest()
+                    .body(new NotificationResponse(false, e.getMessage()));
+        }
+    }
+
     // ── Forgot / Reset password ─────────────────────────────────────────────
 
     /** Request body for forgot-password */

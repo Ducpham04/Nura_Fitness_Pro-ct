@@ -45,6 +45,9 @@ public class UserServiceImpl implements UserService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailService emailService;
 
+    // Google login
+    private final com.example.fitchallenge.Security.GoogleTokenVerifier googleTokenVerifier;
+
     // Supporting services for better separation of concerns
     private final UserChallengeRepository userChallengeRepository;
     private final UserTrainingRepository userTrainingRepository;
@@ -208,6 +211,67 @@ public class UserServiceImpl implements UserService {
         return new JwtResponse(token, refreshToken, userInfo);
     }
 
+
+    @Override
+    @Transactional
+    public JwtResponse loginWithGoogle(String idToken) {
+        // 1. Verify ID token với Google (chữ ký + audience = client-id của ta)
+        com.example.fitchallenge.Security.GoogleTokenVerifier.GoogleUser g =
+                googleTokenVerifier.verify(idToken);
+
+        if (g.email() == null || g.email().isBlank()) {
+            throw new IllegalArgumentException("Tài khoản Google không có email");
+        }
+        if (!g.emailVerified()) {
+            throw new IllegalArgumentException("Email Google chưa được xác thực");
+        }
+        String email = g.email().trim().toLowerCase();
+
+        // 2. Tìm user theo email; chưa có thì tự tạo (đăng nhập = đăng ký luôn)
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            Role userRole = roleRepository.findById(5L)
+                    .orElseThrow(() -> new RuntimeException("Role USER (ID: 5) chưa được khởi tạo trong DB."));
+
+            User newUser = new User();
+            String fullName = (g.name() != null && !g.name().isBlank())
+                    ? g.name().trim()
+                    : email.split("@")[0];
+            newUser.setFullName(fullName);
+            // userName có ràng buộc UNIQUE — dùng email để chắc chắn không đụng giữa các user trùng tên
+            newUser.setUserName(email);
+            newUser.setEmail(email);
+            // User Google không có mật khẩu — set chuỗi ngẫu nhiên đã mã hoá (không ai login local bằng nó được)
+            newUser.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+            newUser.setRole(userRole);
+            newUser.setStatus("active");
+            newUser.setPoints(0);
+            newUser.setLevelPoints(0);
+            if (g.picture() != null && !g.picture().isBlank()) {
+                newUser.setLinkImage(g.picture());
+            }
+            ZonedDateTime created = ZonedDateTime.now();
+            newUser.setCreatedAt(created);
+            newUser.setUpdatedAt(created);
+            newUser.setLastLoginAt(created);
+            log.info("[GoogleAuth] Tạo user mới từ Google: {}", email);
+            return userRepository.save(newUser);
+        });
+
+        // 3. Cập nhật last login + phát JWT giống login thường
+        user.setLastLoginAt(ZonedDateTime.now());
+        userRepository.save(user);
+
+        String token = jwtTokenProvider.generateToken(user.getEmail(), user.getRole().getRoleName());
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
+
+        JwtResponse.JwtUserInfoDTO userInfo = new JwtResponse.JwtUserInfoDTO(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName() != null ? user.getFullName() : user.getUserName(),
+                user.getRole().getRoleName()
+        );
+        return new JwtResponse(token, refreshToken, userInfo);
+    }
 
     @Override
     public UserDetails loadUserByEmail(String email)  {

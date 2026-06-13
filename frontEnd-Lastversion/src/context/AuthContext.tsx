@@ -10,6 +10,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   error: string | null;
   login: (credentials: LoginRequest) => Promise<boolean>;
+  loginWithGoogle: (idToken: string) => Promise<boolean>;
   register: (data: RegisterRequest) => Promise<boolean>;
   logout: () => Promise<void>;
   refresh: () => Promise<boolean>;
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: auth.isAuthenticated,
         error: auth.error,
         login: auth.login,
+        loginWithGoogle: auth.loginWithGoogle,
         register: auth.register,
         logout: auth.logout,
         refresh: auth.refresh,

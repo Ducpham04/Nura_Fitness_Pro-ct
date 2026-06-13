@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Zap, Mail, Lock, ArrowRight, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuthContext } from '../context/AuthContext';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -35,7 +36,26 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login } = useAuthContext();
+  const { login, loginWithGoogle } = useAuthContext();
+  // Nút Google chỉ hiện khi đã cấu hình client-id (gated sau env, giống Sentry/Plausible)
+  const googleEnabled = !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  const handleGoogle = async (credential?: string) => {
+    if (!credential) {
+      setError('Đăng nhập Google thất bại');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      const success = await loginWithGoogle(credential);
+      if (success) onLogin('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Đăng nhập Google thất bại');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,6 +196,28 @@ export default function Login() {
               )}
             </button>
           </form>
+
+          {/* Google login — chỉ hiện khi VITE_GOOGLE_CLIENT_ID được cấu hình */}
+          {googleEnabled && (
+            <>
+              <div className="flex items-center gap-3 my-5">
+                <div className="h-px flex-1 bg-white/10" />
+                <span className="text-neutral-500 text-xs uppercase tracking-wider">{t('auth.or', 'hoặc')}</span>
+                <div className="h-px flex-1 bg-white/10" />
+              </div>
+              <div className="flex justify-center">
+                <GoogleLogin
+                  onSuccess={(resp) => handleGoogle(resp.credential)}
+                  onError={() => setError('Đăng nhập Google thất bại')}
+                  theme="filled_black"
+                  shape="pill"
+                  text="continue_with"
+                  locale="vi"
+                  width="320"
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Sign up link */}

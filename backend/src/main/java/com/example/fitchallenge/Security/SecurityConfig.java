@@ -97,7 +97,8 @@ public class SecurityConfig {
                                 // ── Public unauthenticated endpoints ─────────────────────────
                                 .requestMatchers(
                                     "/api/auth/login", "/api/auth/register",
-                                    "/api/auth/forgot-password", "/api/auth/reset-password"
+                                    "/api/auth/forgot-password", "/api/auth/reset-password",
+                                    "/api/auth/google"
                                 ).permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/goals", "/api/goals/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/foods", "/api/foods/**").permitAll()

@@ -171,6 +171,8 @@ services:
         VITE_SENTRY_DSN: "${VITE_SENTRY_DSN-}"
         # Plausible analytics — trống = tắt; điền domain để bật
         VITE_PLAUSIBLE_DOMAIN: "${VITE_PLAUSIBLE_DOMAIN-}"
+        # Google login — trống = ẩn nút Google; dán client-id để bật (phải rebuild frontend khi đổi)
+        VITE_GOOGLE_CLIENT_ID: "${VITE_GOOGLE_CLIENT_ID-}"
     container_name: fit-prod-frontend
     restart: always
     logging: *default-logging
