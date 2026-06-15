@@ -69,8 +69,9 @@ public class DishAdminController {
 
     @GetMapping("/{dishId}/ingredients")
     public ResponseEntity<NotificationResponse> getIngredients(@PathVariable Long dishId) {
-        List<DishIngredient> ingredients = dishIngredientRepository.findByDishIdWithFood(dishId);
-        return ResponseEntity.ok(new NotificationResponse(true, "Dish ingredients retrieved successfully", ingredients));
+        List<DishIngredientView> views = dishIngredientRepository.findByDishIdWithFood(dishId)
+                .stream().map(DishAdminController::toView).toList();
+        return ResponseEntity.ok(new NotificationResponse(true, "Dish ingredients retrieved successfully", views));
     }
 
     @PostMapping("/{dishId}/ingredients")
@@ -97,7 +98,7 @@ public class DishAdminController {
         ingredient.setFood(food);
         ingredient.setIsCoreIngredient(request.getIsCoreIngredient() == null || request.getIsCoreIngredient());
         DishIngredient saved = dishIngredientRepository.save(ingredient);
-        return ResponseEntity.ok(new NotificationResponse(true, "Dish ingredient added successfully", saved));
+        return ResponseEntity.ok(new NotificationResponse(true, "Dish ingredient added successfully", toView(saved)));
     }
 
     @PutMapping("/ingredients/{ingredientId}")
@@ -118,7 +119,7 @@ public class DishAdminController {
         }
 
         DishIngredient saved = dishIngredientRepository.save(ingredient);
-        return ResponseEntity.ok(new NotificationResponse(true, "Dish ingredient updated successfully", saved));
+        return ResponseEntity.ok(new NotificationResponse(true, "Dish ingredient updated successfully", toView(saved)));
     }
 
     @DeleteMapping("/ingredients/{ingredientId}")
@@ -152,5 +153,17 @@ public class DishAdminController {
     public static class DishIngredientRequest {
         private Long foodId;
         private Boolean isCoreIngredient;
+    }
+
+    // DTO gọn — tránh serialize entity Food (có @ElementCollection LAZY gây 500)
+    public record FoodView(Long foodId, String name) {}
+    public record DishIngredientView(Long dishIngredientId, Boolean isCoreIngredient, FoodView food) {}
+
+    private static DishIngredientView toView(DishIngredient di) {
+        Food f = di.getFood();
+        return new DishIngredientView(
+                di.getDishIngredientId(),
+                di.getIsCoreIngredient(),
+                f == null ? null : new FoodView(f.getFoodId(), f.getName()));
     }
 }
