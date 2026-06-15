@@ -89,16 +89,20 @@ class ApiClient {
         }
       }
 
-      // ── 429: AI quota exceeded ──────────────────────────────────────────
+      // ── 429: khoá brute-force đăng nhập HOẶC hết lượt AI ────────────────
+      // Cùng status 429 nhưng khác ngữ cảnh → thông báo riêng để không gây hiểu nhầm.
       if (response.status === 429) {
-        let msg = 'Bạn đã hết lượt AI tháng này. Nâng cấp gói để tiếp tục.';
+        const isLogin = endpoint.includes('/auth/login');
+        let msg = isLogin
+          ? 'Bạn đã đăng nhập sai quá nhiều lần. Vui lòng đợi khoảng 15 phút rồi thử lại.'
+          : 'Bạn đã hết lượt AI tháng này. Nâng cấp gói để tiếp tục.';
         try {
           const body = await response.json();
-          if (body?.message) msg = body.message;
+          if (body?.message) msg = body.message; // ưu tiên message thật từ backend
         } catch { /* ignore */ }
         return {
           success: false,
-          error: { code: 'QUOTA_EXCEEDED', message: msg, timestamp: new Date().toISOString() },
+          error: { code: isLogin ? 'TOO_MANY_ATTEMPTS' : 'QUOTA_EXCEEDED', message: msg, timestamp: new Date().toISOString() },
         };
       }
 

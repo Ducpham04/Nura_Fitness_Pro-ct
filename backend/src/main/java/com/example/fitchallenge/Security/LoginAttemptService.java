@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Brute-force protection — giới hạn số lần đăng nhập thất bại theo IP.
  *
  * Mặc định:
- *   - Tối đa 5 lần thất bại trong 15 phút → khoá IP thêm 15 phút.
+ *   - Tối đa 8 lần thất bại trong 15 phút → khoá IP thêm 15 phút.
  *   - Đăng nhập thành công → reset bộ đếm.
  *   - Scheduled cleanup mỗi giờ để tránh memory leak.
  */
@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class LoginAttemptService {
 
-    private static final int MAX_FAILURES   = 5;
+    private static final int MAX_FAILURES   = 8;   // nới từ 5 → 8: tránh khoá oan user thật quên mật khẩu (đặc biệt CGNAT nhà mạng VN dùng chung IP)
     private static final int WINDOW_MINUTES = 15;  // cửa sổ đếm lỗi
     private static final int BLOCK_MINUTES  = 15;  // thời gian khoá
 
