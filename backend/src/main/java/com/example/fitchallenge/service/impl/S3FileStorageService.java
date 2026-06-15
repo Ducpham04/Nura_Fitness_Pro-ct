@@ -9,9 +9,13 @@ import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Objects;
 
 @Service
@@ -19,15 +23,28 @@ import java.util.Objects;
 public class S3FileStorageService implements FileStorageService {
 
     private final S3Client s3Client;
+    private final S3Presigner presigner;
     private final String bucketName;
 
     public S3FileStorageService(
             @Value("${aws.region}") String region,
             @Value("${s3.upload.bucket}") String bucketName) {
-        this.s3Client = S3Client.builder()
-                .region(Region.of(region))
-                .build();
+        Region r = Region.of(region);
+        this.s3Client = S3Client.builder().region(r).build();
+        this.presigner = S3Presigner.builder().region(r).build();
         this.bucketName = bucketName;
+    }
+
+    /** Presigned GET URL (hạn 6 giờ) để browser tải ảnh thẳng từ S3 — không cần bucket public. */
+    @Override
+    public String presignedGetUrl(String key) {
+        String k = key.startsWith("/") ? key.substring(1) : key;
+        GetObjectRequest get = GetObjectRequest.builder().bucket(bucketName).key(k).build();
+        GetObjectPresignRequest presign = GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofHours(6))
+                .getObjectRequest(get)
+                .build();
+        return presigner.presignGetObject(presign).url().toString();
     }
 
     @Override

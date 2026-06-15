@@ -392,7 +392,7 @@ export const adminModules: AdminModuleConfig[] = [
     tableColumns: ['dishId', 'dishName', 'dishRole', 'suitableMealTypes', 'isActive', 'imageUrl'],
     fields: [
       { name: 'dishName',         label: 'Tên món ăn',   required: true },
-      { name: 'imageUrl',         label: 'Ảnh món ăn' },
+      { name: 'imageUrl',         label: 'Ảnh món ăn',   type: 'image-upload' },
       { name: 'dishRole',         label: 'Vai trò món',  type: 'select', required: true,
         options: ['MAIN_PROTEIN', 'SOUP', 'VEGETABLE', 'CARB_BASE', 'ONE_POT'],
         optionLabels: ['Món đạm chính', 'Canh/Súp', 'Rau', 'Tinh bột nền', 'Món một nồi'] },
@@ -413,7 +413,7 @@ export const adminModules: AdminModuleConfig[] = [
       { name: 'points',          label: 'Điểm cần đổi',    type: 'number' },
       { name: 'total',           label: 'Số lượng tồn kho', type: 'number' },
       { name: 'status',          label: 'Trạng thái' },
-      { name: 'linkImage',       label: 'Ảnh phần thưởng' },
+      { name: 'linkImage',       label: 'Ảnh phần thưởng', type: 'image-upload' },
       { name: 'externalPartner', label: 'Đối tác' },
     ],
   },
