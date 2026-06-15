@@ -109,8 +109,21 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/ai-packages", "/api/ai-packages/**").permitAll()
                                 .requestMatchers("/api/ai-packages/payment/**").permitAll()
 
+                                // ── Content editing: ADMIN hoặc EDITOR ───────────────────────
+                                // EDITOR (biên tập viên nội dung) chỉ được nhập liệu catalog;
+                                // KHÔNG chạm users / ai / data-seeder / transactions / rewards.
+                                // ⚠️ Phải đặt TRƯỚC rule "/api/admin/**" (Spring match theo thứ tự).
+                                .requestMatchers(
+                                        "/api/admin/exercises/**",
+                                        "/api/admin/dishes/**",
+                                        "/api/admin/training-plans/**",
+                                        "/api/admin/training-plan-details/**"
+                                ).hasAnyAuthority("ADMIN", "EDITOR")
+
                                 // ── Admin: requires ADMIN authority ──────────────────────────
                                 // Authority stored as "ADMIN" (no ROLE_ prefix) in CustomUserDetailService
+                                // Mọi /api/admin/** còn lại (users, ai, data-seeder, goals, blog,
+                                // dashboard, challenges, rewards...) vẫn chỉ dành cho ADMIN.
                                 .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                                 // Reward redemptions: user chỉ được tạo (POST) đơn đổi thưởng;
                                 // xem toàn bộ đơn + đổi trạng thái (duyệt/huỷ→hoàn điểm) là của ADMIN
