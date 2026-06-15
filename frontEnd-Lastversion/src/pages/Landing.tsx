@@ -18,6 +18,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Lenis from 'lenis';
 import LanguageSelector from '../components/LanguageSelector';
+import Logo from '../components/Logo';
 import { useAuthContext } from '../context/AuthContext';
 import { useReveal } from '../hooks/useReveal';
 
@@ -180,10 +181,7 @@ export default function Landing() {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0c0d11]/90 backdrop-blur-md border-b border-white/[0.06] py-4' : 'py-7'}`}>
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
           <button onClick={onEnter} className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-lime">
-              <Zap className="h-4.5 w-4.5 text-black" fill="currentColor" />
-            </div>
-            <span className="font-grotesk text-xl font-bold text-white">Fitnit</span>
+            <Logo size={36} wordmarkClass="text-xl" />
           </button>
 
           <div className="hidden items-center gap-8 lg:flex">
@@ -706,7 +704,7 @@ export default function Landing() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-lime">
               <Zap className="h-4 w-4 text-black" fill="currentColor" />
             </div>
-            <span className="font-grotesk text-lg font-bold text-white">Fitnit</span>
+            <span className="font-grotesk text-lg font-bold text-white">Viway</span>
           </div>
           <div className="flex flex-wrap justify-center gap-8">
             {[
@@ -726,7 +724,7 @@ export default function Landing() {
               )
             ))}
           </div>
-          <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">© 2026 Fitnit</div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">© 2026 Viway</div>
         </div>
       </footer>
     </div>

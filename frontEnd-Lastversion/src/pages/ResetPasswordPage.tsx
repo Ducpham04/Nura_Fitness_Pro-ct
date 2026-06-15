@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Zap, Lock, Eye, EyeOff, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../services/apiClient';
+import Logo from '../components/Logo';
 
 export default function ResetPasswordPage() {
   const [searchParams]          = useSearchParams();
@@ -52,10 +53,7 @@ export default function ResetPasswordPage() {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-lime flex items-center justify-center">
-              <Zap className="w-4 h-4 text-obsidian" fill="currentColor" />
-            </div>
-            <span className="font-grotesk font-bold text-white text-lg">Fitnit</span>
+            <Logo size={32} wordmarkClass="text-lg" />
           </Link>
         </div>
 

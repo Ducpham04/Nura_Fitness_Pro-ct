@@ -298,7 +298,7 @@ export default function HomePage() {
               <h3 className="font-grotesk font-bold text-white text-base flex items-center gap-2">
                 <Compass className="w-4 h-4 text-lime" /> Bắt đầu từ đây
               </h3>
-              <p className="text-neutral-500 text-xs mt-0.5">3 bước đầu tiên để làm quen với Fitnit</p>
+              <p className="text-neutral-500 text-xs mt-0.5">3 bước đầu tiên để làm quen với Viway</p>
             </div>
             <button onClick={dismissGuide} className="text-neutral-600 hover:text-white transition-colors text-xs shrink-0 inline-flex items-center gap-1">
               Đã hiểu <X className="w-3 h-3" />

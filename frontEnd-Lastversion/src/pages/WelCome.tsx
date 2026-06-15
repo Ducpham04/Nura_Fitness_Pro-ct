@@ -4,6 +4,7 @@ import {
   ArrowRight, X, DollarSign, Package, Plus, Minus, Check,
   Leaf, Drumstick, Beef, Crown
 } from 'lucide-react';
+import Logo from '../components/Logo';
 
 export interface InventoryItem {
   id: string;
@@ -330,10 +331,7 @@ export default function Welcome() {
         {/* Logo */}
         <div className="flex justify-center mb-10">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-lime flex items-center justify-center">
-              <Zap className="w-5 h-5 text-obsidian" fill="currentColor" />
-            </div>
-            <span className="font-grotesk font-bold text-white text-xl">Fitnit</span>
+            <Logo size={40} wordmarkClass="text-xl" />
           </div>
         </div>
 

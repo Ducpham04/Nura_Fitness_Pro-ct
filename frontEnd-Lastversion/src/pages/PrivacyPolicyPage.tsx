@@ -1,5 +1,6 @@
 import { Zap, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import Logo from '../components/Logo';
 
 export default function PrivacyPolicyPage() {
   return (
@@ -8,10 +9,7 @@ export default function PrivacyPolicyPage() {
       <div className="border-b border-white/[0.06] px-6 py-4">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-lime">
-              <Zap className="h-4 w-4 text-black" fill="currentColor" />
-            </div>
-            <span className="font-grotesk text-lg font-bold text-white">Fitnit</span>
+            <Logo size={32} wordmarkClass="text-lg" />
           </Link>
           <Link to="/" className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-white transition-colors">
             <ArrowLeft className="h-4 w-4" />
@@ -29,7 +27,7 @@ export default function PrivacyPolicyPage() {
 
           <section>
             <h2 className="font-grotesk text-lg font-bold text-white mb-3">1. Thông Tin Chúng Tôi Thu Thập</h2>
-            <p className="mb-3">Khi bạn sử dụng Fitnit, chúng tôi thu thập các thông tin sau:</p>
+            <p className="mb-3">Khi bạn sử dụng Viway, chúng tôi thu thập các thông tin sau:</p>
             <ul className="space-y-2 list-none">
               {[
                 'Thông tin tài khoản: email, tên, mật khẩu (đã được mã hoá)',
@@ -119,7 +117,7 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="font-grotesk text-lg font-bold text-white mb-3">6. Cookie & Lưu Trữ Cục Bộ</h2>
             <p>
-              Fitnit sử dụng localStorage của trình duyệt để lưu token xác thực và cài đặt ngôn ngữ.
+              Viway sử dụng localStorage của trình duyệt để lưu token xác thực và cài đặt ngôn ngữ.
               Chúng tôi không sử dụng cookie theo dõi quảng cáo.
             </p>
           </section>

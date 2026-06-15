@@ -11,6 +11,7 @@ import {
 import { useAuthContext } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { API_CONFIG } from '../config/api';
+import Logo from '../components/Logo';
 
 /** Resolve đường dẫn media: path tương đối "uploads/..." → URL đầy đủ của backend */
 function resolveMediaUrl(url: string): string {
@@ -1263,11 +1264,9 @@ export default function AdminPanel() {
       <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col border-r border-white/5 bg-[#0f1117] lg:flex">
         {/* Logo */}
         <div className="flex items-center gap-3 border-b border-white/5 px-5 py-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 shadow-lg shadow-emerald-500/30">
-            <Shield className="h-4 w-4 text-white" />
-          </div>
+          <Logo size={34} showWordmark={false} />
           <div>
-            <p className="text-sm font-bold text-white">Fitnit</p>
+            <p className="text-sm font-bold text-white">Viway</p>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Quản trị hệ thống</p>
           </div>
         </div>

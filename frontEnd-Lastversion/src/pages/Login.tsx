@@ -5,6 +5,7 @@ import { useAuthContext } from '../context/AuthContext';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
+import Logo from '../components/Logo';
 
 function ParticleField() {
   const particles = useMemo(() => Array.from({ length: 6 }, (_, i) => ({
@@ -105,10 +106,7 @@ export default function Login() {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-lime flex items-center justify-center">
-              <Zap className="w-4 h-4 text-obsidian" fill="currentColor" />
-            </div>
-            <span className="font-grotesk font-bold text-white text-lg">Fitnit</span>
+            <Logo size={32} wordmarkClass="text-lg" />
           </Link>
         </div>
 

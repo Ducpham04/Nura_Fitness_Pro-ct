@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Logo from '../components/Logo';
 import {
   ArrowRight,
   ArrowLeft,
@@ -266,10 +267,7 @@ export default function Onboarding() {
       <div className="w-full max-w-2xl relative z-10 animate-fade-in">
         <div className="flex justify-center mb-8">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-lime flex items-center justify-center">
-              <Zap className="w-4 h-4 text-obsidian" fill="currentColor" />
-            </div>
-            <span className="font-grotesk font-bold text-white text-lg">Fitnit</span>
+            <Logo size={32} wordmarkClass="text-lg" />
           </div>
         </div>
 

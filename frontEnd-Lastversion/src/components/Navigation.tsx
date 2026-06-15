@@ -3,6 +3,7 @@ import { Home, Dumbbell, Utensils, User, LogOut, Zap, Brain, History, Trophy } f
 import { useTranslation } from 'react-i18next';
 import { useAuthContext } from '../context/AuthContext';
 import LanguageSelector from './LanguageSelector';
+import Logo from './Logo';
 
 export default function Navigation() {
   const location = useLocation();
@@ -37,10 +38,7 @@ export default function Navigation() {
       <nav className="hidden md:flex glass border-b border-white/5 px-10 py-5 sticky top-0 z-50 backdrop-blur-2xl">
         <div className="flex items-center gap-10 flex-1">
           <Link to="/dashboard" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-lime flex items-center justify-center shadow-[0_0_20px_rgba(204,255,0,0.3)] group-hover:scale-110 transition-transform">
-              <Zap className="w-5 h-5 text-obsidian" fill="currentColor" />
-            </div>
-            <span className="font-grotesk font-bold text-white text-xl tracking-tight">Fitnit</span>
+            <Logo size={40} wordmarkClass="text-xl" className="group-hover:scale-105 transition-transform" />
           </Link>
 
           <div className="flex items-center gap-3">

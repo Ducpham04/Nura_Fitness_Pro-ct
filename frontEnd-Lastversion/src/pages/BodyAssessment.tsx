@@ -1,6 +1,7 @@
 import { useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Zap, ArrowRight, Activity, Flame, Gauge, Target, HeartPulse } from 'lucide-react';
+import Logo from '../components/Logo';
 
 /**
  * Màn ĐÁNH GIÁ THỂ TRẠNG — hiển thị ngay sau Onboarding.
@@ -98,10 +99,7 @@ export default function BodyAssessment() {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-lime flex items-center justify-center">
-              <Zap className="w-5 h-5 text-obsidian" fill="currentColor" />
-            </div>
-            <span className="font-grotesk font-bold text-white text-lg">Fitnit</span>
+            <Logo size={36} wordmarkClass="text-lg" />
           </div>
         </div>
 
