@@ -67,6 +67,17 @@ export default function Login() {
       setLoading(false);
       return;
     }
+    // Validate bằng JS + thông báo tự style (form dùng noValidate để tắt popup mặc định của trình duyệt)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError(t('auth.invalidEmail', 'Email không hợp lệ'));
+      setLoading(false);
+      return;
+    }
+    if (password.length < 6) {
+      setError(t('auth.passwordTooShort', 'Mật khẩu phải có ít nhất 6 ký tự'));
+      setLoading(false);
+      return;
+    }
 
     // Call real API — login() ném lỗi kèm message thật từ backend khi thất bại
     try {
@@ -114,7 +125,7 @@ export default function Login() {
           <h1 className="font-grotesk font-bold text-2xl text-white mb-2">{t('auth.loginTitle')}</h1>
           <p className="text-neutral-400 text-sm mb-6">{t('auth.loginSubtitle')}</p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             {/* Email */}
             <div>
               <label htmlFor="email" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.email')}</label>

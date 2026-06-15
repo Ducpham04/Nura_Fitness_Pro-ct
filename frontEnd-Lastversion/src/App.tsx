@@ -53,9 +53,13 @@ function AppContent() {
     );
   }
 
+  // ADMIN + EDITOR đều là tài khoản vận hành → được vào trang admin.
+  // (EDITOR bị giới hạn chỉ thấy tab nội dung — xử lý trong AdminPanel.)
+  const isStaff = !!user && (user.role === 'ADMIN' || user.role === 'EDITOR');
+
   const adminRoute = !user
     ? <Navigate to="/login" replace />
-    : user.role === 'ADMIN'
+    : isStaff
       ? <AdminPanel />
       : <Navigate to="/dashboard" replace />;
 
@@ -66,7 +70,7 @@ function AppContent() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={
           !user ? <Login /> :
-          user.role === 'ADMIN' ? <Navigate to="/admin" replace /> :
+          isStaff ? <Navigate to="/admin" replace /> :
           <Navigate to="/dashboard" replace />
         } />
         <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
@@ -82,7 +86,7 @@ function AppContent() {
         {/* Dashboard routes */}
         <Route path="/dashboard" element={
           !user ? <Navigate to="/login" replace /> :
-          user.role === 'ADMIN' ? <Navigate to="/admin" replace /> :
+          isStaff ? <Navigate to="/admin" replace /> :
           <DashboardLayout />
         }>
           <Route index element={<HomePage />} />

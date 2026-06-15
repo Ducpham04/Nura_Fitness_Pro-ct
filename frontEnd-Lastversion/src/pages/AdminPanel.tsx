@@ -100,6 +100,11 @@ const NAV: {
   { id: 'seeder', label: 'Nhập dữ liệu mẫu', icon: Zap, single: 'dataSeeder', accent: 'text-fuchsia-400' },
 ];
 
+// Tab mà role EDITOR (biên tập nội dung) được phép thấy — KHỚP quyền backend
+// (SecurityConfig: /api/admin/{exercises,dishes,training-plans,...} cho ADMIN|EDITOR).
+// Mọi tab khác (user, tài chính, AI, seeder...) chỉ ADMIN.
+const EDITOR_TABS: AdminTab[] = ['exercises', 'trainingPlans', 'dishes'];
+
 const TAB_META: Record<string, { title: string; subtitle: string; icon: typeof BarChart3 }> = {
   dashboard:            { title: 'Tổng quan',              subtitle: 'Thống kê và sức khoẻ hệ thống',          icon: BarChart3 },
   users:                { title: 'Tài khoản',              subtitle: 'Quản lý người dùng và phân quyền',       icon: Users },
@@ -785,7 +790,22 @@ export default function AdminPanel() {
   const navigate = useNavigate();
   const { user, logout } = useAuthContext();
 
-  const [activeTab, setActiveTab]     = useState<AdminTab>('dashboard');
+  // EDITOR chỉ thấy các tab nội dung; ADMIN thấy toàn bộ.
+  const isEditor = user?.role === 'EDITOR';
+  const visibleNav = useMemo(
+    () => isEditor
+      ? NAV
+          .map(g => g.children
+            ? { ...g, children: g.children.filter(c => EDITOR_TABS.includes(c.id)) }
+            : g)
+          .filter(g => g.children
+            ? g.children.length > 0
+            : EDITOR_TABS.includes((g.single ?? g.id) as AdminTab))
+      : NAV,
+    [isEditor]
+  );
+
+  const [activeTab, setActiveTab]     = useState<AdminTab>(isEditor ? 'exercises' : 'dashboard');
   const [rows, setRows]               = useState<any[]>([]);
   const [dashboard, setDashboard]     = useState<AdminDashboardStats>({});
   const [loading, setLoading]         = useState(false);
@@ -902,10 +922,11 @@ export default function AdminPanel() {
   }, [activeTab]);
 
   useEffect(() => {
-    if (user?.role === 'ADMIN') void loadTab();
+    if (user?.role === 'ADMIN' || user?.role === 'EDITOR') void loadTab();
   }, [activeTab, user?.role]);
 
-  if (!user || user.role !== 'ADMIN') return <Navigate to="/dashboard" replace />;
+  if (!user || (user.role !== 'ADMIN' && user.role !== 'EDITOR'))
+    return <Navigate to="/dashboard" replace />;
 
   function toggleGroup(id: string) {
     setOpenGroups(prev => {
@@ -1258,13 +1279,13 @@ export default function AdminPanel() {
           </div>
           <div className="min-w-0">
             <p className="truncate text-xs font-semibold text-slate-200">{user.fullName || user.email}</p>
-            <p className="text-[10px] text-emerald-400">Administrator</p>
+            <p className="text-[10px] text-emerald-400">{isEditor ? 'Biên tập viên' : 'Administrator'}</p>
           </div>
         </div>
 
         {/* Navigation */}
         <nav className="mt-4 flex-1 overflow-y-auto px-3 pb-4 space-y-0.5">
-          {NAV.map(item => (
+          {visibleNav.map(item => (
             <NavItem
               key={item.id}
               item={item}
@@ -1364,7 +1385,7 @@ export default function AdminPanel() {
               <div>
                 <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">Truy cập nhanh</h2>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {NAV.filter(n => n.children).map(group => (
+                  {visibleNav.filter(n => n.children).map(group => (
                     <button
                       key={group.id}
                       onClick={() => changeTab(group.children![0].id)}

@@ -125,7 +125,7 @@ class AuthService {
 
   // Map BE user to FE user
   private mapBEUserToFE(beUser: BEUserInfo): User {
-    const normalizedRole = String(beUser.role || 'USER').toUpperCase() as 'USER' | 'ADMIN';
+    const normalizedRole = String(beUser.role || 'USER').toUpperCase() as 'USER' | 'ADMIN' | 'EDITOR';
     return {
       id: beUser.id,
       email: beUser.email,
@@ -165,7 +165,7 @@ class AuthService {
         const user = JSON.parse(data) as User;
         const normalized = {
           ...user,
-          role: String(user.role || 'USER').toUpperCase() as 'USER' | 'ADMIN',
+          role: String(user.role || 'USER').toUpperCase() as 'USER' | 'ADMIN' | 'EDITOR',
         };
         if (normalized.role !== user.role) {
           localStorage.setItem(USER_KEY, JSON.stringify(normalized));

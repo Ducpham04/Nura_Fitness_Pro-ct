@@ -5,7 +5,7 @@ export interface User {
   email: string;
   fullName: string;
   avatarUrl?: string; // Mapped from BE linkImage/profileImage
-  role: 'USER' | 'ADMIN';
+  role: 'USER' | 'ADMIN' | 'EDITOR';
   isActive: boolean; // Mapped from BE status
   createdAt: string;
   updatedAt: string;
