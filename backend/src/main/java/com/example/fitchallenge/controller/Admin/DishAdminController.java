@@ -83,6 +83,15 @@ public class DishAdminController {
         Food food = foodRepository.findById(request.getFoodId())
                 .orElseThrow(() -> new RuntimeException("Food not found"));
 
+        // Tránh trùng (unique constraint dish+food) → báo lỗi thân thiện thay vì 500
+        boolean exists = dishIngredientRepository.findByDishIdWithFood(dishId).stream()
+                .anyMatch(di -> di.getFood() != null
+                        && di.getFood().getFoodId().equals(request.getFoodId()));
+        if (exists) {
+            return ResponseEntity.badRequest()
+                    .body(new NotificationResponse(false, "Thực phẩm này đã có trong công thức món"));
+        }
+
         DishIngredient ingredient = new DishIngredient();
         ingredient.setDish(dish);
         ingredient.setFood(food);

@@ -115,6 +115,7 @@ public class SecurityConfig {
                                 // ⚠️ Phải đặt TRƯỚC rule "/api/admin/**" (Spring match theo thứ tự).
                                 .requestMatchers(
                                         "/api/admin/exercises/**",
+                                        "/api/admin/foods/**",
                                         "/api/admin/dishes/**",
                                         "/api/admin/training-plans/**",
                                         "/api/admin/training-plan-details/**"

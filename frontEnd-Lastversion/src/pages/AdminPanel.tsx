@@ -104,7 +104,7 @@ const NAV: {
 // Tab mà role EDITOR (biên tập nội dung) được phép thấy — KHỚP quyền backend
 // (SecurityConfig: /api/admin/{exercises,dishes,training-plans,...} cho ADMIN|EDITOR).
 // Mọi tab khác (user, tài chính, AI, seeder...) chỉ ADMIN.
-const EDITOR_TABS: AdminTab[] = ['exercises', 'trainingPlans', 'dishes'];
+const EDITOR_TABS: AdminTab[] = ['exercises', 'foods', 'trainingPlans', 'dishes'];
 
 const TAB_META: Record<string, { title: string; subtitle: string; icon: typeof BarChart3 }> = {
   dashboard:            { title: 'Tổng quan',              subtitle: 'Thống kê và sức khoẻ hệ thống',          icon: BarChart3 },
@@ -873,6 +873,7 @@ export default function AdminPanel() {
   const [ingredients, setIngredients]            = useState<any[]>([]);
   const [ingredientFoodId, setIngredientFoodId]  = useState('');
   const [ingredientCore, setIngredientCore]      = useState(true);
+  const [foodOptions, setFoodOptions]            = useState<{ foodId: number; name: string }[]>([]);
 
   // Remote select options: { [fieldName]: [{label, value}] }
   const [remoteData, setRemoteData] = useState<Record<string, { label: string; value: string }[]>>({});
@@ -925,6 +926,19 @@ export default function AdminPanel() {
   useEffect(() => {
     if (user?.role === 'ADMIN' || user?.role === 'EDITOR') void loadTab();
   }, [activeTab, user?.role]);
+
+  // Tải danh sách thực phẩm cho dropdown chọn nguyên liệu (chỉ khi vào tab Món ăn)
+  useEffect(() => {
+    if (activeTab !== 'dishes' || foodOptions.length > 0) return;
+    const foodsModule = adminModules.find(m => m.key === 'foods');
+    if (!foodsModule) return;
+    adminService.list(foodsModule)
+      .then(list => setFoodOptions(
+        list.map((f: any) => ({ foodId: f.foodId ?? f.id, name: f.name ?? f.foodName ?? `Food ${f.foodId ?? f.id}` }))
+            .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, 'vi'))
+      ))
+      .catch(() => { /* im lặng — dropdown chỉ là tiện ích */ });
+  }, [activeTab, foodOptions.length]);
 
   if (!user || (user.role !== 'ADMIN' && user.role !== 'EDITOR'))
     return <Navigate to="/dashboard" replace />;
@@ -1218,9 +1232,9 @@ export default function AdminPanel() {
     await loadTab();
   }
 
-  async function loadIngredients() {
-    if (!ingredientDishId) return;
-    try { setIngredients(await adminService.listDishIngredients(ingredientDishId)); }
+  async function loadIngredients(dishId: string | number = ingredientDishId) {
+    if (!dishId) { setIngredients([]); return; }
+    try { setIngredients(await adminService.listDishIngredients(dishId)); }
     catch (e) { setError(e instanceof Error ? e.message : 'Không thể tải ingredients'); }
   }
 
@@ -2226,18 +2240,25 @@ export default function AdminPanel() {
               {activeModule.key === 'dishes' && (
                 <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5">
                   <h3 className="mb-1 font-bold text-white">Công thức món ăn</h3>
-                  <p className="mb-4 text-xs text-slate-500">Thêm nguyên liệu vào món ăn theo Dish ID và Food ID</p>
-                  <div className="flex flex-wrap gap-2">
-                    <input value={ingredientDishId} onChange={e => setIngredientDishId(e.target.value)} placeholder="Dish ID"
-                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 w-28" />
-                    <input value={ingredientFoodId} onChange={e => setIngredientFoodId(e.target.value)} placeholder="Food ID"
-                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 w-28" />
+                  <p className="mb-4 text-xs text-slate-500">Chọn món → chọn thực phẩm theo tên để thêm vào công thức (không cần nhớ ID)</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select value={ingredientDishId}
+                      onChange={e => { setIngredientDishId(e.target.value); setIngredientFoodId(''); void loadIngredients(e.target.value); }}
+                      className="min-w-[180px] rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500">
+                      <option value="">— Chọn món ăn —</option>
+                      {rows.map((d: any) => <option key={d.dishId} value={d.dishId}>{d.dishName}</option>)}
+                    </select>
+                    <select value={ingredientFoodId} onChange={e => setIngredientFoodId(e.target.value)} disabled={!ingredientDishId}
+                      className="min-w-[200px] rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500 disabled:opacity-40">
+                      <option value="">{foodOptions.length ? '— Chọn thực phẩm —' : 'Đang tải thực phẩm…'}</option>
+                      {foodOptions.map(f => <option key={f.foodId} value={f.foodId}>{f.name}</option>)}
+                    </select>
                     <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 cursor-pointer">
                       <input type="checkbox" checked={ingredientCore} onChange={e => setIngredientCore(e.target.checked)} className="h-3.5 w-3.5 accent-emerald-500" />
-                      Core
+                      Chính
                     </label>
-                    <button onClick={() => void loadIngredients()} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 hover:bg-white/10">Xem</button>
-                    <button onClick={() => void addIngredient()} className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-400">Thêm</button>
+                    <button onClick={() => void addIngredient()} disabled={!ingredientDishId || !ingredientFoodId}
+                      className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40">+ Thêm</button>
                   </div>
                   {ingredients.length > 0 && (
                     <div className="mt-4 space-y-1.5">
