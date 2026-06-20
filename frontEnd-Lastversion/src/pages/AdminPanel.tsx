@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import {
   Activity, AlertCircle, ArrowLeft, ArrowUpDown, BarChart3, CheckCircle,
   ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  ClipboardList, Database, Dumbbell, Edit3, ExternalLink, Gift, Image, Layers,
+  ClipboardList, Database, Dumbbell, Edit3, ExternalLink, Gift, Layers,
   ListChecks, Loader2, LogOut, Play, Plus, RefreshCcw, Save, Search, Shield,
   SortAsc, SortDesc, Target, Trash2, Trophy, Upload, Utensils, Users,
   WalletCards, X, Zap,
@@ -35,11 +35,12 @@ import {
 type AdminTab = 'dashboard' | 'dataSeeder' | 'aiStats' | 'aiPackages' | AdminModuleKey;
 
 /* ─── AI Stats types (mirrors backend DashboardDTO) ─────────────────────── */
-interface UserAiUsage { userId: number; fullName: string; email: string; totalCalls: number; }
+interface UserAiUsage { userId: number; fullName: string; email: string; totalCalls: number; realTokensThisMonth?: number; realTokensAllTime?: number; }
 interface AiCallLog  { type: string; userName: string; createdAt: string; estimatedTokens: number; }
 interface AiStatsData {
   totalCallsToday: number; totalCallsThisMonth: number; totalCallsAllTime: number;
   estimatedTokensToday: number; estimatedTokensThisMonth: number;
+  realTokensToday?: number; realTokensThisMonth?: number; realTokensAllTime?: number;
   mealPlanCalls: number; workoutPlanCalls: number; poseEvalCalls: number;
   topUsers: UserAiUsage[]; recentLogs: AiCallLog[];
 }
@@ -130,14 +131,14 @@ const TAB_META: Record<string, { title: string; subtitle: string; icon: typeof B
 
 /* ─── Seeder actions ──────────────────────────────────────────────────────── */
 const SEEDER_ACTIONS = [
-  { action: 'import-all',             label: 'Nhập tất cả',          description: 'Seed toàn bộ dữ liệu một lần', color: 'from-fuchsia-500 to-violet-500' },
+  { action: 'import-all',             label: 'Nhập tất cả',          description: 'Seed toàn bộ dữ liệu một lần', color: 'from-slate-700 to-emerald-600' },
   { action: 'import-exercises',       label: 'Bài tập',              description: 'Dữ liệu bài tập master', color: 'from-emerald-500 to-teal-500' },
   { action: 'import-foods',           label: 'Thực phẩm',            description: 'Danh mục thực phẩm', color: 'from-amber-500 to-orange-500' },
   { action: 'import-users',           label: 'Người dùng',           description: 'Tài khoản người dùng mẫu', color: 'from-sky-500 to-blue-500' },
   { action: 'import-challenges',      label: 'Thử thách',            description: 'Thử thách mẫu', color: 'from-rose-500 to-pink-500' },
-  { action: 'import-training-plans',  label: 'Kế hoạch tập',        description: 'Kế hoạch tập luyện mẫu', color: 'from-violet-500 to-purple-500' },
-  { action: 'import-daily-logs',      label: 'Nhật ký tập',          description: 'Nhật ký tập luyện mẫu', color: 'from-indigo-500 to-blue-500' },
-  { action: 'import-user-challenges', label: 'Tham gia thử thách',   description: 'Dữ liệu tham gia thử thách', color: 'from-teal-500 to-cyan-500' },
+  { action: 'import-training-plans',  label: 'Kế hoạch tập',        description: 'Kế hoạch tập luyện mẫu', color: 'from-lime-600 to-emerald-600' },
+  { action: 'import-daily-logs',      label: 'Nhật ký tập',          description: 'Nhật ký tập luyện mẫu', color: 'from-slate-600 to-blue-600' },
+  { action: 'import-user-challenges', label: 'Tham gia thử thách',   description: 'Dữ liệu tham gia thử thách', color: 'from-teal-600 to-emerald-600' },
   { action: 'import-hybrid-meals',    label: 'Bữa ăn tổng hợp',     description: 'Dữ liệu bữa ăn kết hợp', color: 'from-orange-500 to-amber-500' },
 ];
 
@@ -147,6 +148,7 @@ const COL_LABELS: Record<string, string> = {
   redemptionId: 'ID', userId: 'Người dùng', rewardId: 'Phần thưởng',
   challengeId: 'Thử thách', trainingPlanId: 'Kế hoạch', exerciseId: 'Bài tập',
   fullName: 'Họ và tên', email: 'Email', role: 'Vai trò', status: 'Trạng thái',
+  aiPackageCode: 'Gói AI',
   createdAt: 'Ngày tạo', updatedAt: 'Cập nhật',
   name: 'Tên', title: 'Tiêu đề', description: 'Mô tả',
   imageLink: 'Ảnh', imageUrl: 'Ảnh', linkImage: 'Ảnh',
@@ -325,7 +327,7 @@ function VideoCell({ url }: { url: string }) {
           />
           <button
             onClick={() => setActive(false)}
-            className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-slate-300 hover:bg-red-500 hover:text-white transition text-[10px]"
+            className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-white hover:bg-red-500 transition text-[10px]"
           >✕</button>
         </div>
       );
@@ -341,7 +343,7 @@ function VideoCell({ url }: { url: string }) {
         />
         <button
           onClick={() => setActive(false)}
-          className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-slate-300 hover:bg-red-500 hover:text-white transition text-[10px]"
+          className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-white hover:bg-red-500 transition text-[10px]"
         >✕</button>
       </div>
     );
@@ -368,6 +370,15 @@ function VideoCell({ url }: { url: string }) {
 function renderCell(col: string, value: unknown) {
   const key = col.toLowerCase();
   if (key.includes('status') || col === 'isActive') return <StatusBadge value={value} />;
+
+  // Gói AI — badge màu theo tier
+  if (col === 'aiPackageCode') {
+    const code = String(value || 'FREE').toUpperCase();
+    const cls = code === 'PRO'  ? 'bg-emerald-500/20 text-emerald-200'
+              : code === 'PLUS' ? 'bg-lime-500/20 text-lime-200'
+              :                   'bg-zinc-500/20 text-zinc-300';
+    return <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${cls}`}>{code}</span>;
+  }
 
   const str = unwrapDisplay(value);
   if (str === '—') return <span className="text-slate-600">—</span>;
@@ -628,7 +639,7 @@ function NavItem({
 const STAT_COLORS = [
   { bg: 'from-sky-500/20 to-sky-500/5', ring: 'ring-sky-500/20', accent: 'text-sky-400', icon: Users },
   { bg: 'from-emerald-500/20 to-emerald-500/5', ring: 'ring-emerald-500/20', accent: 'text-emerald-400', icon: Dumbbell },
-  { bg: 'from-violet-500/20 to-violet-500/5', ring: 'ring-violet-500/20', accent: 'text-violet-400', icon: ListChecks },
+  { bg: 'from-lime-500/20 to-lime-500/5', ring: 'ring-lime-500/20', accent: 'text-lime-400', icon: ListChecks },
   { bg: 'from-amber-500/20 to-amber-500/5', ring: 'ring-amber-500/20', accent: 'text-amber-400', icon: Utensils },
   { bg: 'from-rose-500/20 to-rose-500/5', ring: 'ring-rose-500/20', accent: 'text-rose-400', icon: Gift },
 ];
@@ -830,12 +841,23 @@ export default function AdminPanel() {
   const [aiPkgEditing, setAiPkgEditing] = useState<any|null>(null);
   const [aiPkgSaving,  setAiPkgSaving]  = useState(false);
   const [aiPromoSaving,setAiPromoSaving]= useState(false);
-  const [aiPkgTab,     setAiPkgTab]     = useState<'packages'|'promos'|'users'>('packages');
+  const [aiPkgTab,     setAiPkgTab]     = useState<'packages'|'promos'|'users'|'report'>('packages');
+  const [aiAdjQuota,   setAiAdjQuota]   = useState('');
+  const [aiAdjUsed,    setAiAdjUsed]    = useState('');
+  const [aiAdjAdd,     setAiAdjAdd]     = useState('');
+  const [aiReport,     setAiReport]     = useState<any[]|null>(null);
+  const [aiReportLoading, setAiReportLoading] = useState(false);
   const [aiUserSearch, setAiUserSearch] = useState('');
   const [aiUserResult, setAiUserResult] = useState<any|null>(null);
   const [aiUserLoading,setAiUserLoading]= useState(false);
   const [aiAssignPkgId,setAiAssignPkgId]= useState('');
   const [aiAssignDays, setAiAssignDays] = useState('30');
+
+  // Gán gói AI inline từ danh sách user (tab Tài khoản)
+  const [assignTarget, setAssignTarget] = useState<any|null>(null);   // user row đang gán
+  const [assignPkgId,  setAssignPkgId]  = useState('');
+  const [assignDays,   setAssignDays]   = useState('30');
+  const [assignSaving, setAssignSaving] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage]         = useState(0);
@@ -849,7 +871,6 @@ export default function AdminPanel() {
   const [formTab, setFormTab]                 = useState(0);
 
   // Multi-select exercise picker (for challenges)
-  const [exPickerOpen, setExPickerOpen]       = useState(false);
   const [exPickerSearch, setExPickerSearch]   = useState('');
   const [exPickerList, setExPickerList]       = useState<{ id: string; name: string }[]>([]);
 
@@ -1429,7 +1450,9 @@ export default function AdminPanel() {
                     {[
                       { label: 'Lượt gọi AI hôm nay',    value: aiStats.totalCallsToday.toLocaleString(),    sub: 'Tổng các loại', color: 'text-cyan-400' },
                       { label: 'Lượt gọi tháng này',      value: aiStats.totalCallsThisMonth.toLocaleString(), sub: 'Kể từ đầu tháng', color: 'text-violet-400' },
-                      { label: 'Token ước tính hôm nay',  value: aiStats.estimatedTokensToday.toLocaleString(), sub: '≈ Groq usage', color: 'text-amber-400' },
+                      { label: 'Token THẬT hôm nay',      value: (aiStats.realTokensToday ?? 0).toLocaleString(), sub: 'Đo trực tiếp từ Groq', color: 'text-teal-300' },
+                      { label: 'Token THẬT tháng này',     value: (aiStats.realTokensThisMonth ?? 0).toLocaleString(), sub: 'Bảng ai_token_log', color: 'text-pink-400' },
+                      { label: 'Token ước tính hôm nay',  value: aiStats.estimatedTokensToday.toLocaleString(), sub: '≈ suy ra từ số lượt', color: 'text-amber-400' },
                       { label: 'Token ước tính tháng này', value: aiStats.estimatedTokensThisMonth.toLocaleString(), sub: 'Meal×2k · Workout×2.5k · Pose×0.5k', color: 'text-emerald-400' },
                     ].map(({ label, value, sub, color }) => (
                       <div key={label} className="rounded-2xl border border-white/5 bg-white/3 p-5">
@@ -1479,13 +1502,16 @@ export default function AdminPanel() {
                           {aiStats.topUsers.map((u, i) => (
                             <div key={u.userId} className="flex items-center gap-3 rounded-xl bg-white/3 px-3 py-2.5">
                               <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                                i === 0 ? 'bg-amber-400/20 text-amber-400' : i === 1 ? 'bg-slate-400/20 text-slate-300' : 'bg-slate-700/50 text-slate-500'
+                                i === 0 ? 'bg-amber-400/20 text-amber-200' : i === 1 ? 'bg-slate-400/20 text-slate-100' : 'bg-slate-700/50 text-slate-200'
                               }`}>{i + 1}</span>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium text-slate-200 truncate">{u.fullName || u.email}</p>
                                 <p className="text-xs text-slate-500 truncate">{u.email}</p>
                               </div>
-                              <span className="text-sm font-bold text-cyan-400 flex-shrink-0">{u.totalCalls.toLocaleString()} lần</span>
+                              <div className="text-right flex-shrink-0">
+                                <p className="text-sm font-bold text-cyan-400">{u.totalCalls.toLocaleString()} lần</p>
+                                <p className="text-[11px] text-teal-300">{(u.realTokensAllTime ?? 0).toLocaleString()} token thật</p>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -1503,7 +1529,7 @@ export default function AdminPanel() {
                             const typeMeta: Record<string, { label: string; cls: string }> = {
                               MEAL_PLAN:    { label: 'Bữa ăn',    cls: 'bg-amber-400/10 text-amber-400' },
                               WORKOUT_PLAN: { label: 'Tập luyện', cls: 'bg-emerald-400/10 text-emerald-400' },
-                              POSE_EVAL:    { label: 'Tư thế',    cls: 'bg-cyan-400/10 text-cyan-400' },
+                              POSE_EVAL:    { label: 'Tư thế',    cls: 'bg-blue-400/10 text-blue-200' },
                             };
                             const m = typeMeta[log.type] ?? { label: log.type, cls: 'bg-slate-700 text-slate-400' };
                             return (
@@ -1540,11 +1566,21 @@ export default function AdminPanel() {
             <div className="space-y-5">
               {/* Sub-tabs */}
               <div className="flex gap-1 p-1 bg-white/5 rounded-xl w-fit">
-                {(['packages','promos','users'] as const).map(t => (
-                  <button key={t} onClick={() => setAiPkgTab(t)}
+                {(['packages','promos','users','report'] as const).map(t => (
+                  <button key={t} onClick={() => {
+                    setAiPkgTab(t);
+                    if (t === 'report' && aiReport === null) {
+                      setAiReportLoading(true);
+                      apiClient.get('/admin/ai/usage-report').then(res => {
+                        if (res.success && Array.isArray(res.data)) setAiReport(res.data as any[]);
+                        else setAiReport([]);
+                        setAiReportLoading(false);
+                      });
+                    }
+                  }}
                     className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                      aiPkgTab === t ? 'bg-cyan-500 text-black' : 'text-slate-400 hover:text-white'}`}>
-                    {t === 'packages' ? '📦 Gói AI' : t === 'promos' ? '🎟 Mã KM' : '👤 Gán cho User'}
+                      aiPkgTab === t ? 'bg-emerald-500 text-white' : 'text-slate-400 hover:text-white'}`}>
+                    {t === 'packages' ? '📦 Gói AI' : t === 'promos' ? '🎟 Mã KM' : t === 'users' ? '👤 Gán cho User' : '📊 Báo cáo dùng AI'}
                   </button>
                 ))}
               </div>
@@ -1557,7 +1593,7 @@ export default function AdminPanel() {
                     <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
                       <h3 className="text-sm font-bold text-slate-200 uppercase tracking-widest">Danh sách gói AI</h3>
                       <button onClick={() => { setAiPkgEditing({}); setAiPkgForm({ code:'', name:'', aiQuota:'25', priceVnd:'0', durationDays:'30', sortOrder:'99' }); }}
-                        className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold rounded-lg transition-colors">
+                        className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold rounded-lg transition-colors">
                         + Thêm gói
                       </button>
                     </div>
@@ -1576,8 +1612,8 @@ export default function AdminPanel() {
                               <td className="px-4 py-3 text-slate-500 text-xs">{pkg.id}</td>
                               <td className="px-4 py-3">
                                 <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                                  pkg.code==='PRO' ? 'bg-violet-500/20 text-violet-300' :
-                                  pkg.code==='PLUS' ? 'bg-lime-500/20 text-lime-300' : 'bg-zinc-500/20 text-zinc-300'}`}>
+                                  pkg.code==='PRO' ? 'bg-emerald-500/20 text-emerald-100' :
+                                  pkg.code==='PLUS' ? 'bg-lime-500/20 text-lime-100' : 'bg-zinc-500/20 text-zinc-100'}`}>
                                   {pkg.code}
                                 </span>
                               </td>
@@ -1758,7 +1794,10 @@ export default function AdminPanel() {
                       <button disabled={!aiUserSearch || aiUserLoading} onClick={async () => {
                         setAiUserLoading(true); setAiUserResult(null);
                         const res = await apiClient.get(`/admin/ai/users/${aiUserSearch}/usage`);
-                        if (res.success) setAiUserResult({ userId: Number(aiUserSearch), ...res.data });
+                        if (res.success) setAiUserResult({
+                          userId: Number(aiUserSearch),
+                          ...(res.data && typeof res.data === 'object' ? res.data : {}),
+                        });
                         setAiUserLoading(false);
                       }} className="px-4 py-2 bg-violet-500 hover:bg-violet-400 text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors">
                         {aiUserLoading ? 'Đang tìm...' : 'Tìm'}
@@ -1796,7 +1835,10 @@ export default function AdminPanel() {
                           <button disabled={!aiAssignPkgId} onClick={async () => {
                             await apiClient.put(`/admin/ai/users/${aiUserResult.userId}/package`, { packageId: Number(aiAssignPkgId), durationDays: Number(aiAssignDays) });
                             const res = await apiClient.get(`/admin/ai/users/${aiUserResult.userId}/usage`);
-                            if (res.success) setAiUserResult({ ...aiUserResult, ...res.data });
+                            if (res.success) setAiUserResult({
+                              ...aiUserResult,
+                              ...(res.data && typeof res.data === 'object' ? res.data : {}),
+                            });
                           }} className="px-4 py-2 bg-violet-500 hover:bg-violet-400 text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors">
                             Gán gói
                           </button>
@@ -1804,14 +1846,107 @@ export default function AdminPanel() {
                             if (!confirm('Reset lượt AI về 0?')) return;
                             await apiClient.put(`/admin/ai/users/${aiUserResult.userId}/reset-usage`, {});
                             const res = await apiClient.get(`/admin/ai/users/${aiUserResult.userId}/usage`);
-                            if (res.success) setAiUserResult({ ...aiUserResult, ...res.data });
+                            if (res.success) setAiUserResult({
+                              ...aiUserResult,
+                              ...(res.data && typeof res.data === 'object' ? res.data : {}),
+                            });
                           }} className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white text-sm font-semibold rounded-lg transition-colors">
                             Reset lượt
                           </button>
                         </div>
+
+                        {/* Chỉnh credit/quota tùy ý */}
+                        <div className="border-t border-white/5 pt-4 space-y-2">
+                          <p className="text-xs font-bold text-amber-300">Chỉnh credit / quota thủ công</p>
+                          <div className="flex gap-2 flex-wrap items-center">
+                            <input type="number" value={aiAdjQuota} onChange={e => setAiAdjQuota(e.target.value)}
+                              placeholder="Đặt quota (-1 = ∞)"
+                              className="w-40 px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500" />
+                            <input type="number" value={aiAdjUsed} onChange={e => setAiAdjUsed(e.target.value)}
+                              placeholder="Đặt đã dùng"
+                              className="w-36 px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500" />
+                            <input type="number" value={aiAdjAdd} onChange={e => setAiAdjAdd(e.target.value)}
+                              placeholder="+ Cấp thêm credit"
+                              className="w-40 px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500" />
+                            <button disabled={!aiAdjQuota && !aiAdjUsed && !aiAdjAdd} onClick={async () => {
+                              const body: any = {};
+                              if (aiAdjQuota !== '') body.quota = Number(aiAdjQuota);
+                              if (aiAdjUsed !== '') body.used = Number(aiAdjUsed);
+                              if (aiAdjAdd !== '') body.addCredits = Number(aiAdjAdd);
+                              const r = await apiClient.put(`/admin/ai/users/${aiUserResult.userId}/credit`, body);
+                              if (r.success) {
+                                setAiUserResult({ ...aiUserResult, ...(r.data && typeof r.data === 'object' ? r.data : {}) });
+                                setAiAdjQuota(''); setAiAdjUsed(''); setAiAdjAdd('');
+                              } else {
+                                alert(r.error?.message || 'Chỉnh credit thất bại');
+                              }
+                            }} className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black text-sm font-bold rounded-lg disabled:opacity-50 transition-colors">
+                              Áp dụng
+                            </button>
+                          </div>
+                          <p className="text-[11px] text-slate-500">Để trống ô nào thì không đổi ô đó. "Cấp thêm credit" = giảm số đã dùng (tăng còn lại).</p>
+                        </div>
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* ── Tab: Báo cáo dùng AI (tất cả user) ── */}
+              {aiPkgTab === 'report' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-slate-300">Báo cáo dùng AI — tất cả user</h4>
+                    <button disabled={!aiReport || aiReport.length === 0} onClick={() => {
+                      const headers = ['userId','fullName','email','status','packageCode','quota','used','remaining','realTokensThisMonth','realTokensAllTime'];
+                      const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+                      const csv = [headers.join(',')]
+                        .concat((aiReport || []).map(r => headers.map(h => esc(r[h])).join(',')))
+                        .join('\n');
+                      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url; a.download = `ai-usage-report-${new Date().toISOString().slice(0,10)}.csv`;
+                      a.click(); URL.revokeObjectURL(url);
+                    }} className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold rounded-lg disabled:opacity-50 transition-colors">
+                      ⬇ Xuất CSV
+                    </button>
+                  </div>
+                  {aiReportLoading ? (
+                    <p className="text-slate-500 text-sm">Đang tải…</p>
+                  ) : !aiReport || aiReport.length === 0 ? (
+                    <p className="text-slate-500 text-sm">Chưa có dữ liệu</p>
+                  ) : (
+                    <div className="overflow-x-auto rounded-2xl border border-white/5">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-white/5 text-left text-[11px] uppercase tracking-wider text-slate-400">
+                            <th className="px-3 py-2">User</th>
+                            <th className="px-3 py-2">Gói</th>
+                            <th className="px-3 py-2 text-right">Đã dùng / Quota</th>
+                            <th className="px-3 py-2 text-right">Còn lại</th>
+                            <th className="px-3 py-2 text-right">Token tháng</th>
+                            <th className="px-3 py-2 text-right">Token tổng</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {aiReport.map((r: any) => (
+                            <tr key={r.userId} className="border-t border-white/5 hover:bg-white/3">
+                              <td className="px-3 py-2">
+                                <p className="text-slate-200 truncate max-w-[200px]">{r.fullName || r.email}</p>
+                                <p className="text-[11px] text-slate-500 truncate max-w-[200px]">{r.email}</p>
+                              </td>
+                              <td className="px-3 py-2"><span className="text-violet-300 font-semibold">{r.packageCode}</span></td>
+                              <td className="px-3 py-2 text-right font-mono text-amber-300">{r.used} / {r.isUnlimited ? '∞' : r.quota}</td>
+                              <td className="px-3 py-2 text-right font-mono text-emerald-300">{r.isUnlimited ? '∞' : r.remaining}</td>
+                              <td className="px-3 py-2 text-right font-mono text-teal-300">{(r.realTokensThisMonth ?? 0).toLocaleString()}</td>
+                              <td className="px-3 py-2 text-right font-mono text-pink-300">{(r.realTokensAllTime ?? 0).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2036,7 +2171,6 @@ export default function AdminPanel() {
                               const k = col.toLowerCase();
                               const isVideo = k === 'videourl' || k === 'video_url';
                               const isImage = k === 'imageurl' || k === 'image_url' || k === 'linkimage' || k === 'imagelink';
-                              const isMedia = isVideo || isImage;
                               return (
                                 <td key={col} className={`px-4 py-2 align-top ${isVideo ? 'w-48' : isImage ? 'w-20' : 'max-w-[180px] truncate'}`}>
                                   {renderCell(col, row?.[col])}
@@ -2057,6 +2191,24 @@ export default function AdminPanel() {
                                   >
                                     <ListChecks className="h-3.5 w-3.5" />
                                     Lịch tập
+                                  </button>
+                                )}
+                                {/* Gán gói AI — chỉ hiện ở tab Tài khoản */}
+                                {activeModule.key === 'users' && (
+                                  <button
+                                    onClick={async () => {
+                                      setAssignTarget(row);
+                                      setAssignPkgId('');
+                                      setAssignDays('30');
+                                      if (aiPkgs.length === 0) {
+                                        const res = await apiClient.get('/admin/ai/packages');
+                                        if (res.success) setAiPkgs(res.data as any[]);
+                                      }
+                                    }}
+                                    className="flex h-8 items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 text-xs font-semibold text-violet-300 hover:bg-violet-500/20 transition"
+                                  >
+                                    <Zap className="h-3.5 w-3.5" />
+                                    Gán gói
                                   </button>
                                 )}
                                 {activeModule.fields.length > 0 && !['leaderboard', 'challengeSubmissions'].includes(activeModule.key) && (
@@ -2451,6 +2603,60 @@ export default function AdminPanel() {
           onConfirm={() => void confirmDelete()}
           onCancel={() => setDeleteTarget(null)}
         />
+      )}
+
+      {/* Modal gán gói AI cho user (tab Tài khoản) */}
+      {assignTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl">
+            <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10">
+              <Zap className="h-6 w-6 text-violet-400" />
+            </div>
+            <h3 className="mt-4 text-lg font-bold text-white">Gán gói AI</h3>
+            <p className="mt-1 text-sm text-slate-400">
+              {assignTarget.fullName || assignTarget.email} —{' '}
+              <span className="font-semibold text-violet-300">{(assignTarget.aiPackageCode || 'FREE')}</span> hiện tại
+            </p>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-slate-400">Gói mới</label>
+                <select value={assignPkgId} onChange={e => setAssignPkgId(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500">
+                  <option value="">-- Chọn gói --</option>
+                  {aiPkgs.map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.aiQuota === -1 ? '∞' : p.aiQuota} credit)</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-slate-400">Số ngày hiệu lực</label>
+                <input type="number" value={assignDays} onChange={e => setAssignDays(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500" />
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button onClick={() => setAssignTarget(null)}
+                className="flex-1 rounded-xl border border-white/10 py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/5">
+                Huỷ
+              </button>
+              <button disabled={!assignPkgId || assignSaving}
+                onClick={async () => {
+                  setAssignSaving(true);
+                  const uid = assignTarget.id;
+                  const res = await apiClient.put(`/admin/ai/users/${uid}/package`,
+                    { packageId: Number(assignPkgId), durationDays: Number(assignDays) });
+                  setAssignSaving(false);
+                  if (res.success) { setAssignTarget(null); void loadTab(); }
+                  else alert(res.message || 'Gán gói thất bại');
+                }}
+                className="flex-1 rounded-xl bg-violet-500 py-2.5 text-sm font-bold text-white hover:bg-violet-400 disabled:opacity-50">
+                {assignSaving ? 'Đang gán...' : 'Gán gói'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

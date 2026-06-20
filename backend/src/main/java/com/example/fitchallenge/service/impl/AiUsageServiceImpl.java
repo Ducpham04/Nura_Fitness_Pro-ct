@@ -24,6 +24,7 @@ public class AiUsageServiceImpl implements AiUsageService {
 
     private final UserRepository userRepository;
     private final AiPackageRepository aiPackageRepository;
+    private final com.example.fitchallenge.repository.AiTokenLogRepository aiTokenLogRepository;
 
     // ────────────────────────────────────────────────────────────────────────
 
@@ -86,6 +87,44 @@ public class AiUsageServiceImpl implements AiUsageService {
         log.debug("AI credit consumed: userId={} cost={} used={}/{}", userId, cost, used + cost, quota);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public void ensureQuota(Long userId, int cost) {
+        if (cost <= 0) return;
+        User user = findUser(userId);
+        ensureInitialized(user);
+
+        int quota = user.getAiQuota() != null ? user.getAiQuota() : 25;
+        if (quota == -1) return; // unlimited
+
+        int used = user.getAiUsed() != null ? user.getAiUsed() : 0;
+        // Tính thêm: nếu đã reset thì used về 0
+        if (user.getAiResetAt() != null && ZonedDateTime.now().isAfter(user.getAiResetAt())) {
+            used = 0;
+        }
+        int remaining = quota - used;
+        if (remaining < cost) {
+            String pkg = user.getAiPackage() != null ? user.getAiPackage().getCode() : "FREE";
+            throw new QuotaExceededException(
+                    String.format("Bạn đã hết lượt AI tháng này (%d/%d credit). " +
+                                  "Nâng cấp lên gói Plus hoặc Pro để tiếp tục. [Gói hiện tại: %s]",
+                                  used, quota, pkg));
+        }
+    }
+
+    @Override
+    @Transactional
+    public void consume(Long userId, int cost) {
+        if (cost <= 0) return;
+        User user = findUser(userId);
+        maybeResetCycle(user);
+        downgradeIfExpired(user);
+        int used = user.getAiUsed() != null ? user.getAiUsed() : 0;
+        user.setAiUsed(used + cost);
+        userRepository.save(user);
+        log.debug("AI credit consumed: userId={} cost={} used={}", userId, cost, used + cost);
+    }
+
     // ────────────────────────────────────────────────────────────────────────
 
     @Override
@@ -96,6 +135,67 @@ public class AiUsageServiceImpl implements AiUsageService {
         user.setAiResetAt(ZonedDateTime.now().plusDays(30));
         userRepository.save(user);
         log.info("AI usage reset: userId={}", userId);
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> adminAdjustCredit(Long userId, Integer setQuota, Integer setUsed, Integer addCredits) {
+        User user = findUser(userId);
+        ensureInitialized(user);
+        if (setQuota != null) {
+            user.setAiQuota(setQuota < 0 ? -1 : setQuota); // <0 = vô hạn
+        }
+        if (setUsed != null) {
+            user.setAiUsed(Math.max(0, setUsed));
+        }
+        if (addCredits != null && addCredits != 0) {
+            // Cấp thêm credit = giảm 'đã dùng' (tăng còn lại), không xuống dưới 0
+            int used = user.getAiUsed() != null ? user.getAiUsed() : 0;
+            user.setAiUsed(Math.max(0, used - addCredits));
+        }
+        userRepository.save(user);
+        log.info("AI credit adjusted by admin: userId={} quota={} used={} add={}", userId, setQuota, setUsed, addCredits);
+        return getUsageInfo(userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<Map<String, Object>> getAiUsageReport() {
+        ZonedDateTime monthStart = ZonedDateTime.now()
+                .withDayOfMonth(1).toLocalDate().atStartOfDay(java.time.ZoneOffset.UTC);
+
+        Map<Long, Long> tokMonth = new java.util.HashMap<>();
+        aiTokenLogRepository.sumByUserSince(monthStart)
+                .forEach(r -> tokMonth.put((Long) r[0], ((Number) r[1]).longValue()));
+        Map<Long, Long> tokAll = new java.util.HashMap<>();
+        aiTokenLogRepository.sumByUserAllTime()
+                .forEach(r -> tokAll.put((Long) r[0], ((Number) r[1]).longValue()));
+
+        java.util.List<Map<String, Object>> rows = new java.util.ArrayList<>();
+        for (User u : userRepository.findAll()) {
+            AiPackage pkg = u.getAiPackage();
+            int quota = u.getAiQuota() != null ? u.getAiQuota() : 25;
+            int used = u.getAiUsed() != null ? u.getAiUsed() : 0;
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("userId", u.getId());
+            row.put("fullName", u.getFullName() != null ? u.getFullName() : u.getUserName());
+            row.put("email", u.getEmail());
+            row.put("status", u.getStatus());
+            row.put("packageCode", pkg != null ? pkg.getCode() : "FREE");
+            row.put("quota", quota);
+            row.put("used", used);
+            row.put("remaining", quota == -1 ? -1 : Math.max(0, quota - used));
+            row.put("isUnlimited", quota == -1);
+            row.put("realTokensThisMonth", tokMonth.getOrDefault(u.getId(), 0L));
+            row.put("realTokensAllTime", tokAll.getOrDefault(u.getId(), 0L));
+            row.put("packageExpiresAt", fmt(u.getAiPackageExpiresAt()));
+            rows.add(row);
+        }
+        // Sắp xếp: token thật all-time giảm dần (ai tốn nhiều lên đầu)
+        rows.sort((a, b) -> Long.compare(
+                ((Number) b.get("realTokensAllTime")).longValue(),
+                ((Number) a.get("realTokensAllTime")).longValue()));
+        return rows;
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

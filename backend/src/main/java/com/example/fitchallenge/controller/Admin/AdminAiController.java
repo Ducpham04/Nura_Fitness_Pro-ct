@@ -89,6 +89,36 @@ public class AdminAiController {
         return ResponseEntity.ok(aiUsageService.getUsageInfo(userId));
     }
 
+    /**
+     * PUT /api/admin/ai/users/{userId}/credit
+     * Body (mọi field optional): { "quota": 200, "used": 0, "addCredits": 50 }
+     *   quota < 0 = vô hạn. addCredits = cấp thêm (giảm 'đã dùng').
+     */
+    @PutMapping("/users/{userId}/credit")
+    @Operation(summary = "Admin chỉnh credit/quota của user")
+    public ResponseEntity<Map<String, Object>> adjustCredit(
+            @PathVariable Long userId, @RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(aiUsageService.adminAdjustCredit(
+                userId, num(body.get("quota")), num(body.get("used")), num(body.get("addCredits"))));
+    }
+
+    /**
+     * GET /api/admin/ai/usage-report
+     * Báo cáo dùng AI của tất cả user (gói, credit, token thật).
+     */
+    @GetMapping("/usage-report")
+    @Operation(summary = "Báo cáo dùng AI của tất cả user")
+    public ResponseEntity<List<Map<String, Object>>> usageReport() {
+        return ResponseEntity.ok(aiUsageService.getAiUsageReport());
+    }
+
+    /** Parse số từ JSON body (Integer/Double/String) → Integer, null nếu thiếu. */
+    private static Integer num(Object o) {
+        if (o == null) return null;
+        if (o instanceof Number n) return n.intValue();
+        try { return Integer.valueOf(o.toString().trim()); } catch (Exception e) { return null; }
+    }
+
     // ── Promo codes ───────────────────────────────────────────────────────────
 
     @GetMapping("/promo-codes")
