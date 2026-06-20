@@ -244,13 +244,15 @@ export const adminModules: AdminModuleConfig[] = [
     endpoint: '/admin/users',
     idField: 'id',
     createMode: 'json',
-    tableColumns: ['id', 'fullName', 'email', 'role', 'status', 'createdAt'],
+    tableColumns: ['id', 'fullName', 'email', 'role', 'aiPackageCode', 'status', 'createdAt'],
     fields: [
       { name: 'fullName',  label: 'Họ và tên',  required: true },
       { name: 'email',     label: 'Email',       required: true },
       { name: 'password',  label: 'Mật khẩu',   type: 'password', required: true },
       { name: 'roleId',    label: 'Vai trò', type: 'select',
         remoteOptions: { endpoint: '/auth/roles', labelField: 'roleName', valueField: 'id' } },
+      { name: 'status',    label: 'Trạng thái', type: 'select',
+        options: ['active', 'inactive'], optionLabels: ['Hoạt động', 'Vô hiệu hoá'] },
     ],
   },
   {

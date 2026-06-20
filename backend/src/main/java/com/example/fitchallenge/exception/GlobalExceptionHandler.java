@@ -73,6 +73,14 @@ public class GlobalExceptionHandler {
 
     // ── 403 Forbidden ──────────────────────────────────────────────────────────
 
+    /** Tài khoản bị vô hiệu hoá (xoá mềm / admin khoá) — báo rõ lý do thay vì "sai mật khẩu". */
+    @ExceptionHandler(org.springframework.security.authentication.DisabledException.class)
+    public ResponseEntity<Map<String, Object>> handleDisabled(
+            org.springframework.security.authentication.DisabledException ex, WebRequest request) {
+        log.warn("Disabled account [{}]: {}", path(request), ex.getMessage());
+        return build(HttpStatus.FORBIDDEN, "ACCOUNT_DISABLED", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(
             AccessDeniedException ex, WebRequest request) {

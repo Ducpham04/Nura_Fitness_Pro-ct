@@ -213,6 +213,27 @@ class UserService {
     return await apiClient.get<any>('/goals');
   }
 
+  // ── Tự quản lý tài khoản ──────────────────────────────────────────────────
+  /** Đổi tên hiển thị / email. Trả { ok, message }. */
+  updateMyProfile = async (payload: { fullName?: string; email?: string }): Promise<{ ok: boolean; message?: string }> => {
+    const res = await apiClient.put<any>('/user/account/profile', payload);
+    return { ok: res.success, message: res.success ? 'Cập nhật thành công' : res.error?.message };
+  };
+
+  /** Đổi mật khẩu — yêu cầu mật khẩu hiện tại. Trả { ok, message }. */
+  changePassword = async (currentPassword: string, newPassword: string): Promise<{ ok: boolean; message?: string }> => {
+    const res = await apiClient.put<any>('/user/account/password', { currentPassword, newPassword });
+    const body = res.data as any;
+    return { ok: res.success, message: res.success ? (body?.message || 'Đổi mật khẩu thành công') : res.error?.message };
+  };
+
+  /** Tự vô hiệu hoá tài khoản (xoá mềm). Trả { ok, message }. */
+  deactivateMyAccount = async (): Promise<{ ok: boolean; message?: string }> => {
+    const res = await apiClient.delete<any>('/user/account');
+    const body = res.data as any;
+    return { ok: res.success, message: res.success ? (body?.message || 'Đã vô hiệu hoá tài khoản') : res.error?.message };
+  };
+
 
   postBodyProfile = async (bodyProfile: UserBodyProfile): Promise<UserBodyProfile | null> => {
     const response = await apiClient.post<UserBodyProfile>(API_ENDPOINTS.USER.BODY_PROFILE, bodyProfile);

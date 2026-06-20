@@ -35,6 +35,11 @@ public interface UserService {
     UserDTO updateUserAvatar(Long id, String avatarUrl);
     NotificationResponse deleteUser(Long id);
 
+    // User tự quản lý tài khoản
+    UserDTO updateMyProfile(Long userId, String fullName, String email);
+    void changePassword(Long userId, String currentPassword, String newPassword);
+    void deactivateMyAccount(Long userId);
+
     // ── Forgot / Reset password ───────────────────────────────────────────────
     /**
      * Tạo token và gửi email đặt lại mật khẩu.

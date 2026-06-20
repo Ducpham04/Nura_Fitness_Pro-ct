@@ -192,6 +192,12 @@ public class UserServiceImpl implements UserService {
             throw new org.springframework.security.authentication.BadCredentialsException("Invalid email or password");
         }
 
+        // Tài khoản bị vô hiệu hoá (xoá mềm / admin khoá) → chặn đăng nhập
+        if (user.getStatus() != null && "inactive".equalsIgnoreCase(user.getStatus().trim())) {
+            throw new org.springframework.security.authentication.DisabledException(
+                    "Tài khoản đã bị vô hiệu hoá. Vui lòng liên hệ hỗ trợ.");
+        }
+
         // Update last login time
         user.setLastLoginAt(ZonedDateTime.now());
         userRepository.save(user);
@@ -672,6 +678,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<UserDTO> getAllUsersPaginated(String status, String role, String search, Pageable pageable) {
         List<User> allUsers = userRepository.findAll();
 
@@ -714,6 +721,16 @@ public class UserServiceImpl implements UserService {
                     dto.setUpdatedAt(user.getUpdatedAt());
                     dto.setLastLoginAt(user.getLastLoginAt());
                     dto.setRole(user.getRole().getRoleName());
+                    // Gói AI hiện tại — admin xem trực tiếp trên danh sách user
+                    if (user.getAiPackage() != null) {
+                        dto.setAiPackageCode(user.getAiPackage().getCode());
+                        dto.setAiPackageName(user.getAiPackage().getName());
+                    } else {
+                        dto.setAiPackageCode("FREE");
+                    }
+                    dto.setAiQuota(user.getAiQuota());
+                    dto.setAiUsed(user.getAiUsed());
+                    dto.setAiPackageExpiresAt(user.getAiPackageExpiresAt());
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -778,6 +795,11 @@ public class UserServiceImpl implements UserService {
                     .orElseThrow(() -> new RuntimeException("Role not found"));
             user.setRole(role);
         }
+        if (request.getStatus() != null && !request.getStatus().isBlank()) {
+            // Khoá/mở tài khoản: chuẩn hoá về "active" | "inactive"
+            String s = request.getStatus().trim().toLowerCase();
+            user.setStatus("active".equals(s) ? "active" : "inactive");
+        }
 
         user.setUpdatedAt(ZonedDateTime.now());
         User savedUser = userRepository.save(user);
@@ -821,12 +843,68 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public NotificationResponse deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
+        // Vô hiệu hoá mềm: giữ dữ liệu (đơn hàng, log...), tránh vỡ ràng buộc khoá ngoại.
+        // Có thể khôi phục bằng cách đặt lại status="active".
+        User user = userRepository.findById(id).orElse(null);
+        if (user == null) {
             return new NotificationResponse(false, "User not found");
         }
+        user.setStatus("inactive");
+        user.setUpdatedAt(ZonedDateTime.now());
+        userRepository.save(user);
+        return new NotificationResponse(true, "User deactivated successfully");
+    }
 
-        userRepository.deleteById(id);
-        return new NotificationResponse(true, "User deleted successfully");
+    // ── User tự quản lý tài khoản ─────────────────────────────────────────────
+
+    @Override
+    @Transactional
+    public UserDTO updateMyProfile(Long userId, String fullName, String email) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (fullName != null && !fullName.isBlank()) {
+            user.setFullName(fullName.trim());
+        }
+        if (email != null && !email.isBlank()) {
+            String normalized = email.trim().toLowerCase();
+            if (!normalized.equals(user.getEmail())) {
+                if (userRepository.existsByEmail(normalized)) {
+                    throw new RuntimeException("Email already exists");
+                }
+                user.setEmail(normalized);
+            }
+        }
+        user.setUpdatedAt(ZonedDateTime.now());
+        return getUserById(userRepository.save(user).getId());
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new RuntimeException("New password must be at least 6 characters");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(ZonedDateTime.now());
+        userRepository.save(user);
+        log.info("[ChangePassword] Đổi mật khẩu thành công cho userId={}", userId);
+    }
+
+    @Override
+    @Transactional
+    public void deactivateMyAccount(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setStatus("inactive");
+        user.setUpdatedAt(ZonedDateTime.now());
+        userRepository.save(user);
+        log.info("[DeactivateAccount] User tự vô hiệu hoá tài khoản userId={}", userId);
     }
 
     // ── Forgot / Reset password ───────────────────────────────────────────────

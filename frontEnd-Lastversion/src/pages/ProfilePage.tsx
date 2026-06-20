@@ -4,6 +4,7 @@ import {
   TrendingUp, Scale, Loader2, ChevronRight,
   Edit3, Check, Star, Zap,
   Activity, Sparkles, ArrowUpRight,
+  Settings, Lock, Mail, Save, ShieldAlert, Trash2, X,
 } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -60,6 +61,63 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const { usage, packages: aiPackages, loading: usageLoading, refresh: refreshUsage } = useAiUsage(user?.id ?? null);
+
+  // ── Cài đặt tài khoản ──
+  const [showAccount, setShowAccount] = useState(false);
+  const [pName, setPName] = useState(user?.fullName ?? '');
+  const [pEmail, setPEmail] = useState(user?.email ?? '');
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const [curPw, setCurPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const [deactivateConfirm, setDeactivateConfirm] = useState(false);
+  const [deactivateBusy, setDeactivateBusy] = useState(false);
+
+  const handleSaveProfile = async () => {
+    setProfileBusy(true);
+    setProfileMsg(null);
+    const emailChanged = pEmail.trim().toLowerCase() !== (user?.email ?? '').toLowerCase();
+    const res = await userService.updateMyProfile({ fullName: pName.trim(), email: pEmail.trim() });
+    setProfileBusy(false);
+    if (res.ok) {
+      if (emailChanged) {
+        setProfileMsg({ ok: true, text: 'Đổi email thành công. Vui lòng đăng nhập lại…' });
+        setTimeout(() => { logout(); navigate('/login'); }, 1600);
+      } else {
+        setProfileMsg({ ok: true, text: res.message || 'Đã lưu' });
+      }
+    } else {
+      setProfileMsg({ ok: false, text: res.message || 'Lưu thất bại' });
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPwMsg(null);
+    if (newPw.length < 6) { setPwMsg({ ok: false, text: 'Mật khẩu mới tối thiểu 6 ký tự' }); return; }
+    if (newPw !== confirmPw) { setPwMsg({ ok: false, text: 'Xác nhận mật khẩu không khớp' }); return; }
+    setPwBusy(true);
+    const res = await userService.changePassword(curPw, newPw);
+    setPwBusy(false);
+    if (res.ok) {
+      setPwMsg({ ok: true, text: res.message || 'Đổi mật khẩu thành công' });
+      setCurPw(''); setNewPw(''); setConfirmPw('');
+    } else {
+      setPwMsg({ ok: false, text: res.message || 'Đổi mật khẩu thất bại' });
+    }
+  };
+
+  const handleDeactivate = async () => {
+    setDeactivateBusy(true);
+    const res = await userService.deactivateMyAccount();
+    setDeactivateBusy(false);
+    if (res.ok) { logout(); navigate('/login'); }
+    else { setProfileMsg({ ok: false, text: res.message || 'Thao tác thất bại' }); setDeactivateConfirm(false); }
+  };
 
   useEffect(() => {
     if (!user?.id) return;
@@ -255,8 +313,8 @@ export default function ProfilePage() {
                 </div>
               )}
               {usage.isUnlimited && (
-                <div className="h-1.5 bg-purple-500/30 rounded-full overflow-hidden">
-                  <div className="h-full w-full bg-gradient-to-r from-purple-400 to-blue-400 rounded-full" />
+                <div className="h-1.5 bg-lime/20 rounded-full overflow-hidden">
+                  <div className="h-full w-full bg-lime rounded-full" />
                 </div>
               )}
               {usage.resetAt && (
@@ -308,6 +366,146 @@ export default function ProfilePage() {
             <ChevronRight className="w-4 h-4 text-neutral-700 group-hover:text-white transition-colors shrink-0" />
           </Link>
         ))}
+      </div>
+
+      {/* ── Cài đặt tài khoản ── */}
+      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] overflow-hidden">
+        <button
+          onClick={() => setShowAccount(v => !v)}
+          className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/[0.04] transition-colors"
+        >
+          <div className="w-8 h-8 rounded-xl bg-white/[0.05] flex items-center justify-center shrink-0">
+            <Settings className="w-4 h-4 text-neutral-400" />
+          </div>
+          <div className="flex-1 min-w-0 text-left">
+            <p className="text-white text-sm font-semibold">Cài đặt tài khoản</p>
+            <p className="text-neutral-600 text-xs">Đổi thông tin, mật khẩu, vô hiệu hoá tài khoản</p>
+          </div>
+          <ChevronRight className={`w-4 h-4 text-neutral-700 transition-transform ${showAccount ? 'rotate-90' : ''}`} />
+        </button>
+
+        {showAccount && (
+          <div className="px-5 pb-5 pt-1 space-y-6 border-t border-white/[0.04]">
+            {/* Thông tin cơ bản */}
+            <div className="space-y-3 pt-4">
+              <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+                <User className="w-3.5 h-3.5" /> Thông tin cơ bản
+              </h4>
+              <div>
+                <label className="text-[11px] text-neutral-500 mb-1 block">Tên hiển thị</label>
+                <input
+                  value={pName}
+                  onChange={e => setPName(e.target.value)}
+                  className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                  placeholder="Tên của bạn"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] text-neutral-500 mb-1 block flex items-center gap-1">
+                  <Mail className="w-3 h-3" /> Email
+                </label>
+                <input
+                  value={pEmail}
+                  onChange={e => setPEmail(e.target.value)}
+                  type="email"
+                  className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                  placeholder="email@example.com"
+                />
+                <p className="text-[10px] text-neutral-600 mt-1">Đổi email sẽ yêu cầu đăng nhập lại.</p>
+              </div>
+              {profileMsg && (
+                <p className={`text-xs ${profileMsg.ok ? 'text-lime' : 'text-red-400'}`}>{profileMsg.text}</p>
+              )}
+              <button
+                onClick={handleSaveProfile}
+                disabled={profileBusy}
+                className="w-full py-2.5 rounded-xl bg-lime/10 border border-lime/25 text-lime text-xs font-bold hover:bg-lime/15 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {profileBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                Lưu thông tin
+              </button>
+            </div>
+
+            {/* Đổi mật khẩu */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+                <Lock className="w-3.5 h-3.5" /> Đổi mật khẩu
+              </h4>
+              <input
+                value={curPw}
+                onChange={e => setCurPw(e.target.value)}
+                type="password"
+                autoComplete="current-password"
+                className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                placeholder="Mật khẩu hiện tại"
+              />
+              <input
+                value={newPw}
+                onChange={e => setNewPw(e.target.value)}
+                type="password"
+                autoComplete="new-password"
+                className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                placeholder="Mật khẩu mới (tối thiểu 6 ký tự)"
+              />
+              <input
+                value={confirmPw}
+                onChange={e => setConfirmPw(e.target.value)}
+                type="password"
+                autoComplete="new-password"
+                className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                placeholder="Xác nhận mật khẩu mới"
+              />
+              {pwMsg && (
+                <p className={`text-xs ${pwMsg.ok ? 'text-lime' : 'text-red-400'}`}>{pwMsg.text}</p>
+              )}
+              <button
+                onClick={handleChangePassword}
+                disabled={pwBusy || !curPw || !newPw}
+                className="w-full py-2.5 rounded-xl bg-white/[0.05] border border-white/10 text-white text-xs font-bold hover:bg-white/[0.08] transition-colors flex items-center justify-center gap-2 disabled:opacity-40"
+              >
+                {pwBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
+                Cập nhật mật khẩu
+              </button>
+            </div>
+
+            {/* Vùng nguy hiểm */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-red-400/80 uppercase tracking-wider flex items-center gap-2">
+                <ShieldAlert className="w-3.5 h-3.5" /> Vùng nguy hiểm
+              </h4>
+              {!deactivateConfirm ? (
+                <button
+                  onClick={() => setDeactivateConfirm(true)}
+                  className="w-full py-2.5 rounded-xl bg-red-500/[0.06] border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/[0.12] transition-colors flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Vô hiệu hoá tài khoản
+                </button>
+              ) : (
+                <div className="rounded-xl border border-red-500/25 bg-red-500/[0.06] p-3 space-y-2">
+                  <p className="text-xs text-red-300">
+                    Tài khoản sẽ bị vô hiệu hoá và bạn sẽ bị đăng xuất. Dữ liệu được giữ lại; liên hệ hỗ trợ để khôi phục.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleDeactivate}
+                      disabled={deactivateBusy}
+                      className="flex-1 py-2 rounded-lg bg-red-500/80 text-white text-xs font-bold hover:bg-red-500 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {deactivateBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                      Xác nhận
+                    </button>
+                    <button
+                      onClick={() => setDeactivateConfirm(false)}
+                      className="flex-1 py-2 rounded-lg bg-white/[0.05] border border-white/10 text-neutral-300 text-xs font-bold hover:bg-white/[0.08] transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <X className="w-3.5 h-3.5" /> Huỷ
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Logout ── */}

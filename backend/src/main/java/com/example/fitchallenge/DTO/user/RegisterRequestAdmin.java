@@ -8,6 +8,6 @@ public class RegisterRequestAdmin {
     private String email;
     private String password;
     private Long roleId;
-    
+    private String status; // "active" | "inactive" — khoá/mở tài khoản (optional)
 
 }
