@@ -1,6 +1,6 @@
 import { useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Zap, ArrowRight, Activity, Flame, Gauge, Target, HeartPulse } from 'lucide-react';
+import { ArrowRight, Activity, Flame, Gauge, Target, HeartPulse } from 'lucide-react';
 import Logo from '../components/Logo';
 
 /**

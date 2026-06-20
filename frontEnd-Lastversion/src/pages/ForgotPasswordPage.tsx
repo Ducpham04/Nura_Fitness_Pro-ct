@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Zap, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../services/apiClient';
 import Logo from '../components/Logo';

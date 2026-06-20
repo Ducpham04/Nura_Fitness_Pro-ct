@@ -96,7 +96,7 @@ export default function BodyCheckInModal({ previousWeight, onClose, onSaved }: P
               </div>
               {delta !== null && (
                 <div className={`inline-flex items-center gap-1 mt-2 text-xs font-bold px-2 py-0.5 rounded-full ${
-                  delta < 0 ? 'text-lime bg-lime/10' : delta > 0 ? 'text-orange-400 bg-orange-400/10' : 'text-neutral-400 bg-white/[0.05]'
+                  delta < 0 ? 'text-lime bg-lime/10' : delta > 0 ? 'text-orange-300 bg-orange-400/10' : 'text-slate-200 bg-white/[0.05]'
                 }`}>
                   {delta < 0 ? <TrendingDown className="w-3 h-3" /> : delta > 0 ? <TrendingUp className="w-3 h-3" /> : null}
                   {delta > 0 ? '+' : ''}{delta} kg so với lần trước

@@ -90,7 +90,7 @@ services:
       VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
       VNPAY_URL: ${VNPAY_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
       VNPAY_RETURN_URL: ${PUBLIC_ORIGIN}/payment/result
-      VNPAY_IPN_URL: ${PUBLIC_ORIGIN}/api/payment/vnpay-ipn
+      VNPAY_IPN_URL: ${PUBLIC_ORIGIN}/api/ai-packages/payment/ipn
       # Sentry BE — trống = tắt; set SENTRY_DSN để bật giám sát lỗi
       SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:

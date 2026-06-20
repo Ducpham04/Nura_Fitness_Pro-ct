@@ -4,7 +4,7 @@ import {
   Dumbbell, Brain,
   ChevronRight, Check, ShoppingCart,
   Wallet, Moon, Beef, Apple,
-  Star, Flame, Play, History, Target, TrendingUp, Zap, Compass, X, Scale,
+  Flame, Play, History, Target, TrendingUp, Zap, Compass, X, Scale,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProgressRing from '../components/ProgressRing';
@@ -166,6 +166,15 @@ export default function HomePage() {
     : rcm === 'rest' ? 'text-orange-400'
     : rcm === 'light' ? 'text-blue-400'
     : 'text-lime';
+  const nextWorkout = todayWorkouts.find((workout: any) => !workout.done) || todayWorkouts[0];
+  const todayCompletion = stats.scheduledWorkoutsToday
+    ? pct(stats.completedWorkoutsToday, stats.scheduledWorkoutsToday)
+    : 0;
+  const primaryTask = nextWorkout
+    ? nextWorkout.name
+    : hasActiveMealPlan
+      ? 'Ghi bữa ăn đầu tiên'
+      : 'Thiết lập AI coach';
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -235,57 +244,99 @@ export default function HomePage() {
       className="max-w-6xl mx-auto space-y-5 pb-24">
       <Confetti active={goalReached} />
 
-      {/* ── Hero kiểu Nike: ảnh vận động viên + chữ italic in hoa ── */}
+      {/* ── Daily cockpit ── */}
       <motion.div variants={fadeScale}
-        className="relative overflow-hidden rounded-3xl min-h-[280px] sm:min-h-[320px] flex flex-col justify-end shadow-[0_12px_50px_-16px_rgba(0,0,0,0.8)]">
-        {/* Ảnh nền vận động viên */}
-        <motion.img
-          src="https://images.unsplash.com/photo-1549060279-7e168fcee0c2?auto=format&fit=crop&w=1600&q=80"
-          alt=""
-          initial={{ scale: 1.12 }} animate={{ scale: 1 }}
-          transition={{ duration: 1.4, ease: premiumEase }}
-          className="absolute inset-0 w-full h-full object-cover object-center" />
-        {/* Scrim đậm kiểu editorial */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/75 to-black/25" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/40 to-transparent" />
-        {/* Gạch accent lime dọc — chi tiết Nike */}
-        <div className="absolute left-0 top-8 bottom-8 w-1 bg-lime rounded-full" />
+        className="relative overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#0e1012] p-2 shadow-[0_24px_70px_-28px_rgba(0,0,0,0.85)]">
+        <div className="relative overflow-hidden rounded-[1.55rem] bg-[#090a0b]">
+          <motion.img
+            src="/images/viway-hero-training.jpg"
+            alt=""
+            initial={{ scale: 1.08 }} animate={{ scale: 1 }}
+            transition={{ duration: 1.2, ease: premiumEase }}
+            className="absolute inset-0 h-full w-full object-cover object-center opacity-[0.32]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#08090a] via-[#08090a]/92 to-[#08090a]/48" />
+          <div className="absolute inset-0 grid-overlay opacity-60" />
 
-        {/* Badge Lv + streak góc phải trên */}
-        <div className="absolute top-4 right-4 flex gap-2 z-10">
-          <span className="flex items-center gap-1.5 rounded-full bg-black/50 backdrop-blur-sm border border-white/15 px-3 py-1.5">
-            <Star className="w-3.5 h-3.5 text-lime" fill="currentColor" />
-            <span className="text-white text-xs font-bold">Lv.{userSummary.level}</span>
-          </span>
-          <span className="flex items-center gap-1.5 rounded-full bg-black/50 backdrop-blur-sm border border-white/15 px-3 py-1.5">
-            <Flame className="w-3.5 h-3.5 text-orange-400" fill="currentColor" />
-            <span className="text-white text-xs font-bold">{userSummary.streakDays}</span>
-          </span>
-        </div>
+          <div className="relative z-10 grid gap-6 p-5 sm:p-7 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="flex min-h-[330px] flex-col justify-between">
+              <div>
+                <div className="mb-6 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-lime/25 bg-lime/[0.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-lime">
+                    {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </span>
+                  <span className="rounded-full border border-white/[0.09] bg-white/[0.04] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400">
+                    Lv.{userSummary.level} · {userSummary.streakDays} streak
+                  </span>
+                </div>
+                <h1 className="font-grotesk text-4xl font-bold leading-[0.98] tracking-tight text-white sm:text-5xl">
+                  {greeting},<br />
+                  <span className="text-lime">{userName}</span>
+                </h1>
+                <p className="mt-5 max-w-lg text-sm leading-relaxed text-neutral-300 sm:text-base">
+                  Ưu tiên hôm nay: <span className="font-semibold text-white">{primaryTask}</span>. Theo dõi tư thế, bữa ăn và phục hồi trong một luồng duy nhất.
+                </p>
+              </div>
 
-        {/* Nội dung editorial — góc dưới trái */}
-        <div className="relative z-10 p-6 sm:p-8 pl-7 sm:pl-9">
-          <p className="text-white/55 text-[10px] font-bold uppercase tracking-[0.28em] mb-2.5">
-            {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </p>
-          <h1 className="font-grotesk font-bold italic uppercase text-white leading-[0.88] tracking-tight text-4xl sm:text-[3.25rem]">
-            {greeting}<br />
-            <span className="text-lime">{userName}</span>
-          </h1>
-          <p className="text-white/75 text-sm sm:text-base mt-3.5 max-w-md font-semibold uppercase tracking-wide">
-            {userSummary.streakDays > 0
-              ? `Chuỗi ${userSummary.streakDays} ngày. Đừng dừng lại.`
-              : 'Hôm nay là ngày của bạn.'}
-          </p>
-          <div className="flex flex-wrap gap-3 mt-6">
-            <Link to="/dashboard/workout"
-              className="rounded-full bg-lime text-black px-6 py-3 text-xs font-black uppercase tracking-wider flex items-center gap-2 hover:bg-white transition-colors active:scale-95">
-              <Play className="w-4 h-4" fill="currentColor" /> Bắt đầu tập
-            </Link>
-            <Link to="/dashboard/diet"
-              className="rounded-full border-2 border-white/30 text-white px-6 py-3 text-xs font-black uppercase tracking-wider flex items-center gap-2 hover:bg-white hover:text-black hover:border-white transition-all active:scale-95">
-              <Apple className="w-4 h-4" /> Ghi bữa ăn
-            </Link>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link to={nextWorkout ? '/dashboard/workout' : hasActiveMealPlan ? '/dashboard/diet' : '/dashboard/coach'}
+                  className="btn-lime group inline-flex items-center justify-center gap-3 px-6 py-3 text-xs font-black uppercase tracking-wider active:scale-[0.98]">
+                  {nextWorkout ? 'Bắt đầu buổi tập' : hasActiveMealPlan ? 'Ghi bữa ăn' : 'Thiết lập coach'}
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black/10 transition-transform group-hover:translate-x-1">
+                    <Play className="h-3.5 w-3.5" fill="currentColor" />
+                  </span>
+                </Link>
+                <Link to="/dashboard/coach"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.04] px-6 py-3 text-xs font-bold uppercase tracking-wider text-neutral-300 transition-all hover:border-white/25 hover:text-white active:scale-[0.98]">
+                  <Brain className="h-4 w-4 text-blue-200" /> Hỏi AI coach
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid content-between gap-3">
+              <div className="rounded-2xl border border-white/[0.08] bg-[#101217]/88 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">giao thức hôm nay</p>
+                    <h2 className="mt-1 font-grotesk text-xl font-bold text-white">{primaryTask}</h2>
+                  </div>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-lime/10 text-lime">
+                    <Dumbbell className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]">
+                  <div className="h-full rounded-full bg-lime transition-all duration-700" style={{ width: `${todayCompletion}%` }} />
+                </div>
+                <div className="mt-2 flex justify-between text-[11px] text-neutral-500">
+                  <span>{stats.completedWorkoutsToday}/{stats.scheduledWorkoutsToday || 1} bài hôm nay</span>
+                  <span>{todayCompletion}%</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: 'Calo đốt', value: stats.caloriesBurned || 0, suffix: '', tone: 'text-orange-300' },
+                  { label: 'Ngân sách', value: budgetConfigured ? Math.max(0, Math.round(remainingBudget / 1000)) : 0, suffix: budgetConfigured ? 'k' : '—', tone: 'text-blue-200' },
+                  { label: 'Phục hồi', value: recovery.energyLevel || 0, suffix: recovery.energyLevel ? '/5' : '—', tone: recoveryColor },
+                ].map(item => (
+                  <div key={item.label} className="rounded-2xl border border-white/[0.07] bg-white/[0.045] p-3">
+                    <div className={`font-grotesk text-2xl font-bold leading-none ${item.tone}`}>
+                      {item.suffix === '—' ? '—' : <><CountUp value={item.value} />{item.suffix}</>}
+                    </div>
+                    <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-500">{item.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-2xl border border-lime/15 bg-lime/[0.06] p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-lime">AI cue</span>
+                  <Brain className="h-4 w-4 text-lime" />
+                </div>
+                <p className="text-sm leading-relaxed text-lime/80">
+                  {aiSuggestion || 'Nếu năng lượng thấp, giữ bài tập chính và giảm 1 set phụ. Ưu tiên protein trong bữa kế tiếp.'}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </motion.div>

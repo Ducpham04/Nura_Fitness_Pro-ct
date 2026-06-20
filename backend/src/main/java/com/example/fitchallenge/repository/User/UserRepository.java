@@ -34,5 +34,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u WHERE u.lastLoginAt > :since ORDER BY u.lastLoginAt")
     List<User> findByLastLoginAtAfter(@Param("since") ZonedDateTime since);
+
+    /** Gói trả phí đã hết hạn (cần hạ về FREE) — dùng cho scheduled job. */
+    @Query("SELECT u FROM User u WHERE u.aiPackageExpiresAt IS NOT NULL AND u.aiPackageExpiresAt < :now")
+    List<User> findExpiredPaidUsers(@Param("now") ZonedDateTime now);
+
+    /** Gói sắp hết hạn trong khoảng [from, to) — dùng để gửi email nhắc gia hạn. */
+    @Query("SELECT u FROM User u WHERE u.aiPackageExpiresAt IS NOT NULL AND u.aiPackageExpiresAt >= :from AND u.aiPackageExpiresAt < :to")
+    List<User> findUsersExpiringBetween(@Param("from") ZonedDateTime from, @Param("to") ZonedDateTime to);
 }
 

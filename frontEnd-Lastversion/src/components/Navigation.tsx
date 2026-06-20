@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Dumbbell, Utensils, User, LogOut, Zap, Brain, History, Trophy } from 'lucide-react';
+import { Home, Dumbbell, Utensils, User, LogOut, Brain, History, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuthContext } from '../context/AuthContext';
 import LanguageSelector from './LanguageSelector';
@@ -35,31 +35,31 @@ export default function Navigation() {
   return (
     <>
       {/* Desktop Top Navigation */}
-      <nav className="hidden md:flex glass border-b border-white/5 px-10 py-5 sticky top-0 z-50 backdrop-blur-2xl">
-        <div className="flex items-center gap-10 flex-1">
+      <nav className="hidden md:flex border-b border-white/[0.06] bg-[#0a0a0c]/92 px-8 py-3.5 sticky top-0 z-50 backdrop-blur-xl">
+        <div className="flex items-center gap-8 flex-1">
           <Link to="/dashboard" className="flex items-center gap-3 group">
             <Logo size={40} wordmarkClass="text-xl" className="group-hover:scale-105 transition-transform" />
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-1">
             {navItems.map(({ id, icon: Icon, label, path }) => (
               <Link
                 key={id}
                 to={path}
-                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl transition-all ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
                   isActive(path) 
-                    ? 'bg-lime/10 text-lime border border-lime/20' 
+                    ? 'bg-lime text-obsidian shadow-[0_8px_24px_rgba(204,255,0,0.14)]' 
                     : 'text-neutral-500 hover:text-white hover:bg-white/[0.06]'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${id === 'coach' ? 'text-electric' : ''}`} />
+                <Icon className={`w-4 h-4 ${id === 'coach' && !isActive(path) ? 'text-electric' : ''}`} />
                 <span className="font-grotesk font-bold text-[10px] uppercase tracking-widest">{label}</span>
               </Link>
             ))}
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <LanguageSelector />
           <Link to="/dashboard/profile" className="flex items-center gap-3 group">
             <div className="text-right hidden lg:block">
@@ -68,7 +68,7 @@ export default function Navigation() {
                 {t('nav.operatorId', { id: user?.id.toString().slice(0, 4) })}
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-lime to-emerald-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform border border-white/10">
+            <div className="w-9 h-9 rounded-xl bg-lime flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform border border-white/10">
               <span className="font-grotesk font-bold text-obsidian text-sm">{userName[0]?.toUpperCase()}</span>
             </div>
           </Link>

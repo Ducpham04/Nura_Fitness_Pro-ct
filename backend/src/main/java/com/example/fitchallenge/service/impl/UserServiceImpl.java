@@ -309,6 +309,7 @@ public class UserServiceImpl implements UserService {
             dto.setLastLoginAt(user.getLastLoginAt());
             dto.setRole(user.getRole().getRoleName());
             dto.setStatus(user.getStatus());
+            applyAiPackageInfo(dto, user);
             return dto;
         }).collect(Collectors.toList()); // ẩn password trước khi trả về
 
@@ -332,8 +333,22 @@ public class UserServiceImpl implements UserService {
                 .build();
             dto.setUpdatedAt(user.getUpdatedAt());
             dto.setLastLoginAt(user.getLastLoginAt());
+            applyAiPackageInfo(dto, user);
             return dto;
         }).orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    /** Gán thông tin gói AI hiện tại lên DTO để admin xem trực tiếp. */
+    private void applyAiPackageInfo(UserDTO dto, User user) {
+        if (user.getAiPackage() != null) {
+            dto.setAiPackageCode(user.getAiPackage().getCode());
+            dto.setAiPackageName(user.getAiPackage().getName());
+        } else {
+            dto.setAiPackageCode("FREE");
+        }
+        dto.setAiQuota(user.getAiQuota());
+        dto.setAiUsed(user.getAiUsed());
+        dto.setAiPackageExpiresAt(user.getAiPackageExpiresAt());
     }
 
     @Override
@@ -721,16 +736,7 @@ public class UserServiceImpl implements UserService {
                     dto.setUpdatedAt(user.getUpdatedAt());
                     dto.setLastLoginAt(user.getLastLoginAt());
                     dto.setRole(user.getRole().getRoleName());
-                    // Gói AI hiện tại — admin xem trực tiếp trên danh sách user
-                    if (user.getAiPackage() != null) {
-                        dto.setAiPackageCode(user.getAiPackage().getCode());
-                        dto.setAiPackageName(user.getAiPackage().getName());
-                    } else {
-                        dto.setAiPackageCode("FREE");
-                    }
-                    dto.setAiQuota(user.getAiQuota());
-                    dto.setAiUsed(user.getAiUsed());
-                    dto.setAiPackageExpiresAt(user.getAiPackageExpiresAt());
+                    applyAiPackageInfo(dto, user); // gói AI hiện tại cho admin
                     return dto;
                 })
                 .collect(Collectors.toList());

@@ -72,6 +72,92 @@ public class EmailService {
         }
     }
 
+    /**
+     * Gửi email nhắc gói AI sắp hết hạn.
+     *
+     * @param toEmail     địa chỉ nhận
+     * @param userName    tên hiển thị
+     * @param packageName tên gói (vd "Fitnit PLUS")
+     * @param daysLeft    số ngày còn lại trước khi hết hạn
+     */
+    public void sendPackageExpiryReminder(String toEmail, String userName, String packageName, long daysLeft) {
+        String upgradeLink = frontendUrl + "/profile";
+
+        if (mailSender == null || mailUsername == null || mailUsername.isBlank()) {
+            log.warn("[Email] SMTP chưa cấu hình. Nhắc hết hạn gói {} cho {} (còn {} ngày)", packageName, toEmail, daysLeft);
+            return;
+        }
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromAddress, fromName);
+            helper.setTo(toEmail);
+            helper.setSubject("[Fitnit] Gói " + packageName + " của bạn sắp hết hạn");
+            helper.setText(buildExpiryReminderHtml(userName, packageName, daysLeft, upgradeLink), true);
+
+            mailSender.send(message);
+            log.info("[Email] Đã gửi nhắc hết hạn gói {} tới {} (còn {} ngày)", packageName, toEmail, daysLeft);
+
+        } catch (MailException | MessagingException e) {
+            log.error("[Email] Gửi email nhắc hết hạn thất bại tới {}: {}", toEmail, e.getMessage());
+        } catch (Exception e) {
+            log.error("[Email] Lỗi không xác định khi gửi mail nhắc hết hạn tới {}: {}", toEmail, e.getMessage());
+        }
+    }
+
+    private String buildExpiryReminderHtml(String userName, String packageName, long daysLeft, String upgradeLink) {
+        String name = (userName != null && !userName.isBlank()) ? userName : "bạn";
+        return """
+            <!DOCTYPE html>
+            <html lang="vi">
+            <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+            <body style="margin:0;padding:0;background:#0d0d0d;font-family:'Segoe UI',sans-serif;">
+              <table width="100%%" cellpadding="0" cellspacing="0" style="background:#0d0d0d;padding:40px 0;">
+                <tr><td align="center">
+                  <table width="560" cellpadding="0" cellspacing="0" style="background:#1a1a1a;border-radius:16px;border:1px solid #2a2a2a;overflow:hidden;">
+                    <tr>
+                      <td style="background:#131313;padding:24px 32px;border-bottom:1px solid #2a2a2a;">
+                        <span style="font-size:20px;font-weight:700;color:#fff;letter-spacing:-0.5px;">⚡ Fitnit</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:32px;">
+                        <h2 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#fff;">Gói của bạn sắp hết hạn</h2>
+                        <p style="margin:0 0 20px;color:#a0a0a0;line-height:1.6;">
+                          Xin chào <strong style="color:#fff;">%s</strong>,<br/>
+                          Gói <strong style="color:#ccff00;">%s</strong> của bạn sẽ hết hạn sau
+                          <strong style="color:#fff;">%d ngày</strong>. Gia hạn ngay để không gián đoạn
+                          quyền dùng AI (kế hoạch ăn, tập, phân tích tư thế).
+                        </p>
+                        <table cellpadding="0" cellspacing="0" style="margin:28px 0;">
+                          <tr>
+                            <td style="background:#ccff00;border-radius:12px;">
+                              <a href="%s" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#0d0d0d;text-decoration:none;letter-spacing:0.3px;">
+                                Gia hạn ngay →
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                        <p style="margin:24px 0 0;color:#555;font-size:12px;border-top:1px solid #2a2a2a;padding-top:16px;">
+                          Sau khi hết hạn, tài khoản sẽ tự động chuyển về gói FREE.
+                        </p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="background:#131313;padding:16px 32px;border-top:1px solid #2a2a2a;">
+                        <p style="margin:0;color:#444;font-size:12px;">© 2026 Fitnit Challenge. Tất cả quyền được bảo lưu.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+            """.formatted(name, packageName, daysLeft, upgradeLink);
+    }
+
     private String buildResetEmailHtml(String userName, String resetLink) {
         String name = (userName != null && !userName.isBlank()) ? userName : "bạn";
         return """

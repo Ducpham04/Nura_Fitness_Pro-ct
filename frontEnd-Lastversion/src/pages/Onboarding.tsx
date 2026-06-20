@@ -5,7 +5,6 @@ import Logo from '../components/Logo';
 import {
   ArrowRight,
   ArrowLeft,
-  Zap,
   Target,
   Activity,
   Heart,

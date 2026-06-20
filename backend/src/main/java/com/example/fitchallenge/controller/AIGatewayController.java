@@ -87,11 +87,12 @@ public class AIGatewayController {
             @Parameter(description = "Hybrid meal generation request") @RequestBody Map<String, Object> request,
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId) {
         userId = authUser.resolve(userId);
-        aiUsageService.ensureAndConsume(userId, AiCreditCost.PLAN_GENERATE);
+        aiUsageService.ensureQuota(userId, AiCreditCost.PLAN_GENERATE);
         try {
             int days = ((Number) request.getOrDefault("days", 7)).intValue();
             int budget = ((Number) request.getOrDefault("budget", 80000)).intValue();
             var plan = smartMealPlanService.generateHybridPlan(userId, days, budget);
+            aiUsageService.consume(userId, AiCreditCost.PLAN_GENERATE);
             var safety = smartMealPlanService.safetyAdviceFor(userId);
             var body = new java.util.LinkedHashMap<String, Object>();
             body.put("planId", plan.getPnpId());

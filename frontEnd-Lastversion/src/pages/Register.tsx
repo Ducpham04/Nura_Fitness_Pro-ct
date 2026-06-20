@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { FormEvent } from 'react';
-import { Zap, Mail, Lock, Check, ArrowRight, Eye, EyeOff, AlertCircle, User } from 'lucide-react';
+import { Mail, Lock, Check, ArrowRight, Eye, EyeOff, AlertCircle, User } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { trackEvent } from '../analytics';
 import { useTranslation } from 'react-i18next';

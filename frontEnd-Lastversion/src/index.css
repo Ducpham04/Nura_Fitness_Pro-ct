@@ -529,18 +529,10 @@
 .orb-2 { animation: floatOrb 24s ease-in-out infinite reverse; }
 .orb-3 { animation: floatOrb 30s ease-in-out infinite; }
 
-/* Aurora gradient nền dịch chuyển nhẹ */
-@keyframes auroraShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-.aurora-bg {
-  background: linear-gradient(120deg,
-    rgba(204,255,0,0.06), rgba(59,130,246,0.05),
-    rgba(251,146,60,0.04), rgba(204,255,0,0.06));
-  background-size: 300% 300%;
-  animation: auroraShift 20s ease infinite;
+.hero-field {
+  background:
+    radial-gradient(ellipse 78% 52% at 50% 28%, rgba(204, 255, 0, 0.09), transparent 62%),
+    linear-gradient(180deg, rgba(18, 20, 18, 0.92), rgba(10, 10, 12, 0.98) 72%);
 }
 
 /* Lưới nền mờ (depth) */
@@ -560,17 +552,8 @@
 }
 .glow-pulse { animation: glowPulse 2.4s ease-in-out infinite; }
 
-/* Headline gradient chạy nhẹ */
-@keyframes textShine {
-  to { background-position: 200% center; }
-}
 .text-shine {
-  background: linear-gradient(90deg, #fff 20%, #CCFF00 40%, #fff 60%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: textShine 5s linear infinite;
+  color: #f4f6f1;
 }
 
 /* SCROLL REVEAL — phần tử ẩn rồi hiện khi vào viewport */

@@ -20,8 +20,11 @@ public class UserDTO {
     private ZonedDateTime updatedAt;
     private ZonedDateTime lastLoginAt;
     private String status;
-    
 
-    
-
+    // Gói AI hiện tại — để admin xem & quản lý ngay trên danh sách user
+    private String aiPackageCode;             // FREE | PLUS | PRO ...
+    private String aiPackageName;
+    private Integer aiQuota;                  // -1 = không giới hạn
+    private Integer aiUsed;
+    private ZonedDateTime aiPackageExpiresAt; // null = miễn phí/không hết hạn
 }

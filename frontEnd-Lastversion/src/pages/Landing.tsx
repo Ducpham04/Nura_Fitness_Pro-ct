@@ -11,7 +11,6 @@ import {
   Utensils,
   X,
   Zap,
-  Dumbbell,
   Flame,
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
@@ -85,42 +84,6 @@ export default function Landing() {
     { label: t('landing.features'), href: '#features' },
     { label: t('landing.intel'), href: '#intel' },
     { label: t('landing.pricing'), href: '#pricing' },
-  ];
-
-  const features = [
-    {
-      title: t('landing.formTrackingTitle'),
-      description: t('landing.formTrackingDesc'),
-      icon: Camera,
-      metric: '94%',
-      metricLabel: t('landing.accuracy'),
-      accent: 'text-lime',
-      border: 'border-lime/20',
-      bg: 'bg-lime/[0.05]',
-      iconBg: 'bg-lime/10',
-    },
-    {
-      title: t('landing.smartFuelingTitle'),
-      description: t('landing.smartFuelingDesc'),
-      icon: Utensils,
-      metric: '80k',
-      metricLabel: t('landing.dailyBudget'),
-      accent: 'text-blue-400',
-      border: 'border-blue-400/20',
-      bg: 'bg-blue-400/[0.05]',
-      iconBg: 'bg-blue-400/10',
-    },
-    {
-      title: t('landing.challengeRewardsTitle'),
-      description: t('landing.challengeRewardsDesc'),
-      icon: Trophy,
-      metric: '+320',
-      metricLabel: t('landing.progressSignal'),
-      accent: 'text-orange-400',
-      border: 'border-orange-400/20',
-      bg: 'bg-orange-400/[0.05]',
-      iconBg: 'bg-orange-400/10',
-    },
   ];
 
   const intelSteps = [
@@ -220,98 +183,93 @@ export default function Landing() {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pt-28 pb-20 md:px-10">
-        {/* Nền động: aurora + orbs trôi + lưới depth */}
-        <div className="pointer-events-none absolute inset-0 aurora-bg" />
+      <section className="relative flex min-h-[100dvh] items-center overflow-hidden px-6 pt-24 pb-16 md:px-10 lg:pt-28">
+        {/* Nền kỹ thuật tĩnh, giữ cảm giác sport-tech mà không lấn át nội dung */}
+        <div className="pointer-events-none absolute inset-0 hero-field" />
         <div className="pointer-events-none absolute inset-0 grid-overlay" />
-        <div className="orb orb-1 top-[-8%] left-[12%] h-[420px] w-[420px] bg-lime/[0.10]" />
-        <div className="orb orb-2 top-[20%] right-[8%] h-[360px] w-[360px] bg-blue-500/[0.10]" />
-        <div className="orb orb-3 bottom-[-10%] left-[35%] h-[480px] w-[480px] bg-orange-500/[0.06]" />
 
-        <div className="relative z-10 mx-auto w-full max-w-5xl text-center">
-          <div className="reveal mb-7 inline-flex items-center gap-2.5 rounded-full border border-lime/30 bg-lime/[0.07] px-4 py-2 glow-pulse">
-            <span className="h-1.5 w-1.5 rounded-full bg-lime" />
-            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-lime">{t('landing.eyebrow')}</span>
+        <div className="relative z-10 mx-auto grid w-full max-w-7xl items-center gap-10 lg:grid-cols-[0.86fr_1.14fr]">
+          <div className="max-w-xl text-left">
+            <div className="reveal mb-6 inline-flex items-center gap-2.5 rounded-full border border-lime/30 bg-lime/[0.07] px-4 py-2 glow-pulse">
+              <span className="h-1.5 w-1.5 rounded-full bg-lime" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-lime">{t('landing.eyebrow')}</span>
+            </div>
+
+            <h1 className="reveal font-grotesk text-5xl font-bold leading-[0.96] tracking-tight text-[#f4f6f1] sm:text-6xl lg:text-7xl">
+              {t('landing.heroTitle')}
+            </h1>
+
+            <p className="reveal mt-7 max-w-lg text-base leading-relaxed text-neutral-300 md:text-lg">
+              {t('landing.heroCopy')}
+            </p>
+
+            <div className="reveal mt-9 flex flex-col gap-3 sm:flex-row">
+              <button onClick={onEnter} className="btn-lime group inline-flex items-center justify-center gap-3 px-8 py-3.5 text-sm font-bold uppercase tracking-[0.14em] active:scale-[0.98]">
+                {t('landing.primaryCta')}
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/10 transition-transform duration-300 group-hover:translate-x-1">
+                  <ArrowRight className="h-4 w-4" />
+                </span>
+              </button>
+              <a href="#features" className="inline-flex items-center justify-center px-6 py-3.5 text-sm font-bold uppercase tracking-[0.14em] text-neutral-400 transition-colors hover:text-white">
+                {t('landing.secondaryCta')}
+              </a>
+            </div>
+
+            <div className="reveal mt-10 hidden max-w-lg grid-cols-3 gap-px overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.06] sm:grid">
+              {[
+                ['94%', 'điểm tư thế'],
+                ['80k', 'ngân sách'],
+                ['25', 'credit miễn phí'],
+              ].map(([value, label]) => (
+                <div key={label} className="bg-[#0e1012] px-4 py-4">
+                  <div className="font-grotesk text-2xl font-bold text-lime">{value}</div>
+                  <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-neutral-400">{label}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <h1 className="reveal font-grotesk text-5xl font-bold leading-[0.9] tracking-tight text-white sm:text-7xl md:text-8xl lg:text-[96px]">
-            <span className="text-shine">{t('landing.heroTitle')}</span>
-          </h1>
+          <div className="reveal relative lg:pl-4">
+            <div className="rounded-[2rem] border border-white/[0.08] bg-white/[0.04] p-2 shadow-[0_40px_90px_rgba(0,0,0,0.35)]">
+              <div className="relative min-h-[520px] overflow-hidden rounded-[1.55rem] bg-[#090a0b] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] max-md:min-h-[430px]">
+                <img
+                  src="/images/viway-hero-training.jpg"
+                  alt="Người dùng tập luyện tại nhà cùng gợi ý AI"
+                  className="absolute inset-0 h-full w-full object-cover object-center opacity-[0.88]"
+                  loading="eager"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#08090a]/88 via-[#08090a]/35 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#08090a]/92 via-transparent to-transparent" />
 
-          <p className="reveal mx-auto mt-8 max-w-xl text-base leading-relaxed text-neutral-400 md:text-lg">
-            {t('landing.heroCopy')}
-          </p>
+                <div className="absolute left-4 top-4 rounded-2xl border border-white/[0.10] bg-[#0b0d10]/88 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400">giao thức hôm nay</div>
+                  <div className="mt-1 flex items-end gap-2">
+                    <span className="font-grotesk text-3xl font-bold leading-none text-lime">12</span>
+                    <span className="pb-1 text-xs font-semibold text-neutral-300">phút core + push</span>
+                  </div>
+                </div>
 
-          <div className="reveal mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <button onClick={onEnter} className="btn-lime flex items-center gap-2.5 px-9 py-4 text-sm font-bold uppercase tracking-[0.15em]">
-              {t('landing.primaryCta')}
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            <a href="#features" className="flex items-center gap-2 px-9 py-4 text-sm font-bold uppercase tracking-[0.15em] text-neutral-500 hover:text-white transition-colors">
-              {t('landing.secondaryCta')}
-            </a>
-          </div>
+                <div className="absolute bottom-4 left-4 right-4 grid gap-2 md:grid-cols-3">
+                  {[
+                    { label: 'Tư thế', value: 'ổn định', tone: 'text-lime' },
+                    { label: 'Bữa tối', value: '32k', tone: 'text-orange-300' },
+                    { label: 'Cường độ', value: 'RPE 7', tone: 'text-blue-200' },
+                  ].map(item => (
+                    <div key={item.label} className="rounded-2xl border border-white/[0.08] bg-[#0d0f12]/88 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-md">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-500">{item.label}</div>
+                      <div className={`mt-1 font-grotesk text-xl font-bold ${item.tone}`}>{item.value}</div>
+                    </div>
+                  ))}
+                </div>
 
-          {/* Stats */}
-          <div className="reveal mx-auto mt-20 grid max-w-lg grid-cols-3 gap-px overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.06]">
-            {[
-              ['AI', t('landing.activeOps')],
-              ['Việt', t('landing.accuracy')],
-              ['Beta', t('landing.rating')],
-            ].map(([value, label]) => (
-              <div key={String(label)} className="bg-[#0c0d11] px-4 py-5 text-center">
-                <div className="font-grotesk text-2xl font-bold text-lime md:text-3xl">{value}</div>
-                <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-neutral-600">{label}</div>
+                <div className="absolute right-4 top-4 hidden w-48 rounded-2xl border border-lime/20 bg-lime/[0.08] px-4 py-3 backdrop-blur-md md:block">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-lime">gợi ý AI</span>
+                    <Camera className="h-4 w-4 text-lime" />
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-lime/80">Giữ cổ tay thẳng, vai khóa nhẹ.</p>
+                </div>
               </div>
-            ))}
-          </div>
-
-          {/* App preview mockup */}
-          <div className="reveal float-y mx-auto mt-16 max-w-3xl overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111318] p-4 text-left shadow-2xl shadow-lime/[0.03]">
-            <div className="mb-3 flex items-center gap-1.5 px-1">
-              {['bg-red-500/60', 'bg-yellow-500/60', 'bg-lime/60'].map(c => (
-                <span key={c} className={`h-2.5 w-2.5 rounded-full ${c}`} />
-              ))}
-            </div>
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {[
-                { label: 'Hoàn thành', value: '12/48', color: 'text-lime' },
-                { label: 'Kcal hôm nay', value: '340', color: 'text-orange-400' },
-                { label: 'Tuần', value: '2/8', color: 'text-blue-400' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="rounded-xl border border-white/[0.06] bg-white/[0.05] px-3 py-2.5">
-                  <div className="text-[10px] text-neutral-600 uppercase tracking-wider">{label}</div>
-                  <div className={`font-grotesk text-lg font-bold mt-0.5 ${color}`}>{value}</div>
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-1 mb-3">
-              {['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7'].map((d, i) => (
-                <div
-                  key={d}
-                  className={`rounded-lg py-2 text-center text-[10px] font-bold ${i === 1 ? 'bg-lime/15 text-lime border border-lime/30' : i < 1 ? 'bg-white/[0.07] text-neutral-500' : 'border border-transparent text-neutral-700'}`}
-                >
-                  {d}
-                </div>
-              ))}
-            </div>
-            <div className="space-y-1.5">
-              {[
-                { name: 'Push Up', muscle: 'Chest', sets: '3×10', done: true },
-                { name: 'Plank', muscle: 'Core', sets: '3×45s', done: true },
-                { name: 'Squat', muscle: 'Legs', sets: '4×12', done: false },
-              ].map(ex => (
-                <div key={ex.name} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${ex.done ? 'bg-white/[0.05]' : 'bg-lime/[0.06] border border-lime/10'}`}>
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${ex.done ? 'bg-lime/15 text-lime' : 'bg-white/[0.06] text-neutral-400'}`}>
-                    {ex.done ? <Check className="w-3 h-3" /> : <Dumbbell className="w-3 h-3" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className={`text-xs font-semibold ${ex.done ? 'text-neutral-500 line-through' : 'text-white'}`}>{ex.name}</span>
-                    <span className="text-neutral-600 text-[10px] ml-2">{ex.muscle}</span>
-                  </div>
-                  <span className="text-[10px] text-neutral-600 font-mono">{ex.sets}</span>
-                </div>
-              ))}
             </div>
           </div>
         </div>
@@ -352,11 +310,9 @@ export default function Landing() {
             <div className="relative z-10 flex-1 rounded-xl bg-[#060809] border border-white/[0.07] overflow-hidden" style={{minHeight: '280px'}}>
 
               {/* Corner bracket frames */}
-              <div className="absolute inset-5 pointer-events-none">
-                <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-lime/50 rounded-tl" />
-                <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-lime/50 rounded-tr" />
-                <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-lime/50 rounded-bl" />
-                <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-lime/50 rounded-br" />
+              <div className="absolute inset-5 pointer-events-none rounded-lg border border-lime/20">
+                <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-lime/[0.08]" />
+                <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-lime/[0.08]" />
               </div>
 
               {/* Skeleton pose SVG */}
@@ -434,8 +390,8 @@ export default function Landing() {
             <div className="space-y-1.5 mb-4">
               {[
                 { label: 'Protein', pct: 72, color: 'bg-blue-400' },
-                { label: 'Carbs', pct: 55, color: 'bg-cyan-400' },
-                { label: 'Fat', pct: 38, color: 'bg-indigo-400' },
+                { label: 'Carbs', pct: 55, color: 'bg-emerald-400' },
+                { label: 'Fat', pct: 38, color: 'bg-orange-300' },
               ].map(({ label, pct, color }) => (
                 <div key={label} className="flex items-center gap-2">
                   <span className="text-[11px] text-neutral-600 uppercase tracking-wide w-10 shrink-0">{label}</span>

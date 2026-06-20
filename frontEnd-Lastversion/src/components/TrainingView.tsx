@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback, useRef, memo, type ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import {
   Play,
   X,
   Check,
-  AlertTriangle,
-  Camera,
   Volume2,
   VolumeX,
   Loader2,
@@ -30,7 +28,6 @@ import {
 } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { trainingService, type DailyTrainingLog, type PersonalizedWorkoutExercise, type AlternativeExercise } from '../services/trainingService';
-import { aiService } from '../services/aiService';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import CyberpunkWorkoutModal from './CyberpunkWorkoutModal';
@@ -350,31 +347,6 @@ interface SessionData {
   avgRepTime: number;
 }
 
-interface PoseCorrection {
-  issue?: string;
-  cue?: string;
-  severity?: string;
-}
-
-interface PoseAnalysisResult {
-  exercise_type?: string;
-  overall_score?: number;
-  score?: number;
-  risk_level?: string;
-  confidence?: number;
-  phase?: string;
-  key_findings?: string[];
-  corrections?: Array<PoseCorrection | string>;
-  notes?: string;
-}
-
-const poseRiskTone = (risk?: string) => {
-  const value = (risk || '').toLowerCase();
-  if (value === 'high') return 'text-red-300 border-red-400/30 bg-red-400/10';
-  if (value === 'medium') return 'text-yellow-300 border-yellow-400/30 bg-yellow-400/10';
-  return 'text-lime border-lime/25 bg-lime/10';
-};
-
 function TrainingView() {
   const { user } = useAuthContext();
   const { i18n } = useTranslation();
@@ -403,9 +375,6 @@ function TrainingView() {
   const [activePlan, setActivePlan] = useState<any>(null);
   const [generatingNextWeek, setGeneratingNextWeek] = useState(false);
   const [adaptingNextWeek, setAdaptingNextWeek] = useState(false);
-  const [poseChecking, setPoseChecking] = useState(false);
-  const [poseResult, setPoseResult] = useState<PoseAnalysisResult | null>(null);
-  const [poseError, setPoseError] = useState<string | null>(null);
   // Check-in sau buổi tập: độ mệt mỏi (1-5), độ khó RPE (1-10), giấc ngủ (giờ)
   const [showCheckIn, setShowCheckIn] = useState(false);
   const [savingCheckIn, setSavingCheckIn] = useState(false);
@@ -628,8 +597,6 @@ function TrainingView() {
     setIsResting(false);
     setRestCountdown(0);
     setCurrentRepInput(ex.targetReps || 0);
-    setPoseResult(null);
-    setPoseError(null);
   };
 
   /**
@@ -731,28 +698,6 @@ function TrainingView() {
     if (ok) setShowCheckIn(false);
   };
 
-  const analyzePoseSnapshot = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file || !user || !activeExercise || poseChecking) return;
-
-    setPoseChecking(true);
-    setPoseError(null);
-    try {
-      const exerciseType = activeExercise.exerciseType || activeExercise.name;
-      const response = await aiService.analyzePose(user.id, file, exerciseType);
-      const body = response.data as any;
-      if (!response.success || body?.success === false) {
-        throw new Error(body?.message || response.error?.message || 'Không thể phân tích form');
-      }
-      setPoseResult((body?.data ?? body) as PoseAnalysisResult);
-    } catch (error) {
-      setPoseError(error instanceof Error ? error.message : 'Không thể phân tích form');
-    } finally {
-      setPoseChecking(false);
-    }
-  };
-
   /**
    * Làm lại bài đã hoàn thành — reset done state và mở lại session.
    */
@@ -837,9 +782,6 @@ function TrainingView() {
     const exerciseName = i18n.language === 'vi' ? (activeExercise as any).nameVi || activeExercise.name : activeExercise.name;
     const parsed       = parseNotes(activeExercise.notes);
     const movement     = translateMovement(activeExercise.exerciseType);
-    const poseScore    = Math.round(Number(poseResult?.overall_score ?? poseResult?.score ?? 0));
-    const poseRisk     = poseResult?.risk_level || 'low';
-    const poseCorrections = (poseResult?.corrections || []).slice(0, 3);
 
     return (
       <div className="fixed inset-0 z-50 bg-[#080a0e] flex flex-col overflow-hidden animate-fade-in">
@@ -927,81 +869,6 @@ function TrainingView() {
             </div>
           )}
 
-          {/* AI FORM CHECK — snapshot-based vision analysis (order-last: ít dùng mỗi set) */}
-          <div className="order-last rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
-                  <Shield className="w-3 h-3 text-lime" /> AI form check
-                </p>
-                <p className="text-neutral-500 text-xs mt-1">Chấm nhanh từ ảnh snapshot của bài đang tập.</p>
-              </div>
-              <input
-                id={`pose-upload-${activeExercise.id}`}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={analyzePoseSnapshot}
-                disabled={poseChecking}
-              />
-              <label
-                htmlFor={`pose-upload-${activeExercise.id}`}
-                className={`h-9 px-3 rounded-xl border text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 ${
-                  poseChecking
-                    ? 'border-white/[0.08] bg-white/[0.04] text-neutral-600 pointer-events-none'
-                    : 'border-lime/25 bg-lime/10 text-lime hover:bg-lime/15 cursor-pointer'
-                }`}
-              >
-                {poseChecking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
-                Kiểm tra
-              </label>
-            </div>
-
-            {poseError && (
-              <div className="mt-3 rounded-xl border border-red-400/20 bg-red-400/10 px-3 py-2 text-xs text-red-200">
-                {poseError}
-              </div>
-            )}
-
-            {poseResult && (
-              <div className="mt-3 space-y-3">
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-xl bg-black/20 p-2 text-center">
-                    <div className="text-lg font-grotesk font-bold text-white">{poseScore}</div>
-                    <div className="text-[11px] uppercase tracking-wider text-neutral-600">Score</div>
-                  </div>
-                  <div className={`rounded-xl border p-2 text-center ${poseRiskTone(poseRisk)}`}>
-                    <div className="text-xs font-bold uppercase">{poseRisk}</div>
-                    <div className="text-[11px] uppercase tracking-wider opacity-70">Risk</div>
-                  </div>
-                  <div className="rounded-xl bg-black/20 p-2 text-center">
-                    <div className="text-xs font-bold text-white">{Math.round(Number(poseResult.confidence ?? 0) * 100)}%</div>
-                    <div className="text-[11px] uppercase tracking-wider text-neutral-600">Tin cậy</div>
-                  </div>
-                </div>
-
-                {!!poseCorrections.length && (
-                  <div className="space-y-1.5">
-                    {poseCorrections.map((item, idx) => {
-                      const correction = typeof item === 'string' ? { issue: item } : item;
-                      return (
-                        <div key={`${correction.issue}-${idx}`} className="rounded-xl border border-white/[0.06] bg-black/10 px-3 py-2">
-                          <div className="flex items-start gap-2">
-                            <AlertTriangle className="w-3.5 h-3.5 text-yellow-300 mt-0.5 shrink-0" />
-                            <div className="min-w-0">
-                              <p className="text-xs text-white">{correction.issue || 'Cần chỉnh kỹ thuật'}</p>
-                              {correction.cue && <p className="text-[11px] text-neutral-500 mt-0.5">{correction.cue}</p>}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
 
           {/* SET PROGRESS (order-1: thao tác chính lên đầu) */}
           <div className="order-1 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
@@ -1155,7 +1022,7 @@ function TrainingView() {
               <span className="text-neutral-500 text-xs">Dụng cụ</span>
               <span className="text-white text-xs font-medium inline-flex items-center gap-1.5">
                 {activeExercise.equipment.toUpperCase() === 'BODYWEIGHT'
-                  ? <><Activity className="w-3.5 h-3.5" /> Tự trọng</>
+                  ? <><Activity className="w-3.5 h-3.5" /> Trọng lượng cơ thể</>
                   : <><Dumbbell className="w-3.5 h-3.5" /> {formatEnumLabel(activeExercise.equipment)}</>}
               </span>
             </div>
@@ -1401,7 +1268,7 @@ function TrainingView() {
                 {Array.from({ length: 10 }, (_, i) => i + 1).map(val => (
                   <button key={val} type="button" onClick={() => setCheckIn(c => ({ ...c, rpe: val }))}
                     className={`py-2 rounded-lg border text-xs font-bold transition-all ${
-                      checkIn.rpe === val ? 'bg-blue-500/20 border-blue-400/50 text-blue-300' : 'bg-white/[0.04] border-white/10 text-neutral-500 hover:text-white'
+                      checkIn.rpe === val ? 'bg-blue-500/20 border-blue-400/50 text-blue-100' : 'bg-white/[0.04] border-white/10 text-neutral-500 hover:text-white'
                     }`}>
                     {val}
                   </button>
@@ -1919,7 +1786,7 @@ function TrainingView() {
                             <Dumbbell className="w-3 h-3" /> Dụng cụ
                           </span>
                           <span className="text-white font-medium inline-flex items-center gap-1.5">
-                            {ex.equipment.toUpperCase() === 'BODYWEIGHT' ? <><Activity className="w-3 h-3" /> Tự trọng (không cần dụng cụ)</> : <><Dumbbell className="w-3 h-3" /> {formatEnumLabel(ex.equipment)}</>}
+                            {ex.equipment.toUpperCase() === 'BODYWEIGHT' ? <><Activity className="w-3 h-3" /> Trọng lượng cơ thể (không cần dụng cụ)</> : <><Dumbbell className="w-3 h-3" /> {formatEnumLabel(ex.equipment)}</>}
                           </span>
                         </div>
                       )}

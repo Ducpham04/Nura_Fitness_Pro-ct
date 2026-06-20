@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Zap, Mail, Lock, ArrowRight, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuthContext } from '../context/AuthContext';
 import { useNavigate, useLocation, Link } from 'react-router-dom';

@@ -30,8 +30,8 @@ const programOptions = [
 const durationOptions = ['30', '45', '60'];
 
 const equipmentPresets = [
-  { label: 'Tự trọng', value: 'bodyweight',                          emoji: '🤸', hint: 'Không cần thiết bị' },
-  { label: 'Tạ đơn',  value: 'dumbbell, bodyweight',                 emoji: '🏋️', hint: 'Tạ đơn + tự trọng' },
+  { label: 'Trọng lượng cơ thể', value: 'bodyweight',                emoji: '🤸', hint: 'Không cần thiết bị' },
+  { label: 'Tạ đơn',  value: 'dumbbell, bodyweight',                 emoji: '🏋️', hint: 'Tạ đơn + trọng lượng cơ thể' },
   { label: 'Phòng Gym', value: 'full gym',                           emoji: '🏟️', hint: 'Máy + tạ đòn + tạ đơn' },
   { label: 'Tạ đòn',  value: 'barbell, dumbbell',                    emoji: '⚡', hint: 'Compound nặng' },
   { label: 'Dây kháng lực', value: 'resistance band, bodyweight',    emoji: '🟡', hint: 'Tập tại nhà' },

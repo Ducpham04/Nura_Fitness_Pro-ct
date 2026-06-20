@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Zap, Lock, Eye, EyeOff, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../services/apiClient';
 import Logo from '../components/Logo';
