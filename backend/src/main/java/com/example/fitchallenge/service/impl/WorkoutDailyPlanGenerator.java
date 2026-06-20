@@ -265,16 +265,21 @@ public class WorkoutDailyPlanGenerator {
 
     private String toMetSessionType(String sessionType) {
         if ("lower".equals(sessionType)) return "lower_body";
-        if ("cardio_core".equals(sessionType)) return "cardio";
-        if ("upper_push".equals(sessionType) || "upper_pull".equals(sessionType)) return "upper_body";
+        if ("cardio_core".equals(sessionType) || "core".equals(sessionType)) return "cardio";
+        if ("upper_push".equals(sessionType) || "upper_pull".equals(sessionType)
+                || "upper".equals(sessionType) || "push".equals(sessionType) || "pull".equals(sessionType)) {
+            return "upper_body";
+        }
         return sessionType;
     }
 
     private List<String> muscleGroups(String sessionType) {
         return switch (sessionType) {
-            case "upper_push" -> List.of("chest", "shoulders", "triceps");
-            case "upper_pull" -> List.of("back", "biceps");
+            case "upper_push", "push" -> List.of("chest", "shoulders", "triceps");
+            case "upper_pull", "pull" -> List.of("back", "biceps");
+            case "upper" -> List.of("chest", "back", "shoulders", "arms");
             case "lower" -> List.of("quads", "hamstrings", "glutes");
+            case "core" -> List.of("core", "abs");
             case "full_body" -> List.of("push", "pull", "legs", "core");
             case "cardio_core" -> List.of("cardio", "core");
             default -> List.of();
@@ -326,7 +331,7 @@ public class WorkoutDailyPlanGenerator {
     private List<String> warmup(String sessionType) {
         return switch (sessionType) {
             case "lower" -> List.of("Hip circles", "Leg swings", "Bodyweight squat");
-            case "upper_push", "upper_pull" -> List.of("Shoulder circles", "Arm swings", "Chest opener");
+            case "upper_push", "upper_pull", "upper", "push", "pull" -> List.of("Shoulder circles", "Arm swings", "Chest opener");
             default -> List.of("Shoulder circles", "Hip circles", "Bodyweight squat");
         };
     }
@@ -334,7 +339,7 @@ public class WorkoutDailyPlanGenerator {
     private List<String> cooldown(String sessionType) {
         return switch (sessionType) {
             case "lower" -> List.of("Standing quad stretch 20-30s", "Hamstring stretch 20-30s", "Figure-four glute stretch 20-30s");
-            case "upper_push", "upper_pull" -> List.of("Doorway chest stretch 20-30s", "Lat stretch 20-30s", "Cross-body shoulder stretch 20-30s");
+            case "upper_push", "upper_pull", "upper", "push", "pull" -> List.of("Doorway chest stretch 20-30s", "Lat stretch 20-30s", "Cross-body shoulder stretch 20-30s");
             default -> List.of("Chest stretch 20-30s", "Hip flexor stretch 20-30s", "Hamstring stretch 20-30s");
         };
     }

@@ -845,10 +845,17 @@ public class AIGatewayServiceImpl implements AIGatewayService {
         Map<Long, Exercise> allowedById = safeExercises.stream()
                 .collect(Collectors.toMap(Exercise::getId, exercise -> exercise, (a, b) -> a));
 
+        // Từ vựng session type phải khớp PersonalizationResolver + ai-service workout_planner.
+        // Ngoài upper_push/upper_pull (PPL) còn có upper (thân trên gộp), push, pull, core
+        // dùng trong split upper_lower / push_pull_legs / *_focus.
         Map<String, Integer> requiredPoolSizes = Map.of(
                 "upper_push", 3,
                 "upper_pull", 3,
+                "upper", 3,
+                "push", 3,
+                "pull", 3,
                 "lower", 3,
+                "core", 2,
                 "full_body", 4,
                 "cardio_core", 2
         );
