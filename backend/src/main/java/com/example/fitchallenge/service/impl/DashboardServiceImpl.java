@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 public class DashboardServiceImpl implements DashboardService {
 
     private final UserRepository userRepository;
+    private final com.example.fitchallenge.repository.AiTokenLogRepository aiTokenLogRepository;
     private final UserChallengeRepository userChallengeRepository;
     private final ChallengeRepository challengeRepository;
     private final TrainingPlanRepository trainingPlanRepository;
@@ -708,6 +709,17 @@ public class DashboardServiceImpl implements DashboardService {
         userChallengeRepository.countNonPendingGroupByUser(pending)
                 .forEach(row -> totalByUser.merge((Long) row[0], (Long) row[1], Long::sum));
 
+        // ── Token THẬT đo từ Groq (bảng ai_token_log) ──────────────────────
+        long realTokensToday = aiTokenLogRepository.sumTotalSince(todayStartZdt);
+        long realTokensMonth = aiTokenLogRepository.sumTotalSince(monthStartZdt);
+        long realTokensAll   = aiTokenLogRepository.sumTotalAllTime();
+        Map<Long, Long> realByUserMonth = new java.util.HashMap<>();
+        aiTokenLogRepository.sumByUserSince(monthStartZdt)
+                .forEach(row -> realByUserMonth.put((Long) row[0], ((Number) row[1]).longValue()));
+        Map<Long, Long> realByUserAll = new java.util.HashMap<>();
+        aiTokenLogRepository.sumByUserAllTime()
+                .forEach(row -> realByUserAll.put((Long) row[0], ((Number) row[1]).longValue()));
+
         List<Long> topUserIds = totalByUser.entrySet().stream()
                 .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
                 .limit(10)
@@ -726,6 +738,8 @@ public class DashboardServiceImpl implements DashboardService {
                             .fullName(u.getFullName() != null ? u.getFullName() : u.getUserName())
                             .email(u.getEmail())
                             .totalCalls(totalByUser.get(uid))
+                            .realTokensThisMonth(realByUserMonth.getOrDefault(uid, 0L))
+                            .realTokensAllTime(realByUserAll.getOrDefault(uid, 0L))
                             .build();
                 })
                 .filter(java.util.Objects::nonNull)
@@ -778,6 +792,9 @@ public class DashboardServiceImpl implements DashboardService {
                 .totalCallsAllTime(totalAllTime)
                 .estimatedTokensToday(tokensToday)
                 .estimatedTokensThisMonth(tokensMonth)
+                .realTokensToday(realTokensToday)
+                .realTokensThisMonth(realTokensMonth)
+                .realTokensAllTime(realTokensAll)
                 .mealPlanCalls(mealAll)
                 .workoutPlanCalls(workoutAll)
                 .poseEvalCalls(poseAll)

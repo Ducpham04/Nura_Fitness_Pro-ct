@@ -77,7 +77,14 @@ class _Completions:
                 # (vision cần model đa phương thức, dish/planner cần model text — không đụng).
                 if model_override:
                     call_kwargs["model"] = model_override
-                return client.chat.completions.create(**call_kwargs)
+                resp = client.chat.completions.create(**call_kwargs)
+                # Đo token thật để backend thống kê theo user (best-effort, không chặn luồng).
+                try:
+                    from app.core.token_meter import record_usage
+                    record_usage(getattr(resp, "usage", None))
+                except Exception:  # noqa: BLE001
+                    pass
+                return resp
             except Exception as e:  # noqa: BLE001 — gom mọi lỗi để thử provider kế
                 last_err = e
                 continue

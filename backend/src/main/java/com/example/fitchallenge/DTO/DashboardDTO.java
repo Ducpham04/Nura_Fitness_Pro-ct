@@ -370,6 +370,10 @@ public class DashboardDTO {
         // Ước tính token (meal ~2000, workout ~2500, food ~500 token/lần)
         private long estimatedTokensToday;
         private long estimatedTokensThisMonth;
+        // Token THẬT đo từ Groq (bảng ai_token_log). 0 nếu chưa có dữ liệu.
+        private long realTokensToday;
+        private long realTokensThisMonth;
+        private long realTokensAllTime;
         // Phân loại theo loại AI call
         private long mealPlanCalls;
         private long workoutPlanCalls;
@@ -386,6 +390,9 @@ public class DashboardDTO {
         private String fullName;
         private String email;
         private long totalCalls;
+        // Token THẬT của user này (đo từ Groq). 0 nếu chưa có dữ liệu.
+        private long realTokensThisMonth;
+        private long realTokensAllTime;
     }
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor

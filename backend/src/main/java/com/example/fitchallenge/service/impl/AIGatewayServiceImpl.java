@@ -80,6 +80,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     private final WorkoutWeekGenerationService workoutWeekGenerationService;
     private final UserPreferenceService userPreferenceService;
     private final AiUsageService aiUsageService;
+    private final com.example.fitchallenge.service.AiTokenLogService aiTokenLogService;
     private final RestTemplate restTemplate; // injected bean có timeout (RestTemplateConfig)
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -137,7 +138,9 @@ public class AIGatewayServiceImpl implements AIGatewayService {
 
     @Override
     public NotificationResponse generateMealPlan(Map<String, Object> request, Long userId) {
-        aiUsageService.ensureAndConsume(userId, AiCreditCost.PLAN_GENERATE);
+        // Chỉ kiểm tra quota trước (fail-fast). Trừ credit SAU khi AI sinh plan thành công
+        // để tránh đốt credit oan khi AI service lỗi (vd 422). Xem luồng hybrid làm chuẩn.
+        aiUsageService.ensureQuota(userId, AiCreditCost.PLAN_GENERATE);
         log.info("[SmartMeal] Master-data meal flow for user {}", userId);
         try {
             UserBodyProfile profile = bodyProfileRepository.findByUser_Id(userId).orElse(null);
@@ -215,6 +218,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             log.info("[SmartMeal] POST {} payloadBytes≈{}", endpoint, mapper.writeValueAsString(aiPayload).length());
 
             ResponseEntity<Map> response = restTemplate.postForEntity(endpoint, aiPayload, Map.class);
+            aiTokenLogService.record(userId, "meal", response.getHeaders());
             Map<String, Object> body = response.getBody();
             if (body == null) {
                 return new NotificationResponse(false, "AI service returned empty body");
@@ -238,6 +242,8 @@ public class AIGatewayServiceImpl implements AIGatewayService {
                 clientEnvelope.put("medicalConditions", safety.getConditions());
             }
 
+            // AI sinh plan + lưu thành công → mới trừ credit
+            aiUsageService.consume(userId, AiCreditCost.PLAN_GENERATE);
             return new NotificationResponse(true, "Meal plan generated from master catalog", clientEnvelope);
         } catch (Exception e) {
             log.error("Smart meal plan failed", e);
@@ -394,7 +400,9 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     @Override
     @Transactional
     public NotificationResponse generateWorkoutPlan(Map<String, Object> request, Long userId) {
-        aiUsageService.ensureAndConsume(userId, AiCreditCost.PLAN_GENERATE);
+        // Chỉ kiểm tra quota trước (fail-fast). Trừ credit SAU khi AI sinh plan thành công
+        // để tránh đốt credit oan khi AI service lỗi (vd 422). Xem luồng hybrid làm chuẩn.
+        aiUsageService.ensureQuota(userId, AiCreditCost.PLAN_GENERATE);
         log.info("Generating intelligent workout plan for user: {}", userId);
         try {
             UserBodyProfile profile = bodyProfileRepository.findByUser_Id(userId).orElse(null);
@@ -545,6 +553,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             try {
                 String endpoint = aiServiceUrl + "/workout-plan";
                 ResponseEntity<Map> response = restTemplate.postForEntity(endpoint, aiRequest, Map.class);
+                aiTokenLogService.record(userId, "workout", response.getHeaders());
                 programTemplate = response.getBody();
             } catch (Exception ex) {
                 log.error("AI Workout Template Service error. Error: {}", ex.getMessage());
@@ -588,6 +597,8 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             }
 
             saveWorkoutPlan(userId, aiResponse, programTemplate, profile, totalWeeks, programId, totalProgramDays, rx.getDaysPerWeek());
+            // AI sinh plan + lưu thành công → mới trừ credit
+            aiUsageService.consume(userId, AiCreditCost.PLAN_GENERATE);
             return new NotificationResponse(true, "Workout plan generated successfully", aiResponse);
         } catch (Exception e) {
             log.error("Error generating workout plan", e);

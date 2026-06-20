@@ -13,9 +13,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -45,6 +50,7 @@ public class SmartMealPlanService {
     @Value("${ai.service.url:http://localhost:8001}")
     private String aiServiceUrl;
 
+    private final AiTokenLogService aiTokenLogService;
     private final UserRepository userRepository;
     private final UserBodyProfileRepository bodyProfileRepository;
     private final DishRepository dishRepository;
@@ -298,11 +304,25 @@ public class SmartMealPlanService {
                         LinkedHashMap::new
                 )));
 
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-                aiServiceUrl + "/smart-meal-plan-dish",
-                payload,
-                Map.class
-        );
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);
+
+        ResponseEntity<Map> response;
+        try {
+            response = restTemplate.postForEntity(
+                    aiServiceUrl + "/smart-meal-plan-dish",
+                    requestEntity,
+                    Map.class
+            );
+        } catch (ResourceAccessException e) {
+            throw new IllegalStateException(
+                    "AI service không khả dụng. Vui lòng thử lại sau ít phút.", e);
+        } catch (RestClientException e) {
+            throw new IllegalStateException(
+                    "Lỗi kết nối AI service: " + e.getMessage(), e);
+        }
+        aiTokenLogService.record(user.getId(), "meal_hybrid", response.getHeaders());
         if (response.getBody() == null) {
             throw new IllegalStateException("AI service returned empty body");
         }

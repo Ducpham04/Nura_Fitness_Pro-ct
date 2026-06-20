@@ -55,6 +55,40 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+from app.core.token_meter import start_meter, current_meter
+
+
+class TokenMeterMiddleware:
+    """ASGI middleware thuần: đo token LLM mỗi request, gắn vào response header.
+
+    Dùng ASGI thuần (không phải BaseHTTPMiddleware) để ContextVar set ở đây chắc chắn
+    được thấy bởi handler — kể cả endpoint sync chạy trong threadpool.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+        meter = start_meter()
+
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                m = current_meter() or meter
+                if m.total > 0:
+                    headers = message.setdefault("headers", [])
+                    headers.append((b"x-ai-prompt-tokens", str(m.prompt).encode()))
+                    headers.append((b"x-ai-completion-tokens", str(m.completion).encode()))
+                    headers.append((b"x-ai-total-tokens", str(m.total).encode()))
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
+
+
+app.add_middleware(TokenMeterMiddleware)
+
 # Enable CORS for frontend integration
 app.add_middleware(
     CORSMiddleware,
@@ -62,6 +96,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-AI-Prompt-Tokens", "X-AI-Completion-Tokens", "X-AI-Total-Tokens"],
 )
 
 # Initialize AI components
