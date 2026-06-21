@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.util.List;
 
@@ -81,6 +82,38 @@ public class User {
     /** Gói hết hạn lúc (null = Free / không hết hạn) */
     @Column(name = "ai_package_expires_at")
     private java.time.ZonedDateTime aiPackageExpiresAt;
+
+    // ── Swap tracking ────────────────────────────────────────────────────────
+    @Column(name = "exercise_swap_used")
+    private Integer exerciseSwapUsed = 0;
+
+    @Column(name = "meal_swap_used")
+    private Integer mealSwapUsed = 0;
+
+    /** Mốc reset swap counter (đầu chu kỳ tháng) */
+    @Column(name = "swap_reset_at")
+    private ZonedDateTime swapResetAt;
+
+    // ── Log tracking (reset hằng ngày) ──────────────────────────────────────
+    @Column(name = "training_log_today")
+    private Integer trainingLogToday = 0;
+
+    @Column(name = "nutrition_log_today")
+    private Integer nutritionLogToday = 0;
+
+    @Column(name = "log_reset_date")
+    private LocalDate logResetDate;
+
+    // ── Referral ─────────────────────────────────────────────────────────────
+    @Column(name = "referral_code", unique = true, length = 12)
+    private String referralCode;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "referred_by_id")
+    private User referredBy;
+
+    @Column(name = "referral_count")
+    private Integer referralCount = 0;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<UserBodyProfile> userBodyProfiles;

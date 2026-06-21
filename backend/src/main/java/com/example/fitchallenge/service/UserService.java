@@ -40,6 +40,10 @@ public interface UserService {
     void changePassword(Long userId, String currentPassword, String newPassword);
     void deactivateMyAccount(Long userId);
 
+    // ── Referral ──────────────────────────────────────────────────────────────
+    java.util.Map<String, Object> getMyReferralInfo(Long userId);
+    java.util.Map<String, Object> applyReferralCode(Long userId, String code);
+
     // ── Forgot / Reset password ───────────────────────────────────────────────
     /**
      * Tạo token và gửi email đặt lại mật khẩu.

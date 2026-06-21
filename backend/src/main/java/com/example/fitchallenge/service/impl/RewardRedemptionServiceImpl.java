@@ -9,6 +9,7 @@ import com.example.fitchallenge.config.NotificationResponse;
 import com.example.fitchallenge.repository.RewardRedemptionRepository;
 import com.example.fitchallenge.repository.RewardRepository;
 import com.example.fitchallenge.repository.User.UserRepository;
+import com.example.fitchallenge.service.AiUsageService;
 import com.example.fitchallenge.service.RewardRedemptionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ public class RewardRedemptionServiceImpl implements RewardRedemptionService {
     private final RewardRedemptionRepository rewardRedemptionRepository;
     private final UserRepository userRepository;
     private final RewardRepository rewardRepository;
+    private final AiUsageService aiUsageService;
 
     // Chuyển entity -> DTO
     private RewardRedemptionResponse toResponse(RewardRedemption redemption) {
@@ -72,6 +74,29 @@ public class RewardRedemptionServiceImpl implements RewardRedemptionService {
                     "Không đủ điểm. Cần " + cost + " điểm, bạn có " + userPoints);
         }
 
+        // ── Xử lý theo loại phần thưởng ─────────────────────────────────────
+        String rewardType = reward.getRewardType() != null ? reward.getRewardType() : "PHYSICAL";
+
+        if ("CREDIT".equalsIgnoreCase(rewardType)) {
+            // Cộng credit AI ngay lập tức, không cần tạo redemption chờ
+            int creditValue = reward.getCreditValue() != null ? reward.getCreditValue() : 0;
+            if (creditValue > 0) {
+                aiUsageService.adminAdjustCredit(user.getId(), null, null, creditValue);
+            }
+            RewardRedemption redemption = new RewardRedemption();
+            redemption.setUser(user);
+            redemption.setReward(reward);
+            redemption.setStatus(RewardRedemption.RedemptionStatus.FULFILLED);
+            redemption.setCreatedAt(ZonedDateTime.now());
+            redemption.setFulfilledAt(ZonedDateTime.now());
+            rewardRedemptionRepository.save(redemption);
+
+            RewardRedemptionResponse response = toResponse(redemption);
+            return new NotificationResponse(true,
+                    "Đổi thành công! Đã trừ " + cost + " điểm và cộng " + creditValue + " credit AI.", response);
+        }
+
+        // PHYSICAL — tạo redemption chờ admin giao
         RewardRedemption redemption = new RewardRedemption();
         redemption.setUser(user);
         redemption.setReward(reward);

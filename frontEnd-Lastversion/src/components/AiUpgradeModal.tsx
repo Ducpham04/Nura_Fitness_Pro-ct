@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Zap, Check, Loader2, Gift } from 'lucide-react';
+import { X, Zap, Check, Loader2, Gift, Clock } from 'lucide-react';
 import { AiPackage, AiUsageInfo, aiUsageService } from '../services/aiUsageService';
 import { trackEvent } from '../analytics';
 
@@ -241,22 +241,39 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
           )}
 
           {/* CTA */}
-          <button
-            type="button"
-            onClick={handleSubscribe}
-            disabled={!selectedId || loading || selectedPkg?.code === currentCode}
-            className="w-full py-3 rounded-xl bg-lime-500 hover:bg-lime-400 text-black font-bold text-sm
-                       disabled:opacity-50 disabled:cursor-default transition-all flex items-center justify-center gap-2"
-          >
-            {loading
-              ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang xử lý...</>
-              : selectedPkg?.priceVnd === 0
-                ? 'Kích hoạt gói miễn phí'
-                : `Thanh toán qua VNPay — ${formatPrice(discountedPrice(selectedPkg!))}`
-            }
-          </button>
+          {selectedPkg && selectedPkg.priceVnd > 0 ? (
+            /* Gói trả phí — chưa mở thanh toán, hiển thị "Sắp ra mắt" */
+            <div className="space-y-3">
+              <div className="w-full py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-400 text-sm font-bold
+                              flex items-center justify-center gap-2 cursor-default">
+                <Clock className="w-4 h-4" /> Thanh toán sắp ra mắt
+              </div>
+              <div className="rounded-xl bg-lime-500/10 border border-lime-500/25 p-3 text-xs text-lime-300 space-y-1.5">
+                <p className="font-bold text-lime-400">Giai đoạn beta — nhận gói cao hơn miễn phí!</p>
+                <p>Mời bạn bè qua link trong trang cá nhân:</p>
+                <ul className="space-y-0.5 text-lime-300/80">
+                  <li>• Mời đủ <strong className="text-white">5 người</strong> → lên <strong className="text-lime-400">PLUS</strong> (200 credit/tháng)</li>
+                  <li>• Mời đủ <strong className="text-white">20 người</strong> → lên <strong className="text-violet-400">PRO</strong> (không giới hạn)</li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            /* Gói FREE */
+            <button
+              type="button"
+              onClick={handleSubscribe}
+              disabled={!selectedId || loading || selectedPkg?.code === currentCode}
+              className="w-full py-3 rounded-xl bg-lime-500 hover:bg-lime-400 text-black font-bold text-sm
+                         disabled:opacity-50 disabled:cursor-default transition-all flex items-center justify-center gap-2"
+            >
+              {loading
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang xử lý...</>
+                : 'Kích hoạt gói miễn phí'
+              }
+            </button>
+          )}
           <p className="text-center text-xs text-zinc-500">
-            Thanh toán bảo mật qua VNPay · Tự động gia hạn hàng tháng
+            Giai đoạn thử nghiệm · Tính năng nâng cao sắp ra mắt
           </p>
         </div>
       </div>

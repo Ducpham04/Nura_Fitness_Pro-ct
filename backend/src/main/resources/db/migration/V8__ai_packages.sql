@@ -16,9 +16,9 @@ CREATE TABLE ai_packages (
 
 -- ── 2. Seed 3 gói cơ bản ──────────────────────────────────────────────────────
 INSERT INTO ai_packages (code, name, ai_quota, price_vnd, duration_days, sort_order) VALUES
-    ('FREE', 'Gói Miễn Phí',   25,  0,      30, 1),
-    ('PLUS', 'Gói Plus',       200, 49000,  30, 2),
-    ('PRO',  'Gói Pro',        -1,  99000,  30, 3);
+    ('FREE', 'Gói Miễn Phí',   20,  0,      30, 1),
+    ('PLUS', 'Gói Plus',       150, 49000,  30, 2),
+    ('PRO',  'Gói Pro',        500, 99000,  30, 3);
 
 -- ── 3. Bảng mã khuyến mãi ─────────────────────────────────────────────────────
 CREATE TABLE ai_promo_codes (

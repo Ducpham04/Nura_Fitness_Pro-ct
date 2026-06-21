@@ -61,6 +61,38 @@ public class UserAccountController {
         }
     }
 
+    /** Thông tin referral của user đang đăng nhập. */
+    @GetMapping("/referral")
+    public ResponseEntity<?> getMyReferralInfo(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body(new NotificationResponse(false, "Unauthorized"));
+        }
+        try {
+            return ResponseEntity.ok(userService.getMyReferralInfo(currentUserId(userDetails)));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new NotificationResponse(false, e.getMessage()));
+        }
+    }
+
+    /** Áp dụng mã giới thiệu sau khi đã đăng ký (onboarding step). */
+    @PostMapping("/referral/apply")
+    public ResponseEntity<?> applyReferralCode(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody java.util.Map<String, String> body) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body(new NotificationResponse(false, "Unauthorized"));
+        }
+        String code = body.get("referralCode");
+        if (code == null || code.isBlank()) {
+            return ResponseEntity.badRequest().body(new NotificationResponse(false, "Thiếu mã giới thiệu."));
+        }
+        try {
+            return ResponseEntity.ok(userService.applyReferralCode(currentUserId(userDetails), code));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(new NotificationResponse(false, e.getMessage()));
+        }
+    }
+
     /** Tự vô hiệu hoá tài khoản (xoá mềm — giữ dữ liệu). */
     @DeleteMapping
     public ResponseEntity<NotificationResponse> deactivate(

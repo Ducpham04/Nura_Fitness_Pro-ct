@@ -15,6 +15,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
+    Optional<User> findByReferralCode(String referralCode);
 
     /**
      * 🔒 Trừ điểm ở mức DB, chỉ khi đủ điểm (points >= cost).

@@ -19,9 +19,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -47,6 +49,8 @@ public class UserServiceImpl implements UserService {
 
     // Google login
     private final com.example.fitchallenge.Security.GoogleTokenVerifier googleTokenVerifier;
+
+    private final com.example.fitchallenge.repository.AiPackageRepository aiPackageRepository;
 
     // Supporting services for better separation of concerns
     private final UserChallengeRepository userChallengeRepository;
@@ -150,6 +154,7 @@ public class UserServiceImpl implements UserService {
         newUser.setStatus("active");
         newUser.setPoints(0);
         newUser.setLevelPoints(0);
+        newUser.setReferralCode(generateReferralCode());
 
         ZonedDateTime now = ZonedDateTime.now();
         newUser.setCreatedAt(now);
@@ -160,7 +165,6 @@ public class UserServiceImpl implements UserService {
         try {
             User savedUser = userRepository.save(newUser);
 
-            // Generate tokens ngay lập tức để User không cần login lại
             String token = jwtTokenProvider.generateToken(savedUser.getEmail(), savedUser.getRole().getRoleName());
             String refreshToken = jwtTokenProvider.generateRefreshToken(savedUser.getEmail());
 
@@ -176,6 +180,103 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             throw new RuntimeException("Lỗi lưu dữ liệu: " + e.getMessage());
         }
+    }
+
+    @Override
+    public Map<String, Object> getMyReferralInfo(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("User not found: " + userId));
+        int count = user.getReferralCount() == null ? 0 : user.getReferralCount();
+        String pkg = user.getAiPackage() != null ? user.getAiPackage().getCode() : "FREE";
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("referralCode", user.getReferralCode());
+        res.put("referralCount", count);
+        res.put("creditsEarned", count * 20);
+        res.put("currentPackage", pkg);
+        // Milestones: 5 → PLUS, 20 → PRO
+        res.put("referralsUntilPlus", Math.max(0, 5 - count));
+        res.put("referralsUntilPro", Math.max(0, 20 - count));
+        res.put("plusUnlocked", count >= 5);
+        res.put("proUnlocked", count >= 20);
+        return res;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public Map<String, Object> applyReferralCode(Long userId, String code) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("User not found: " + userId));
+
+        if (user.getReferredBy() != null) {
+            throw new IllegalStateException("Bạn đã nhập mã giới thiệu trước đó rồi.");
+        }
+        String trimmed = code.trim().toUpperCase();
+        User referrer = userRepository.findByReferralCode(trimmed)
+                .orElseThrow(() -> new IllegalArgumentException("Mã giới thiệu không tồn tại: " + trimmed));
+        if (referrer.getId().equals(userId)) {
+            throw new IllegalArgumentException("Không thể dùng mã của chính mình.");
+        }
+
+        // Tặng người được mời +25 credit
+        user.setReferredBy(referrer);
+        int bonusForInvitee = 25;
+        user.setAiQuota((user.getAiQuota() == null ? 25 : user.getAiQuota()) + bonusForInvitee);
+        userRepository.save(user);
+
+        // Thưởng người mời
+        rewardReferrer(referrer);
+
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("success", true);
+        res.put("message", "Mã hợp lệ! Bạn nhận được +" + bonusForInvitee + " AI credit.");
+        res.put("bonusCredits", bonusForInvitee);
+        res.put("referrerName", referrer.getFullName() != null ? referrer.getFullName() : referrer.getUserName());
+        return res;
+    }
+
+    private void rewardReferrer(User referrer) {
+        int current = referrer.getReferralCount() == null ? 0 : referrer.getReferralCount();
+        int newCount = current + 1;
+        referrer.setReferralCount(newCount);
+        // +20 credit mỗi lần (cap 500 khi chưa lên gói cao)
+        int newQuota = (referrer.getAiQuota() == null ? 25 : referrer.getAiQuota()) + 20;
+        referrer.setAiQuota(Math.min(newQuota, 500));
+        // Milestone: 20 → PRO, 5 → PLUS
+        if (newCount >= 20) {
+            aiPackageRepository.findByCode("PRO").ifPresent(pkg -> {
+                referrer.setAiPackage(pkg);
+                referrer.setAiQuota(pkg.getAiQuota());
+                referrer.setAiUsed(0);
+                referrer.setAiResetAt(ZonedDateTime.now().plusDays(30));
+                referrer.setAiPackageExpiresAt(ZonedDateTime.now().plusDays(30));
+                log.info("Referral milestone PRO: userId={} count={}", referrer.getId(), newCount);
+            });
+        } else if (newCount >= 5) {
+            aiPackageRepository.findByCode("PLUS").ifPresent(pkg -> {
+                referrer.setAiPackage(pkg);
+                referrer.setAiQuota(pkg.getAiQuota());
+                referrer.setAiUsed(0);
+                referrer.setAiResetAt(ZonedDateTime.now().plusDays(30));
+                referrer.setAiPackageExpiresAt(ZonedDateTime.now().plusDays(30));
+                log.info("Referral milestone PLUS: userId={} count={}", referrer.getId(), newCount);
+            });
+        }
+        userRepository.save(referrer);
+        log.info("Referral rewarded: referrerId={} newCount={}", referrer.getId(), newCount);
+    }
+
+    private static final String REFERRAL_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    private String generateReferralCode() {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            StringBuilder sb = new StringBuilder(8);
+            for (int i = 0; i < 8; i++) sb.append(REFERRAL_CHARS.charAt(SECURE_RANDOM.nextInt(REFERRAL_CHARS.length())));
+            String code = sb.toString();
+            if (userRepository.findByReferralCode(code).isEmpty()) return code;
+        }
+        // fallback: timestamp-based, guaranteed unique
+        return "R" + Long.toString(System.currentTimeMillis(), 36).toUpperCase().substring(0, 7);
     }
 
 

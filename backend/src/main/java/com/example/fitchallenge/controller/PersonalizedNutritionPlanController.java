@@ -70,6 +70,9 @@ public class PersonalizedNutritionPlanController {
     @Autowired
     private com.example.fitchallenge.Security.AuthenticatedUserIdResolver authUser;
 
+    @Autowired
+    private com.example.fitchallenge.service.SwapLimitService swapLimitService;
+
     /**
      * 📋 GET /api/personalized-plans/{userId} - Lấy tất cả plans của user
      */
@@ -240,9 +243,12 @@ public class PersonalizedNutritionPlanController {
                 return ResponseEntity.status(401).body(new NotificationResponse(false, "Unauthorized"));
             }
             Long authenticatedUserId = userService.getUserByEmail(userDetails.getUsername()).getId();
+            swapLimitService.ensureAndConsume(authenticatedUserId, com.example.fitchallenge.service.SwapLimitService.SwapType.MEAL);
             com.example.fitchallenge.Entity.PersonalizedMealDetail updated =
                     smartMealPlanService.swapMealDish(mealDetailId, authenticatedUserId);
             return ResponseEntity.ok(new NotificationResponse(true, "Dish swapped successfully", toMealDetailResponse(updated)));
+        } catch (com.example.fitchallenge.exception.QuotaExceededException e) {
+            return ResponseEntity.status(429).body(new NotificationResponse(false, e.getMessage()));
         } catch (SecurityException e) {
             return ResponseEntity.status(403).body(new NotificationResponse(false, e.getMessage()));
         } catch (IllegalArgumentException | IllegalStateException e) {

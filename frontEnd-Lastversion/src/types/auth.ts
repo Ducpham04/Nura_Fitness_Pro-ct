@@ -24,6 +24,7 @@ export interface RegisterRequest {
   password: string;
   fullName: string;
   avatarUrl?: string;
+  referralCode?: string;
 }
 
 // BE Response format

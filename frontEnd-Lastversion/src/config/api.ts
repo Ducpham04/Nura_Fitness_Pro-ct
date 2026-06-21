@@ -99,6 +99,11 @@ export const API_ENDPOINTS = {
     VALIDATE_PROMO: '/ai-packages/promo/validate',
     PAYMENT_RESULT: '/ai-packages/payment/result',
   },
+  // Referral program
+  REFERRAL: {
+    MY_INFO: '/user/account/referral',
+    APPLY: '/user/account/referral/apply',
+  },
   // Notifications
   NOTIFICATIONS: {
     LIST: (userId: number) => `/notifications/${userId}`,

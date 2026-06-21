@@ -1,7 +1,9 @@
 package com.example.fitchallenge.controller.User;
 
 import com.example.fitchallenge.config.NotificationResponse;
+import com.example.fitchallenge.exception.QuotaExceededException;
 import com.example.fitchallenge.service.DailyTrainingLogService;
+import com.example.fitchallenge.service.LogLimitService;
 import com.example.fitchallenge.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +20,7 @@ public class DailyTrainingLogController {
 
     private final DailyTrainingLogService dailyTrainingLogService;
     private final UserService userService;
+    private final LogLimitService logLimitService;
 
     /**
      * GET /api/user/daily-training-logs/plan/{trainingPlanId}
@@ -123,7 +126,13 @@ public class DailyTrainingLogController {
                 new NotificationResponse(false, "Unauthorized - User identification required")
             );
         }
-        
+
+        try {
+            logLimitService.ensureAndConsume(userId, LogLimitService.LogType.TRAINING);
+        } catch (QuotaExceededException e) {
+            return ResponseEntity.status(429).body(new NotificationResponse(false, e.getMessage()));
+        }
+
         try {
             log.debug("✅ [DailyTrainingLogController] User ID: {}", userId);
             

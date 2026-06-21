@@ -72,8 +72,16 @@ public class Reward {
     @Column(name = "expire_at")
     private ZonedDateTime expireAt;
     
-    @Column (name = "Claimed")
+    @Column(name = "Claimed")
     private Integer claimed = 0;
+
+    /** PHYSICAL = quà vật lý/voucher · CREDIT = quy đổi thành credit AI */
+    @Column(name = "reward_type", length = 20, nullable = false)
+    private String rewardType = "PHYSICAL";
+
+    /** Số credit AI được cộng khi loại CREDIT (100 điểm = 10 credit mặc định) */
+    @Column(name = "credit_value", nullable = false)
+    private Integer creditValue = 0;
     
     /**
      * ⚙️ Trạng thái phần thưởng: active, inactive
@@ -165,9 +173,25 @@ public class Reward {
     public String getStatus() {
         return status;
     }
-    
+
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getRewardType() {
+        return rewardType;
+    }
+
+    public void setRewardType(String rewardType) {
+        this.rewardType = rewardType;
+    }
+
+    public Integer getCreditValue() {
+        return creditValue;
+    }
+
+    public void setCreditValue(Integer creditValue) {
+        this.creditValue = creditValue;
     }
 
     // Manual Builder
@@ -188,6 +212,8 @@ public class Reward {
         public RewardBuilder expireAt(ZonedDateTime expireAt) { instance.setExpireAt(expireAt); return this; }
         public RewardBuilder claimed(Integer claimed) { instance.setClaimed(claimed); return this; }
         public RewardBuilder status(String status) { instance.setStatus(status); return this; }
+        public RewardBuilder rewardType(String rewardType) { instance.setRewardType(rewardType); return this; }
+        public RewardBuilder creditValue(Integer creditValue) { instance.setCreditValue(creditValue); return this; }
         public Reward build() { return instance; }
     }
 }

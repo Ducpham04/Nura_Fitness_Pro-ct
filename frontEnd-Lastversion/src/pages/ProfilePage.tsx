@@ -5,6 +5,7 @@ import {
   Edit3, Check, Star, Zap,
   Activity, Sparkles, ArrowUpRight,
   Settings, Lock, Mail, Save, ShieldAlert, Trash2, X,
+  Gift, Copy, CheckCheck,
 } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -78,6 +79,14 @@ export default function ProfilePage() {
   const [deactivateConfirm, setDeactivateConfirm] = useState(false);
   const [deactivateBusy, setDeactivateBusy] = useState(false);
 
+  // ── Referral ──
+  const [referralInfo, setReferralInfo] = useState<{
+    referralCode: string; referralCount: number; creditsEarned: number;
+    currentPackage: string; referralsUntilPlus: number; referralsUntilPro: number;
+    plusUnlocked: boolean; proUnlocked: boolean;
+  } | null>(null);
+  const [refCopied, setRefCopied] = useState(false);
+
   const handleSaveProfile = async () => {
     setProfileBusy(true);
     setProfileMsg(null);
@@ -123,10 +132,21 @@ export default function ProfilePage() {
     if (!user?.id) return;
     Promise.all([
       userService.getBodyProfile(),
-    ]).then(([body]) => {
+      userService.getReferralInfo(),
+    ]).then(([body, refInfo]) => {
       setBodyProfile(body);
+      setReferralInfo(refInfo);
     }).catch(console.error).finally(() => setLoading(false));
   }, [user?.id]);
+
+  const handleCopyReferralLink = () => {
+    if (!referralInfo) return;
+    const link = `${window.location.origin}/register?ref=${referralInfo.referralCode}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setRefCopied(true);
+      setTimeout(() => setRefCopied(false), 2000);
+    });
+  };
 
   const handleLogout = () => {
     logout();
@@ -339,6 +359,98 @@ export default function ProfilePage() {
           <p className="text-neutral-600 text-sm">Không thể tải thông tin gói AI.</p>
         )}
       </div>
+
+      {/* ── Referral / Mời bạn ── */}
+      {referralInfo && (
+        <div className="rounded-2xl border border-lime/20 bg-lime/[0.03] p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <Gift className="w-4 h-4 text-lime" />
+            <h3 className="text-sm font-bold text-white">Mời bạn bè — nhận gói miễn phí</h3>
+          </div>
+
+          {/* Referral link */}
+          <div>
+            <p className="text-[11px] text-neutral-500 mb-2">
+              Bạn bè đăng ký qua link → nhận +25 credit. Bạn nhận +20 credit mỗi lần mời thành công.
+            </p>
+            <div className="flex gap-2 items-center">
+              <div className="flex-1 px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-neutral-300 truncate font-mono">
+                {window.location.origin}/register?ref={referralInfo.referralCode}
+              </div>
+              <button
+                onClick={handleCopyReferralLink}
+                className="p-2 rounded-xl bg-lime/10 border border-lime/25 text-lime hover:bg-lime/20 transition-colors flex-shrink-0"
+                title="Sao chép link"
+              >
+                {refCopied ? <CheckCheck className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Stats row */}
+          <div className="flex gap-3">
+            <div className="flex-1 text-center py-2 rounded-xl bg-white/[0.04] border border-white/[0.07]">
+              <div className="text-xl font-black text-lime">{referralInfo.referralCount}</div>
+              <div className="text-[10px] text-neutral-500 mt-0.5">Đã mời</div>
+            </div>
+            <div className="flex-1 text-center py-2 rounded-xl bg-white/[0.04] border border-white/[0.07]">
+              <div className="text-xl font-black text-lime">+{referralInfo.creditsEarned}</div>
+              <div className="text-[10px] text-neutral-500 mt-0.5">Credit nhận</div>
+            </div>
+          </div>
+
+          {/* Milestone progress */}
+          <div className="space-y-2.5">
+            {/* PLUS milestone */}
+            <div className={`rounded-xl p-3 border ${referralInfo.plusUnlocked ? 'border-lime/40 bg-lime/10' : 'border-white/[0.07] bg-white/[0.03]'}`}>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  {referralInfo.plusUnlocked
+                    ? <CheckCheck className="w-3.5 h-3.5 text-lime" />
+                    : <Zap className="w-3.5 h-3.5 text-blue-400" />}
+                  <span className="text-xs font-bold text-white">✦ PLUS — 200 credit/tháng</span>
+                </div>
+                <span className={`text-[10px] font-semibold ${referralInfo.plusUnlocked ? 'text-lime' : 'text-neutral-500'}`}>
+                  {referralInfo.plusUnlocked ? 'Đã đạt!' : `${referralInfo.referralCount}/5`}
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${referralInfo.plusUnlocked ? 'bg-lime' : 'bg-blue-400/70'}`}
+                  style={{ width: `${Math.min(100, (referralInfo.referralCount / 5) * 100)}%` }}
+                />
+              </div>
+              {!referralInfo.plusUnlocked && (
+                <p className="text-[10px] text-neutral-600 mt-1">Còn {referralInfo.referralsUntilPlus} người nữa</p>
+              )}
+            </div>
+
+            {/* PRO milestone */}
+            <div className={`rounded-xl p-3 border ${referralInfo.proUnlocked ? 'border-violet-500/40 bg-violet-500/10' : 'border-white/[0.07] bg-white/[0.03]'}`}>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  {referralInfo.proUnlocked
+                    ? <CheckCheck className="w-3.5 h-3.5 text-violet-400" />
+                    : <Zap className="w-3.5 h-3.5 text-violet-400" />}
+                  <span className="text-xs font-bold text-white">⚡ PRO — Không giới hạn</span>
+                </div>
+                <span className={`text-[10px] font-semibold ${referralInfo.proUnlocked ? 'text-violet-400' : 'text-neutral-500'}`}>
+                  {referralInfo.proUnlocked ? 'Đã đạt!' : `${referralInfo.referralCount}/20`}
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${referralInfo.proUnlocked ? 'bg-violet-400' : 'bg-violet-500/50'}`}
+                  style={{ width: `${Math.min(100, (referralInfo.referralCount / 20) * 100)}%` }}
+                />
+              </div>
+              {!referralInfo.proUnlocked && (
+                <p className="text-[10px] text-neutral-600 mt-1">Còn {referralInfo.referralsUntilPro} người nữa</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Quick actions ── */}
       <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] overflow-hidden">

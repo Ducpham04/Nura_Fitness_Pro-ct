@@ -22,6 +22,9 @@ import {
   Apple,
   AlertTriangle,
   Clock,
+  Gift,
+  Check,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { userService } from '../services/userService';
@@ -106,6 +109,7 @@ const steps: Array<{
   { title: 'Thiết bị sẵn có', subtitle: 'Bạn tập ở đâu, có thể dùng những gì?', icon: Dumbbell },
   { title: 'Thời lượng mỗi buổi', subtitle: 'Bạn có bao nhiêu phút cho mỗi buổi tập?', icon: Clock },
   { title: 'Chế độ ăn', subtitle: 'Chúng tôi sẽ điều chỉnh thực đơn phù hợp.', icon: UtensilsCrossed },
+  { title: 'Mã giới thiệu', subtitle: 'Ai đã giới thiệu bạn đến Fitnit? (không bắt buộc)', icon: Gift },
 ];
 
 function ParticleField() {
@@ -131,6 +135,12 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [backendGoals, setBackendGoals] = useState<any[]>([]);
+
+  // Referral step state
+  const [refCode, setRefCode] = useState('');
+  const [refStatus, setRefStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [refMessage, setRefMessage] = useState('');
+
   const [form, setForm] = useState<FormData>({
     age: '',
     weight: '',
@@ -143,6 +153,31 @@ export default function Onboarding() {
     sessionDuration: 45,
     dietType: '',
   });
+
+  useEffect(() => {
+    // Pre-fill referral code từ link mời
+    const pending = localStorage.getItem('pendingReferral');
+    if (pending) setRefCode(pending);
+  }, []);
+
+  const handleApplyReferral = async () => {
+    if (!refCode.trim() || refStatus === 'success') return;
+    setRefStatus('loading');
+    try {
+      const res = await userService.applyReferralCode(refCode.trim().toUpperCase());
+      if (res) {
+        setRefStatus('success');
+        setRefMessage(`Hợp lệ! +${res.bonusCredits} credit. Người mời: ${res.referrerName}`);
+        localStorage.removeItem('pendingReferral');
+      } else {
+        setRefStatus('error');
+        setRefMessage('Mã không hợp lệ hoặc đã được sử dụng.');
+      }
+    } catch {
+      setRefStatus('error');
+      setRefMessage('Có lỗi xảy ra, vui lòng thử lại.');
+    }
+  };
 
   useEffect(() => {
     const fetchGoals = async () => {
@@ -178,6 +213,7 @@ export default function Onboarding() {
       case 4: return form.equipment.length > 0;
       case 5: return !!form.sessionDuration;
       case 6: return !!form.dietType;
+      case 7: return true; // bước referral luôn có thể bỏ qua
       default: return true;
     }
   };
@@ -251,9 +287,18 @@ export default function Onboarding() {
     }
   };
 
-  const handleNext = () => {
-    if (step < steps.length - 1) setStep(s => s + 1);
-    else submitProfileToBackend();
+  const handleNext = async () => {
+    if (step === 7) {
+      // Bước referral: nếu có code và chưa apply thì apply trước rồi submit
+      if (refCode.trim() && refStatus === 'idle') {
+        await handleApplyReferral();
+      }
+      submitProfileToBackend();
+    } else if (step < steps.length - 1) {
+      setStep(s => s + 1);
+    } else {
+      submitProfileToBackend();
+    }
   };
 
   const StepIcon = typeof steps[step].icon === 'string' ? null : steps[step].icon as LucideIcon;
@@ -456,6 +501,78 @@ export default function Onboarding() {
               })}
             </div>
           )}
+
+          {/* Step 7: Referral code */}
+          {step === 7 && (
+            <div className="space-y-5">
+              {refStatus === 'success' ? (
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <div className="w-14 h-14 rounded-full bg-lime/15 flex items-center justify-center">
+                    <Check className="w-7 h-7 text-lime" />
+                  </div>
+                  <p className="text-white font-semibold text-center">{refMessage}</p>
+                  <p className="text-neutral-400 text-sm text-center">Credit đã được cộng vào tài khoản của bạn!</p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider block">
+                      Mã giới thiệu
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={refCode}
+                        onChange={e => {
+                          setRefCode(e.target.value.toUpperCase());
+                          setRefStatus('idle');
+                          setRefMessage('');
+                        }}
+                        placeholder="Ví dụ: ABCD1234"
+                        maxLength={12}
+                        className="flex-1 bg-white/[0.06] border border-white/10 rounded-2xl px-4 py-3.5 text-white font-mono placeholder-neutral-500 focus:outline-none focus:border-lime/40 transition-all uppercase tracking-widest"
+                        disabled={refStatus === 'loading'}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyReferral}
+                        disabled={!refCode.trim() || refStatus === 'loading'}
+                        className="px-4 py-3.5 rounded-2xl bg-lime/10 border border-lime/25 text-lime text-sm font-semibold hover:bg-lime/20 transition-colors disabled:opacity-40 whitespace-nowrap"
+                      >
+                        {refStatus === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Xác nhận'}
+                      </button>
+                    </div>
+                    {refStatus === 'error' && (
+                      <p className="text-red-400 text-xs mt-1">{refMessage}</p>
+                    )}
+                  </div>
+
+                  {/* Milestones hint */}
+                  <div className="rounded-2xl bg-white/[0.03] border border-white/[0.07] p-4 space-y-2">
+                    <p className="text-xs text-neutral-500 font-semibold uppercase tracking-wider">Khi bạn mời được người khác</p>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-400 text-sm font-black">5</span>
+                      </div>
+                      <div>
+                        <p className="text-white text-sm font-semibold">✦ PLUS — 200 AI credit/tháng</p>
+                        <p className="text-neutral-500 text-xs">Mời đủ 5 người là lên tự động</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-violet-500/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-violet-400 text-sm font-black">20</span>
+                      </div>
+                      <div>
+                        <p className="text-white text-sm font-semibold">⚡ PRO — Không giới hạn AI</p>
+                        <p className="text-neutral-500 text-xs">Mời đủ 20 người là lên tự động</p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between">
@@ -463,9 +580,15 @@ export default function Onboarding() {
             className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-grotesk font-medium text-sm transition-all ${step === 0 ? 'opacity-30 cursor-not-allowed' : 'text-white hover:bg-white/[0.06]'}`}>
             <ArrowLeft className="w-4 h-4" /> Quay lại
           </button>
-          <button onClick={handleNext} disabled={!canAdvance() || isSubmitting}
+          <button onClick={handleNext} disabled={!canAdvance() || isSubmitting || refStatus === 'loading'}
             className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-grotesk font-semibold text-sm transition-all ${canAdvance() && !isSubmitting ? 'bg-lime text-obsidian' : 'bg-white/[0.06] text-neutral-500'}`}>
-            {isSubmitting ? 'Đang xử lý...' : step === steps.length - 1 ? 'Tạo kế hoạch' : 'Tiếp tục'}
+            {isSubmitting
+              ? 'Đang xử lý...'
+              : step === 7
+                ? (refStatus === 'success' || !refCode.trim() ? 'Tạo kế hoạch' : 'Xác nhận & Tạo kế hoạch')
+                : step === steps.length - 1
+                  ? 'Tiếp tục'
+                  : 'Tiếp tục'}
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

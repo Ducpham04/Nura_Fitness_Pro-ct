@@ -493,6 +493,38 @@ class UserService {
       return false;
     }
   }
+
+  async applyReferralCode(code: string): Promise<{
+    success: boolean;
+    message: string;
+    bonusCredits: number;
+    referrerName: string;
+  } | null> {
+    try {
+      const res = await apiClient.post<any>(API_ENDPOINTS.REFERRAL.APPLY, { referralCode: code });
+      return res.success ? res.data || null : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async getReferralInfo(): Promise<{
+    referralCode: string;
+    referralCount: number;
+    creditsEarned: number;
+    currentPackage: string;
+    referralsUntilPlus: number;
+    referralsUntilPro: number;
+    plusUnlocked: boolean;
+    proUnlocked: boolean;
+  } | null> {
+    try {
+      const res = await apiClient.get<any>(API_ENDPOINTS.REFERRAL.MY_INFO);
+      return res.success ? res.data || null : null;
+    } catch {
+      return null;
+    }
+  }
 }
 
 export const userService = new UserService();

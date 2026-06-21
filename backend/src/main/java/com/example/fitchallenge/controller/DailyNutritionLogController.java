@@ -4,8 +4,10 @@ import com.example.fitchallenge.Entity.DailyNutritionLog;
 import com.example.fitchallenge.Entity.User;
 import com.example.fitchallenge.Security.AuthenticatedUserIdResolver;
 import com.example.fitchallenge.config.NotificationResponse;
+import com.example.fitchallenge.exception.QuotaExceededException;
 import com.example.fitchallenge.repository.DailyNutritionLogRepository;
 import com.example.fitchallenge.repository.User.UserRepository;
+import com.example.fitchallenge.service.LogLimitService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,14 +24,22 @@ public class DailyNutritionLogController {
     private final DailyNutritionLogRepository logRepository;
     private final UserRepository userRepository;
     private final AuthenticatedUserIdResolver authUser;
+    private final LogLimitService logLimitService;
 
     @PostMapping("/log")
     public ResponseEntity<NotificationResponse> logMeal(
             @RequestHeader(value = "userId", required = false) Long headerUserId,
             @RequestBody Map<String, Object> request) {
-        
+
         // userId từ JWT — không tin header/body để chống ghi log vào tài khoản người khác
         Long userId = authUser.resolve(headerUserId);
+
+        try {
+            logLimitService.ensureAndConsume(userId, LogLimitService.LogType.NUTRITION);
+        } catch (QuotaExceededException e) {
+            return ResponseEntity.status(429).body(new NotificationResponse(false, e.getMessage()));
+        }
+
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
         DailyNutritionLog log = DailyNutritionLog.builder()

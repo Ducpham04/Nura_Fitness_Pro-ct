@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
 import type { FormEvent } from 'react';
-import { Mail, Lock, Check, ArrowRight, Eye, EyeOff, AlertCircle, User } from 'lucide-react';
+import { Mail, Lock, Check, ArrowRight, Eye, EyeOff, AlertCircle, User, Gift } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { trackEvent } from '../analytics';
 import { useTranslation } from 'react-i18next';
 import Logo from '../components/Logo';
 import LanguageSelector from '../components/LanguageSelector';
 
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 
 function ParticleField() {
   const particles = useMemo(() => Array.from({ length: 6 }, (_, i) => ({
@@ -52,6 +52,8 @@ const PasswordStrength = ({ password }: { password: string }) => {
 export default function Register() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get('ref')?.toUpperCase() ?? '';
   const onRegister = () => navigate('/onboarding');
   const onBackToLogin = () => navigate('/login');
   const [name, setName] = useState('');
@@ -89,9 +91,11 @@ export default function Register() {
 
     setLoading(true);
     try {
+      // Lưu mã giới thiệu vào localStorage để Onboarding áp dụng sau
+      if (refCode) localStorage.setItem('pendingReferral', refCode);
       const success = await register({ email, password, fullName: name });
       if (success) {
-        trackEvent('Signup'); // funnel: acquisition → activation
+        trackEvent('Signup', { hasReferral: !!refCode }); // funnel: acquisition → activation
         onRegister();
       }
       else setError(authError || t('auth.registerFailed'));
@@ -265,6 +269,14 @@ export default function Register() {
                 </Link>
               </label>
             </div>
+
+            {/* Referral bonus banner */}
+            {refCode && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-lime/10 border border-lime/25 text-lime text-xs">
+                <Gift className="w-4 h-4 flex-shrink-0" />
+                <span>Bạn được mời bởi <strong>{refCode}</strong> — nhận thêm <strong>+25 AI credit</strong> khi đăng ký!</span>
+              </div>
+            )}
 
             {/* Submit button */}
             <button

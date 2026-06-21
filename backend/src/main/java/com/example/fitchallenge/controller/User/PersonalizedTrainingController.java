@@ -1,8 +1,10 @@
 package com.example.fitchallenge.controller.User;
 
 import com.example.fitchallenge.config.NotificationResponse;
+import com.example.fitchallenge.exception.QuotaExceededException;
 import com.example.fitchallenge.repository.UserTrainingRepository;
 import com.example.fitchallenge.service.PersonalizationService;
+import com.example.fitchallenge.service.SwapLimitService;
 import com.example.fitchallenge.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +25,7 @@ public class PersonalizedTrainingController {
     private final PersonalizationService personalizationService;
     private final UserService userService;
     private final UserTrainingRepository userTrainingRepository;
+    private final SwapLimitService swapLimitService;
 
     /**
      * GET /api/user/training/{utId}/day/{dayNumber}
@@ -134,9 +137,16 @@ public class PersonalizedTrainingController {
     @PutMapping("/personalized/{ppdId}/swap/{newExerciseId}")
     public ResponseEntity<NotificationResponse> swapExercise(
             @PathVariable Long ppdId,
-            @PathVariable Long newExerciseId) {
+            @PathVariable Long newExerciseId,
+            @AuthenticationPrincipal UserDetails userDetails) {
         try {
+            if (userDetails != null) {
+                Long userId = userService.getUserByEmail(userDetails.getUsername()).getId();
+                swapLimitService.ensureAndConsume(userId, SwapLimitService.SwapType.EXERCISE);
+            }
             return ResponseEntity.ok(personalizationService.swapExercise(ppdId, newExerciseId));
+        } catch (QuotaExceededException e) {
+            return ResponseEntity.status(429).body(new NotificationResponse(false, e.getMessage()));
         } catch (Exception e) {
             log.error("Error swapping exercise", e);
             return ResponseEntity.ok(new NotificationResponse(false, "Error: " + e.getMessage()));

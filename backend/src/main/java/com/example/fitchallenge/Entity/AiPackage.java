@@ -50,4 +50,24 @@ public class AiPackage {
 
     @Column(name = "created_at", updatable = false)
     private ZonedDateTime createdAt = ZonedDateTime.now();
+
+    /** Số lần đổi bài tập/tháng; -1 = vô hạn */
+    @Column(name = "max_exercise_swap_per_month", nullable = false)
+    private int maxExerciseSwapPerMonth = -1;
+
+    /** Số lần đổi món ăn/tháng; -1 = vô hạn */
+    @Column(name = "max_meal_swap_per_month", nullable = false)
+    private int maxMealSwapPerMonth = -1;
+
+    /** Số lần ghi log tập/ngày; -1 = vô hạn */
+    @Column(name = "max_training_log_per_day", nullable = false)
+    private int maxTrainingLogPerDay = -1;
+
+    /** Số lần ghi log dinh dưỡng/ngày; -1 = vô hạn */
+    @Column(name = "max_nutrition_log_per_day", nullable = false)
+    private int maxNutritionLogPerDay = -1;
+
+    /** Cho phép tham gia challenge và tích điểm */
+    @Column(name = "can_join_challenges", nullable = false)
+    private boolean canJoinChallenges = false;
 }
