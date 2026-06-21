@@ -37,8 +37,12 @@ for s in "${SERVICES[@]}"; do
   spec="$(svc_spec "$s")"
   [ -z "$spec" ] && { echo "❌ service lạ: $s"; exit 1; }
   repo="${spec%%|*}"; ctx="${spec##*|}"
-  echo "→ [$s] build arm64 + push ($repo)..."
-  docker buildx build --platform linux/arm64 -t "$REG/$repo:latest" --push "$ctx"
+  if [ -d "$ctx" ]; then
+    echo "→ [$s] build arm64 + push ($repo)..."
+    docker buildx build --platform linux/arm64 -t "$REG/$repo:latest" --push "$ctx"
+  else
+    echo "→ [$s] thư mục build '$ctx' không tồn tại — force-redeploy image hiện có trên ECR..."
+  fi
   echo "→ [$s] force redeploy..."
   aws ecs update-service --cluster "$CLUSTER" --service "$s" --force-new-deployment \
     --query 'service.serviceName' --output text
