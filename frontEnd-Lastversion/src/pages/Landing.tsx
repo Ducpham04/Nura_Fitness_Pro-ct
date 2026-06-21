@@ -106,6 +106,7 @@ export default function Landing() {
         t('landing.progressTracking'),
       ],
       highlight: false,
+      comingSoon: false,
       cta: 'Bắt đầu miễn phí',
     },
     {
@@ -120,7 +121,8 @@ export default function Landing() {
         t('landing.smartMealBudget'),
       ],
       highlight: true,
-      cta: 'Nâng cấp Plus',
+      comingSoon: true,
+      cta: 'Sắp ra mắt',
     },
     {
       name: 'Pro',
@@ -133,7 +135,8 @@ export default function Landing() {
         'Tạo lại kế hoạch bao nhiêu lần tuỳ thích',
       ],
       highlight: false,
-      cta: 'Lên Pro',
+      comingSoon: true,
+      cta: 'Sắp ra mắt',
     },
   ];
 
@@ -566,7 +569,7 @@ export default function Landing() {
           <p className="mt-4 mx-auto max-w-xl text-neutral-400 leading-relaxed">{t('landing.pricingCopy')}</p>
           <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-lime/30 bg-lime/[0.08] px-4 py-2">
             <Zap className="w-3.5 h-3.5 text-lime" fill="currentColor" />
-            <span className="text-xs font-bold text-lime">Bắt đầu miễn phí — thanh toán VNPay, kích hoạt ngay lập tức</span>
+            <span className="text-xs font-bold text-lime">Bắt đầu miễn phí ngay hôm nay — không cần thẻ</span>
           </div>
         </div>
 
@@ -578,7 +581,11 @@ export default function Landing() {
             >
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-grotesk text-xl font-bold text-white">{plan.name}</h3>
-                {plan.highlight && (
+                {plan.comingSoon ? (
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 bg-white/10 border border-white/15 px-2.5 py-1 rounded-full">
+                    Sắp có
+                  </span>
+                ) : plan.highlight && (
                   <span className="text-[10px] font-bold uppercase tracking-wider text-lime bg-lime/15 border border-lime/25 px-2.5 py-1 rounded-full">
                     Phổ biến nhất
                   </span>
@@ -601,9 +608,12 @@ export default function Landing() {
                 ))}
               </div>
               <button
-                onClick={onEnter}
+                onClick={plan.comingSoon ? undefined : onEnter}
+                disabled={plan.comingSoon}
                 className={`w-full py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-colors ${
-                  plan.highlight
+                  plan.comingSoon
+                    ? 'border border-white/10 text-neutral-500 cursor-not-allowed'
+                    : plan.highlight
                     ? 'btn-lime'
                     : 'border border-white/10 text-white hover:bg-white/[0.07]'
                 }`}
