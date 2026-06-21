@@ -76,11 +76,11 @@ const durationOptions = [
   { id: 60, label: '60 phút', desc: 'Tập kỹ, nhiều thời gian' },
 ];
 
-const dietTypes: Array<{ id: string; label: string; icon: LucideIcon }> = [
-  { id: 'omnivore', label: 'Ăn tạp', icon: Beef },
-  { id: 'vegetarian', label: 'Ăn chay', icon: Salad },
-  { id: 'vegan', label: 'Thuần chay', icon: Leaf },
-  { id: 'keto', label: 'Keto', icon: Apple },
+const dietTypes: Array<{ id: string; label: string; desc: string; icon: LucideIcon }> = [
+  { id: 'omnivore',   label: 'Ăn đa dạng',  desc: 'Không kiêng — thịt, cá, rau đủ loại',   icon: Beef },
+  { id: 'vegetarian', label: 'Ăn chay',      desc: 'Không thịt, có thể có trứng & sữa',      icon: Salad },
+  { id: 'vegan',      label: 'Thuần chay',   desc: 'Hoàn toàn từ thực vật, không động vật', icon: Leaf },
+  { id: 'keto',       label: 'Keto',         desc: 'Ít carb, nhiều chất béo lành mạnh',      icon: Apple },
 ];
 
 // Hiển thị mục tiêu bằng tiếng Việt + icon Lucide (ảnh từ backend là placeholder vỡ).
@@ -493,9 +493,10 @@ export default function Onboarding() {
                 const selected = form.dietType === d.id;
                 return (
                   <button key={d.id} onClick={() => update('dietType', d.id)}
-                    className={`p-4 rounded-2xl text-left border transition-all ${selected ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'}`}>
-                    <d.icon className={`w-6 h-6 mb-2 ${selected ? 'text-lime' : 'text-neutral-300'}`} />
-                    <div className="font-grotesk font-semibold text-sm">{d.label}</div>
+                    className={`p-4 rounded-2xl text-left border transition-all ${selected ? 'bg-lime/10 border-lime/30' : 'bg-white/[0.06] border-white/5'}`}>
+                    <d.icon className={`w-5 h-5 mb-2 ${selected ? 'text-lime' : 'text-neutral-400'}`} />
+                    <div className={`font-grotesk font-semibold text-sm mb-0.5 ${selected ? 'text-lime' : 'text-white'}`}>{d.label}</div>
+                    <div className="text-[10px] text-neutral-500 leading-tight">{d.desc}</div>
                   </button>
                 );
               })}

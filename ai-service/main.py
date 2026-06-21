@@ -4,6 +4,8 @@ Combines Model 2 (Personal Coach/Planner) and Model 3 (AI Vision/Food Tracking)
 """
 import os
 import sys
+import re
+import ast
 import base64
 import uuid
 from datetime import datetime
@@ -44,6 +46,51 @@ from app.core.progression_tracker import progression_tracker
 from app.core.price_database import PriceDatabase
 from app.core.plan_versioning import plan_versioning
 from app.core.be_integration import BEIntegration, be_integration, prepare_ai_request_context, save_ai_plan_to_be
+
+import json as _global_json
+
+def safe_parse_json(raw: str) -> dict:
+    """Parse LLM output to JSON with multiple fallback strategies."""
+    # 1. Strip markdown code fences
+    text = raw.strip()
+    for fence in ["```json", "```"]:
+        if fence in text:
+            parts = text.split(fence)
+            if len(parts) >= 2:
+                text = parts[1].split("```")[0].strip()
+                break
+
+    # 2. Try standard JSON parse
+    try:
+        return _global_json.loads(text)
+    except Exception:
+        pass
+
+    # 3. Try replacing single quotes → double quotes (common LLM mistake)
+    try:
+        # Simple but handles most cases: only replace when not inside a value
+        fixed = re.sub(r"(?<![\\])'", '"', text)
+        return _global_json.loads(fixed)
+    except Exception:
+        pass
+
+    # 4. Try Python literal eval (handles Python dict syntax with True/False/None)
+    try:
+        result = ast.literal_eval(text)
+        if isinstance(result, dict):
+            return result
+    except Exception:
+        pass
+
+    # 5. Regex extract the outermost JSON object
+    try:
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            return _global_json.loads(match.group(0))
+    except Exception:
+        pass
+
+    raise ValueError(f"Cannot parse JSON from LLM response: {text[:300]}")
 
 
 # Initialize FastAPI app
@@ -580,7 +627,7 @@ Analyze this snapshot and return strict JSON only."""
         )
 
         raw_text = response.choices[0].message.content or "{}"
-        result = _json.loads(raw_text)
+        result = safe_parse_json(raw_text)
         result["exercise_type"] = result.get("exercise_type") or exercise_type
         result["model"] = model_name
         result["image_size"] = original_size
@@ -608,15 +655,15 @@ async def log_food_natural(body: dict):
 
     client = make_client()
 
-    system_prompt = """Bạn là chuyên gia dinh dưỡng. Phân tích đoạn text mô tả bữa ăn thành JSON.
+    system_prompt = """Bạn là chuyên gia dinh dưỡng. Phân tích đoạn text mô tả bữa ăn thành JSON hợp lệ.
 RULES:
-- Trả về ONLY JSON, không markdown.
+- Trả về ONLY valid JSON (double quotes), không markdown, không giải thích.
 - Với mỗi món ăn: name_vi (tên Việt), quantity_g (gram ước tính), calories, protein_g, carb_g, fat_g.
 - Nếu không đủ thông tin khẩu phần, ước tính theo khẩu phần tiêu chuẩn Việt Nam.
 - Tổng hợp macro toàn bữa vào "total".
 
-OUTPUT FORMAT:
-{"meal_time":"...","items":[{"name_vi":"...","quantity_g":...,"calories":...,"protein_g":...,"carb_g":...,"fat_g":...}],"total":{"calories":...,"protein_g":...,"carb_g":...,"fat_g":...},"confidence":"high|medium|low","notes":"..."}"""
+OUTPUT FORMAT (exact, no deviation):
+{"meal_time":"...","items":[{"name_vi":"...","quantity_g":150,"calories":250,"protein_g":12,"carb_g":30,"fat_g":8}],"total":{"calories":250,"protein_g":12,"carb_g":30,"fat_g":8},"confidence":"high","notes":"..."}"""
 
     try:
         resp = client.chat.completions.create(
@@ -625,16 +672,11 @@ OUTPUT FORMAT:
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content": f"Bữa ăn ({meal_time}): {text}"},
             ],
-            temperature=0.1,
+            temperature=0.05,
             max_tokens=600,
         )
-        raw = resp.choices[0].message.content
-        # Strip markdown fences if any
-        for fence in ["```json", "```"]:
-            if fence in raw:
-                raw = raw.split(fence)[1].split("```")[0].strip()
-                break
-        result = _json.loads(raw)
+        raw = resp.choices[0].message.content or "{}"
+        result = safe_parse_json(raw)
         result["meal_time"] = meal_time
         result["source_text"] = text
         return result
@@ -723,7 +765,7 @@ OUTPUT FORMAT (JSON only, no markdown):
             if fence in raw:
                 raw = raw.split(fence)[1].split("```")[0].strip()
                 break
-        result = _json.loads(raw)
+        result = safe_parse_json(raw)
         result["current_week"] = current_week
         result["evaluated_week"] = current_week
         return result

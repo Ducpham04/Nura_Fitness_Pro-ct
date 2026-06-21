@@ -10,6 +10,13 @@ export interface AiUsageInfo {
   isUnlimited: boolean;
   resetAt: string | null;
   packageExpiresAt: string | null;
+  // Swap limits
+  exerciseSwapUsed: number;
+  exerciseSwapLimit: number;    // -1 = unlimited
+  exerciseSwapRemaining: number;
+  mealSwapUsed: number;
+  mealSwapLimit: number;        // -1 = unlimited
+  mealSwapRemaining: number;
 }
 
 export interface AiPackage {

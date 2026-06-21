@@ -6,6 +6,7 @@ import com.example.fitchallenge.exception.QuotaExceededException;
 import com.example.fitchallenge.repository.AiPackageRepository;
 import com.example.fitchallenge.repository.User.UserRepository;
 import com.example.fitchallenge.service.AiUsageService;
+import com.example.fitchallenge.service.SwapLimitService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ public class AiUsageServiceImpl implements AiUsageService {
     private final UserRepository userRepository;
     private final AiPackageRepository aiPackageRepository;
     private final com.example.fitchallenge.repository.AiTokenLogRepository aiTokenLogRepository;
+    private final SwapLimitService swapLimitService;
 
     // ────────────────────────────────────────────────────────────────────────
 
@@ -48,6 +50,8 @@ public class AiUsageServiceImpl implements AiUsageService {
         info.put("isUnlimited",        quota == -1);
         info.put("resetAt",            fmt(user.getAiResetAt()));
         info.put("packageExpiresAt",   fmt(user.getAiPackageExpiresAt()));
+        // Swap limits
+        info.putAll(swapLimitService.getSwapInfo(userId));
         return info;
     }
 
