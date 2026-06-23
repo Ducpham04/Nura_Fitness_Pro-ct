@@ -191,6 +191,7 @@ function ChallengesView() {
   const [selectedChallenge, setSelectedChallenge] = useState<ChallengeUI | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null); // challengeId đang xử lý
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<boolean>(true);
   const [attemptResult, setAttemptResult] = useState<ChallengeAttemptResult | null>(null);
   const [cameraTarget, setCameraTarget] = useState<ChallengeUI | null>(null); // challenge đang thi realtime
   const [showRewardShop, setShowRewardShop] = useState(false);
@@ -237,18 +238,21 @@ function ChallengesView() {
 
   // Tham gia thử thách
   const handleJoin = async (challengeId: number) => {
-    if (!user?.id) { setActionMsg('Vui lòng đăng nhập để tham gia.'); return; }
+    if (!user?.id) { setActionSuccess(false); setActionMsg('Vui lòng đăng nhập để tham gia.'); return; }
     setActionLoading(challengeId);
     setActionMsg(null);
     try {
       const res = await challengeService.join(challengeId, user.id);
       if (res.success) {
+        setActionSuccess(true);
         setActionMsg('Đã tham gia thử thách! 🔥');
         await loadChallenges();
       } else {
+        setActionSuccess(false);
         setActionMsg(res.error?.message || 'Không tham gia được. Thử lại sau.');
       }
     } catch {
+      setActionSuccess(false);
       setActionMsg('Không tham gia được. Thử lại sau.');
     } finally {
       setActionLoading(null);
@@ -519,7 +523,15 @@ function ChallengesView() {
                   </button>
                 </div>
               )}
-              {actionMsg && <p className="text-center text-xs text-neutral-300 mt-3">{actionMsg}</p>}
+              {actionMsg && (
+                <div className={`mt-3 rounded-xl px-4 py-3 text-sm text-center font-medium ${
+                  actionSuccess
+                    ? 'bg-lime/10 border border-lime/30 text-lime'
+                    : 'bg-orange-500/10 border border-orange-500/30 text-orange-400'
+                }`}>
+                  {actionMsg}
+                </div>
+              )}
 
               {/* Kết quả AI chấm điểm */}
               {attemptResult && (
