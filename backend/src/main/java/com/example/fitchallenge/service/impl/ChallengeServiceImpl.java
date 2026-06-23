@@ -3,6 +3,7 @@ package com.example.fitchallenge.service.impl;
 import com.example.fitchallenge.DTO.ChallengeDTO.ChallengeDTOPayload;
 import com.example.fitchallenge.DTO.ChallengeDTO.ChallengeResponseDTO;
 import com.example.fitchallenge.DTO.ChallengeDTO.ParticipantDTO;
+import com.example.fitchallenge.Entity.AiPackage;
 import com.example.fitchallenge.Entity.Challenges;
 import com.example.fitchallenge.Entity.Exercise;
 import com.example.fitchallenge.Entity.UserChallenge;
@@ -235,7 +236,13 @@ public class ChallengeServiceImpl implements ChallengeService {
             // Create UserChallenge
             com.example.fitchallenge.Entity.User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
-            
+
+            AiPackage pkg = user.getAiPackage();
+            if (pkg == null || !pkg.isCanJoinChallenges()) {
+                return new NotificationResponse(false,
+                        "Tính năng tham gia thử thách chỉ dành cho gói PLUS và PRO. Nâng cấp để tham gia!");
+            }
+
             UserChallenge userChallenge = UserChallenge.builder()
                     .user(user)
                     .challenge(challenge)

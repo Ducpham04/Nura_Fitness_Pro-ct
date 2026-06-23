@@ -3,9 +3,6 @@ package com.example.fitchallenge.controller;
 import com.example.fitchallenge.DTO.ChallengeDTO.ChallengeResponseDTO;
 import com.example.fitchallenge.config.NotificationResponse;
 import com.example.fitchallenge.service.ChallengeService;
-import com.example.fitchallenge.service.UserService;
-import com.example.fitchallenge.Entity.User;
-import com.example.fitchallenge.Entity.AiPackage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -29,7 +26,6 @@ import org.springframework.web.bind.annotation.*;
 public class ChallengeController {
 
     private final ChallengeService challengeService;
-    private final UserService userService;
 
     /**
      * Get all challenges với pagination và filters
@@ -86,15 +82,6 @@ public class ChallengeController {
     public ResponseEntity<NotificationResponse> joinChallenge(
             @PathVariable Long id,
             @Valid @RequestBody JoinChallengeRequest request) {
-
-        User user = userService.getUserEntityById(request.getUserId());
-        AiPackage pkg = user != null ? user.getAiPackage() : null;
-        boolean canJoin = pkg != null && pkg.isCanJoinChallenges();
-        if (!canJoin) {
-            return ResponseEntity.status(403).body(
-                new NotificationResponse(false,
-                    "Tính năng tham gia thử thách chỉ dành cho gói PLUS và PRO. Nâng cấp để tham gia!"));
-        }
 
         NotificationResponse response = challengeService.joinChallenge(id, request.getUserId());
         return ResponseEntity.ok(response);
