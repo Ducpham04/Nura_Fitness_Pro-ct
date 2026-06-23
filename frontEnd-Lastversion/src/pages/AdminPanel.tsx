@@ -841,7 +841,7 @@ export default function AdminPanel() {
   const [aiPkgEditing, setAiPkgEditing] = useState<any|null>(null);
   const [aiPkgSaving,  setAiPkgSaving]  = useState(false);
   const [aiPromoSaving,setAiPromoSaving]= useState(false);
-  const [aiPkgTab,     setAiPkgTab]     = useState<'packages'|'promos'|'users'|'report'|'revenue'|'qrConfig'>('packages');
+  const [aiPkgTab,     setAiPkgTab]     = useState<'packages'|'promos'|'users'|'report'|'revenue'|'qrConfig'|'payments'>('packages');
   const [aiAdjQuota,   setAiAdjQuota]   = useState('');
   const [aiAdjUsed,    setAiAdjUsed]    = useState('');
   const [aiAdjAdd,     setAiAdjAdd]     = useState('');
@@ -852,6 +852,10 @@ export default function AdminPanel() {
   const [qrConfigForm, setQrConfigForm] = useState({ qrUrl: '', bankInfo: '' });
   const [qrConfigSaving, setQrConfigSaving] = useState(false);
   const [qrConfigMsg, setQrConfigMsg] = useState<{ok: boolean; text: string}|null>(null);
+  const [paymentRequests, setPaymentRequests] = useState<any[]|null>(null);
+  const [paymentReqLoading, setPaymentReqLoading] = useState(false);
+  const [paymentFilter, setPaymentFilter] = useState<'ALL'|'PENDING'|'APPROVED'|'REJECTED'>('PENDING');
+  const [paymentProcessing, setPaymentProcessing] = useState<number|null>(null);
   const [aiUserSearch, setAiUserSearch] = useState('');
   const [aiUserResult, setAiUserResult] = useState<any|null>(null);
   const [aiUserLoading,setAiUserLoading]= useState(false);
@@ -1571,7 +1575,7 @@ export default function AdminPanel() {
             <div className="space-y-5">
               {/* Sub-tabs */}
               <div className="flex flex-wrap gap-1 p-1 bg-white/5 rounded-xl w-fit">
-                {(['packages','promos','users','report','revenue','qrConfig'] as const).map(t => (
+                {(['packages','promos','users','report','revenue','qrConfig','payments'] as const).map(t => (
                   <button key={t} onClick={() => {
                     setAiPkgTab(t);
                     if (t === 'report' && aiReport === null) {
@@ -1597,6 +1601,14 @@ export default function AdminPanel() {
                         }
                       });
                     }
+                    if (t === 'payments') {
+                      setPaymentReqLoading(true);
+                      apiClient.get('/admin/ai/payment-requests').then(res => {
+                        if (res.success && Array.isArray(res.data)) setPaymentRequests(res.data as any[]);
+                        else setPaymentRequests([]);
+                        setPaymentReqLoading(false);
+                      });
+                    }
                   }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                       aiPkgTab === t ? 'bg-emerald-500 text-white' : 'text-slate-400 hover:text-white'}`}>
@@ -1605,7 +1617,8 @@ export default function AdminPanel() {
                       : t === 'users' ? '👤 Gán User'
                       : t === 'report' ? '📊 Dùng AI'
                       : t === 'revenue' ? '💰 Doanh thu'
-                      : '🔗 QR Thanh toán'}
+                      : t === 'qrConfig' ? '🔗 QR Thanh toán'
+                      : '💳 Thanh toán'}
                   </button>
                 ))}
               </div>
@@ -1918,6 +1931,120 @@ export default function AdminPanel() {
               )}
 
               {/* ── Tab: Báo cáo dùng AI (tất cả user) ── */}
+              {/* ── Tab: Thanh toán (Payment Requests) ── */}
+              {aiPkgTab === 'payments' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-bold text-slate-300">Yêu cầu chuyển khoản</h4>
+                      {paymentRequests !== null && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">
+                          {paymentRequests.filter(r => r.status === 'PENDING').length} chờ duyệt
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-1">
+                      {(['PENDING','APPROVED','REJECTED','ALL'] as const).map(f => (
+                        <button key={f} onClick={() => setPaymentFilter(f)}
+                          className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${paymentFilter === f ? 'bg-emerald-500 text-white' : 'text-slate-400 hover:text-white'}`}>
+                          {f === 'PENDING' ? '⏳ Chờ' : f === 'APPROVED' ? '✅ Đã duyệt' : f === 'REJECTED' ? '❌ Từ chối' : '📋 Tất cả'}
+                        </button>
+                      ))}
+                      <button onClick={() => {
+                        setPaymentReqLoading(true);
+                        apiClient.get('/admin/ai/payment-requests').then(res => {
+                          if (res.success && Array.isArray(res.data)) setPaymentRequests(res.data as any[]);
+                          setPaymentReqLoading(false);
+                        });
+                      }} className="px-3 py-1 rounded-lg text-xs text-slate-400 hover:text-white border border-white/10 transition-colors">↻</button>
+                    </div>
+                  </div>
+
+                  {paymentReqLoading ? (
+                    <p className="text-slate-500 text-sm">Đang tải…</p>
+                  ) : !paymentRequests || paymentRequests.length === 0 ? (
+                    <div className="rounded-xl border border-white/5 bg-white/3 p-8 text-center">
+                      <p className="text-slate-400 text-sm">Chưa có yêu cầu nào</p>
+                      <p className="text-slate-600 text-xs mt-1">Khi user bấm "Tôi đã chuyển khoản", yêu cầu sẽ hiện ở đây</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {paymentRequests
+                        .filter(r => paymentFilter === 'ALL' || r.status === paymentFilter)
+                        .map((r: any) => (
+                          <div key={r.id} className={`rounded-xl border p-4 transition-colors ${
+                            r.status === 'PENDING' ? 'border-amber-500/30 bg-amber-500/5' :
+                            r.status === 'APPROVED' ? 'border-emerald-500/20 bg-emerald-500/5' :
+                            'border-zinc-700 bg-white/3'}`}>
+                            <div className="flex items-start justify-between gap-3 flex-wrap">
+                              <div className="space-y-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    r.status === 'PENDING' ? 'bg-amber-500/20 text-amber-300' :
+                                    r.status === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-300' :
+                                    'bg-zinc-600/20 text-zinc-400'}`}>
+                                    {r.status === 'PENDING' ? '⏳ Chờ duyệt' : r.status === 'APPROVED' ? '✅ Đã duyệt' : '❌ Từ chối'}
+                                  </span>
+                                  <span className="text-slate-200 text-sm font-semibold truncate">{r.userName || r.userEmail}</span>
+                                  <span className="text-slate-500 text-xs truncate">{r.userEmail}</span>
+                                  <span className="text-slate-600 text-xs font-mono">ID:{r.userId}</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs flex-wrap">
+                                  <span className={`font-bold ${r.packageCode === 'PRO' ? 'text-violet-300' : 'text-lime-300'}`}>
+                                    {r.packageName}
+                                  </span>
+                                  <span className="text-amber-300 font-mono">{r.priceVnd?.toLocaleString('vi-VN')}đ</span>
+                                  <span className="text-slate-500">{r.createdAt ? new Date(r.createdAt).toLocaleString('vi-VN') : ''}</span>
+                                </div>
+                                {r.note && (
+                                  <p className="text-slate-400 text-xs italic">"{r.note}"</p>
+                                )}
+                                {r.processedNote && (
+                                  <p className="text-slate-500 text-xs">Lý do: {r.processedNote}</p>
+                                )}
+                              </div>
+
+                              {r.status === 'PENDING' && (
+                                <div className="flex gap-2 shrink-0">
+                                  <button
+                                    disabled={paymentProcessing === r.id}
+                                    onClick={async () => {
+                                      setPaymentProcessing(r.id);
+                                      const res = await apiClient.put(`/admin/ai/payment-requests/${r.id}/approve`, {});
+                                      setPaymentProcessing(null);
+                                      if ((res as any)?.success || res.success) {
+                                        setPaymentRequests(prev => prev?.map(x => x.id === r.id ? { ...x, status: 'APPROVED', processedAt: new Date().toISOString() } : x) ?? null);
+                                      } else {
+                                        alert((res as any)?.message || 'Lỗi khi duyệt');
+                                      }
+                                    }}
+                                    className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold rounded-lg disabled:opacity-50 transition-colors">
+                                    {paymentProcessing === r.id ? '...' : '✓ Duyệt & Kích hoạt'}
+                                  </button>
+                                  <button
+                                    disabled={paymentProcessing === r.id}
+                                    onClick={async () => {
+                                      const note = prompt('Lý do từ chối (tuỳ chọn):') ?? '';
+                                      setPaymentProcessing(r.id);
+                                      const res = await apiClient.put(`/admin/ai/payment-requests/${r.id}/reject`, { note });
+                                      setPaymentProcessing(null);
+                                      if ((res as any)?.success || res.success) {
+                                        setPaymentRequests(prev => prev?.map(x => x.id === r.id ? { ...x, status: 'REJECTED', processedNote: note } : x) ?? null);
+                                      }
+                                    }}
+                                    className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-bold rounded-lg disabled:opacity-50 transition-colors">
+                                    ✗ Từ chối
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* ── Tab: Revenue ── */}
               {aiPkgTab === 'revenue' && (
                 <div className="space-y-4">

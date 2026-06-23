@@ -1,6 +1,8 @@
 package com.example.fitchallenge.controller;
 
+import com.example.fitchallenge.Entity.PaymentRequest;
 import com.example.fitchallenge.Security.AuthenticatedUserIdResolver;
+import com.example.fitchallenge.repository.PaymentRequestRepository;
 import com.example.fitchallenge.repository.User.UserRepository;
 import com.example.fitchallenge.service.AiPackageService;
 import com.example.fitchallenge.service.EmailService;
@@ -35,6 +37,7 @@ public class AiPackageController {
     private final PaymentConfigService paymentConfigService;
     private final EmailService emailService;
     private final UserRepository userRepository;
+    private final PaymentRequestRepository paymentRequestRepository;
 
     @Value("${app.admin.email:pvanduc0403@gmail.com}")
     private String adminEmail;
@@ -137,11 +140,11 @@ public class AiPackageController {
 
     /**
      * POST /api/ai-packages/notify-payment
-     * User báo đã chuyển khoản → gửi email cho admin.
+     * User báo đã chuyển khoản → lưu DB pending + gửi email admin (nếu SMTP đã cấu hình).
      * Body: { "packageId": 2, "note": "..." }
      */
     @PostMapping("/notify-payment")
-    @Operation(summary = "Báo đã chuyển khoản — gửi email cho admin")
+    @Operation(summary = "Báo đã chuyển khoản — lưu pending request + thông báo admin")
     public ResponseEntity<Map<String, Object>> notifyPayment(
             @RequestBody Map<String, Object> body,
             @RequestHeader(value = "userId", required = false) Long userId) {
@@ -156,6 +159,7 @@ public class AiPackageController {
 
             // Lấy thông tin gói
             String packageName = "Không xác định";
+            String packageCode = "";
             int priceVnd = 0;
             if (packageId != null) {
                 var pkgs = aiPackageService.listActivePackages();
@@ -164,28 +168,34 @@ public class AiPackageController {
                         .findFirst().orElse(null);
                 if (pkg != null) {
                     packageName = String.valueOf(pkg.get("name"));
+                    packageCode = String.valueOf(pkg.getOrDefault("code", ""));
                     priceVnd = pkg.get("priceVnd") != null ? ((Number) pkg.get("priceVnd")).intValue() : 0;
                 }
             }
 
+            // Lưu vào DB
+            PaymentRequest req = new PaymentRequest();
+            req.setUser(user);
+            req.setPackageId(packageId);
+            req.setPackageCode(packageCode);
+            req.setPackageName(packageName);
+            req.setPriceVnd(priceVnd);
+            req.setNote(note);
+            paymentRequestRepository.save(req);
+
+            // Gửi email nếu SMTP đã cấu hình (fallback thông báo)
             emailService.sendPaymentNotificationToAdmin(
-                    adminEmail,
-                    user.getFullName(),
-                    user.getEmail(),
-                    userId,
-                    packageName,
-                    priceVnd,
-                    note
-            );
+                    adminEmail, user.getFullName(), user.getEmail(),
+                    userId, packageName, priceVnd, note);
 
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "message", "Đã gửi thông báo cho admin. Chúng tôi sẽ kích hoạt gói trong vòng 24h."
+                "message", "Đã ghi nhận. Admin sẽ kích hoạt gói trong vòng 24h."
             ));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of(
                 "success", false,
-                "message", "Không thể gửi thông báo: " + e.getMessage()
+                "message", "Không thể ghi nhận: " + e.getMessage()
             ));
         }
     }

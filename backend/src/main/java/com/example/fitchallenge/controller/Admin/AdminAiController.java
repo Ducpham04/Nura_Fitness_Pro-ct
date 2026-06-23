@@ -1,5 +1,7 @@
 package com.example.fitchallenge.controller.Admin;
 
+import com.example.fitchallenge.Entity.PaymentRequest;
+import com.example.fitchallenge.repository.PaymentRequestRepository;
 import com.example.fitchallenge.repository.User.UserRepository;
 import com.example.fitchallenge.service.AiPackageService;
 import com.example.fitchallenge.service.AiUsageService;
@@ -30,6 +32,7 @@ public class AdminAiController {
     private final AiUsageService aiUsageService;
     private final UserRepository userRepository;
     private final PaymentConfigService paymentConfigService;
+    private final PaymentRequestRepository paymentRequestRepository;
 
     // ── Packages CRUD ─────────────────────────────────────────────────────────
 
@@ -222,5 +225,87 @@ public class AdminAiController {
             "qrUrl", paymentConfigService.getQrUrl(),
             "bankInfo", paymentConfigService.getBankInfo()
         ));
+    }
+
+    // ── Payment Requests (chuyển khoản thủ công) ──────────────────────────────
+
+    /** GET /api/admin/ai/payment-requests?status=PENDING */
+    @GetMapping("/payment-requests")
+    @Operation(summary = "Danh sách yêu cầu chuyển khoản")
+    public ResponseEntity<List<Map<String, Object>>> listPaymentRequests(
+            @RequestParam(required = false) String status) {
+        List<PaymentRequest> list = status != null
+                ? paymentRequestRepository.findByStatusOrderByCreatedAtDesc(
+                        PaymentRequest.Status.valueOf(status.toUpperCase()))
+                : paymentRequestRepository.findAllByOrderByCreatedAtDesc();
+
+        List<Map<String, Object>> result = list.stream().map(r -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", r.getId());
+            m.put("userId", r.getUser().getId());
+            m.put("userName", r.getUser().getFullName());
+            m.put("userEmail", r.getUser().getEmail());
+            m.put("packageId", r.getPackageId());
+            m.put("packageCode", r.getPackageCode());
+            m.put("packageName", r.getPackageName());
+            m.put("priceVnd", r.getPriceVnd());
+            m.put("status", r.getStatus().name());
+            m.put("note", r.getNote());
+            m.put("createdAt", r.getCreatedAt() != null ? r.getCreatedAt().toString() : null);
+            m.put("processedAt", r.getProcessedAt() != null ? r.getProcessedAt().toString() : null);
+            m.put("processedNote", r.getProcessedNote());
+            return m;
+        }).toList();
+
+        return ResponseEntity.ok(result);
+    }
+
+    /** PUT /api/admin/ai/payment-requests/{id}/approve — duyệt + auto activate gói */
+    @PutMapping("/payment-requests/{id}/approve")
+    @Operation(summary = "Duyệt yêu cầu CK — kích hoạt gói tự động")
+    public ResponseEntity<Map<String, Object>> approvePaymentRequest(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        PaymentRequest req = paymentRequestRepository.findById(id)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("PaymentRequest not found: " + id));
+
+        if (req.getStatus() != PaymentRequest.Status.PENDING) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Yêu cầu đã được xử lý rồi"));
+        }
+
+        Map<String, Object> assignResult = aiPackageService.adminAssignPackage(
+                req.getUser().getId(), req.getPackageId(), 30);
+
+        req.setStatus(PaymentRequest.Status.APPROVED);
+        req.setProcessedAt(ZonedDateTime.now());
+        if (body != null && body.containsKey("note")) req.setProcessedNote(String.valueOf(body.get("note")));
+        paymentRequestRepository.save(req);
+
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "message", "Đã kích hoạt gói " + req.getPackageName() + " cho " + req.getUser().getEmail(),
+            "assignResult", assignResult
+        ));
+    }
+
+    /** PUT /api/admin/ai/payment-requests/{id}/reject */
+    @PutMapping("/payment-requests/{id}/reject")
+    @Operation(summary = "Từ chối yêu cầu CK")
+    public ResponseEntity<Map<String, Object>> rejectPaymentRequest(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        PaymentRequest req = paymentRequestRepository.findById(id)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("PaymentRequest not found: " + id));
+
+        if (req.getStatus() != PaymentRequest.Status.PENDING) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Yêu cầu đã được xử lý rồi"));
+        }
+
+        req.setStatus(PaymentRequest.Status.REJECTED);
+        req.setProcessedAt(ZonedDateTime.now());
+        if (body != null && body.containsKey("note")) req.setProcessedNote(String.valueOf(body.get("note")));
+        paymentRequestRepository.save(req);
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "Đã từ chối yêu cầu"));
     }
 }
