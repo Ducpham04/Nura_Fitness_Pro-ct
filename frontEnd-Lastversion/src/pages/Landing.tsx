@@ -147,7 +147,7 @@ export default function Landing() {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0c0d11]/90 backdrop-blur-md border-b border-white/[0.06] py-4' : 'py-7'}`}>
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
           <button onClick={onEnter} className="flex items-center gap-2.5">
-            <Logo size={36} wordmarkClass="text-xl" />
+            <Logo size={48} wordmarkClass="text-2xl" />
           </button>
 
           <div className="hidden items-center gap-8 lg:flex">

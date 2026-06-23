@@ -38,7 +38,7 @@ export default function Navigation() {
       <nav className="hidden md:flex border-b border-white/[0.06] bg-[#0a0a0c]/92 px-8 py-3.5 sticky top-0 z-50 backdrop-blur-xl">
         <div className="flex items-center gap-8 flex-1">
           <Link to="/dashboard" className="flex items-center gap-3 group">
-            <Logo size={40} wordmarkClass="text-xl" className="group-hover:scale-105 transition-transform" />
+            <Logo size={52} wordmarkClass="text-2xl" className="group-hover:scale-105 transition-transform" />
           </Link>
 
           <div className="flex items-center gap-1.5 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-1">

@@ -491,15 +491,18 @@ function ChallengesView() {
                     >
                       <Camera className="w-4 h-4" /> Bắt đầu thi (Camera AI)
                     </button>
-                    <button
-                      onClick={() => handleComplete(c.ucId, c.id)}
-                      disabled={actionLoading === c.id}
-                      className="w-full mt-2 py-2.5 text-xs font-grotesk text-neutral-400 hover:text-neutral-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
-                    >
-                      {actionLoading === c.id
-                        ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang xử lý…</>
-                        : <><CheckCircle className="w-3.5 h-3.5" /> Đánh dấu hoàn thành thủ công</>}
-                    </button>
+                    {/* Manual fallback — chỉ hiện khi KHÔNG có AI camera hỗ trợ */}
+                    {!c.ucId && (
+                      <button
+                        onClick={() => handleComplete(c.ucId, c.id)}
+                        disabled={actionLoading === c.id}
+                        className="w-full mt-2 py-2.5 text-xs font-grotesk text-neutral-500 hover:text-neutral-300 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                      >
+                        {actionLoading === c.id
+                          ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang xử lý…</>
+                          : <><CheckCircle className="w-3.5 h-3.5" /> Đánh dấu hoàn thành thủ công</>}
+                      </button>
+                    )}
                   </div>
                 )
               ) : (

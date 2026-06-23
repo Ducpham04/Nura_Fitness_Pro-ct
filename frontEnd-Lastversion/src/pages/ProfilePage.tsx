@@ -152,13 +152,17 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!user?.id) return;
-    Promise.all([
-      userService.getBodyProfile(),
-      userService.getReferralInfo(),
-    ]).then(([body, refInfo]) => {
-      setBodyProfile(body);
-      setReferralInfo(refInfo);
-    }).catch(console.error).finally(() => setLoading(false));
+    userService.getBodyProfile()
+      .then(body => setBodyProfile(body))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    userService.getReferralInfo()
+      .then(refInfo => { if (refInfo) setReferralInfo(refInfo); })
+      .catch(console.error);
   }, [user?.id]);
 
   const handleCopyReferralLink = () => {
@@ -477,7 +481,15 @@ export default function ProfilePage() {
             )}
           </div>
         ) : (
-          <p className="text-neutral-600 text-sm">Không thể tải thông tin gói AI.</p>
+          <div className="flex flex-col items-center gap-3 py-3">
+            <p className="text-neutral-400 text-sm text-center">Không thể tải thông tin gói AI.</p>
+            <button
+              onClick={refreshUsage}
+              className="text-xs text-lime hover:text-lime/80 font-semibold flex items-center gap-1 transition-colors"
+            >
+              <RefreshCw className="w-3 h-3" /> Thử lại
+            </button>
+          </div>
         )}
       </div>
 

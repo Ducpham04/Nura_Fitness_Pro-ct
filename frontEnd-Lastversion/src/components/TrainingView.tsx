@@ -379,6 +379,8 @@ function TrainingView() {
   const [showCheckIn, setShowCheckIn] = useState(false);
   const [savingCheckIn, setSavingCheckIn] = useState(false);
   const [checkIn, setCheckIn] = useState<{ fatigue: number; rpe: number; sleep: string }>({ fatigue: 0, rpe: 0, sleep: '' });
+  const [checkInError, setCheckInError] = useState<string | null>(null);
+  const [adaptationNote, setAdaptationNote] = useState<string | null>(null);
   // Modal tạo kế hoạch AI (gộp từ tab "Kế Hoạch Tập" cũ)
   const [aiPlanModalOpen, setAiPlanModalOpen] = useState(false);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
@@ -625,6 +627,7 @@ function TrainingView() {
     // Hoàn thành bài → hỏi check-in (mệt mỏi/RPE/giấc ngủ) trước khi lưu.
     if (markDone) {
       setCheckIn({ fatigue: 0, rpe: 0, sleep: '' });
+      setCheckInError(null);
       setShowCheckIn(true);
       return;
     }
@@ -640,8 +643,9 @@ function TrainingView() {
   const persistTrainingLog = async (
     markDone: boolean,
     extra?: { fatigueLevel?: number; perceivedDifficulty?: number; sleepHours?: number }
-  ) => {
-    if (!user || !activeExercise?.trainingPlanId || !activeExercise.dayNumber || !activeExercise.exerciseId) return false;
+  ): Promise<{ success: boolean; adaptationNote?: string | null }> => {
+    if (!user || !activeExercise?.trainingPlanId || !activeExercise.dayNumber || !activeExercise.exerciseId)
+      return { success: false };
 
     const response = await trainingService.saveTrainingLog(user.id, {
       trainingPlanId: activeExercise.trainingPlanId,
@@ -652,8 +656,11 @@ function TrainingView() {
         repsCompleted: sessionData.reps,
         setsCompleted: currentSet,
         actualDurationMinutes: Math.max(1, Math.round(sessionTime / 60)),
-        // Gửi estimatedCalories để backend dùng khi tính kcal đã đốt
-        caloriesBurned: activeExercise.estimatedCalories || 0,
+        caloriesBurned: (() => {
+          const base = activeExercise.estimatedCalories || 0;
+          const target = activeExercise.targetSets || parseInt(activeExercise.sets?.split('x')[0] || '3') || 3;
+          return base > 0 ? Math.max(1, Math.round(base * Math.min(1, currentSet / target))) : 0;
+        })(),
         ...(extra?.fatigueLevel ? { fatigueLevel: extra.fatigueLevel } : {}),
         ...(extra?.perceivedDifficulty ? { perceivedDifficulty: extra.perceivedDifficulty } : {}),
         ...(extra?.sleepHours != null ? { sleepHours: extra.sleepHours } : {}),
@@ -662,7 +669,7 @@ function TrainingView() {
 
     if (!response.success) {
       setSaveError(response.error?.message || 'Could not save training log');
-      return false;
+      return { success: false, adaptationNote: null };
     }
 
     if (markDone) {
@@ -671,7 +678,6 @@ function TrainingView() {
       );
     }
 
-    // Thông báo Dashboard cập nhật sau khi tập xong
     window.dispatchEvent(new CustomEvent('workout-completed', {
       detail: {
         exerciseId: activeExercise.exerciseId,
@@ -682,20 +688,26 @@ function TrainingView() {
         markDone,
       }
     }));
-    return true;
+    return { success: true, adaptationNote: response.data?.adaptationNote ?? null };
   };
 
   /** Xác nhận check-in → lưu kèm dữ liệu phục hồi. */
   const submitCheckIn = async () => {
+    setCheckInError(null);
     setSavingCheckIn(true);
     const sleepNum = parseFloat(checkIn.sleep);
-    const ok = await persistTrainingLog(true, {
+    const result = await persistTrainingLog(true, {
       fatigueLevel: checkIn.fatigue || undefined,
       perceivedDifficulty: checkIn.rpe || undefined,
       sleepHours: !isNaN(sleepNum) && sleepNum > 0 ? sleepNum : undefined,
     });
     setSavingCheckIn(false);
-    if (ok) setShowCheckIn(false);
+    if (result.success) {
+      setAdaptationNote(result.adaptationNote ?? null);
+      setShowCheckIn(false);
+    } else {
+      setCheckInError(saveError || 'Không thể lưu. Vui lòng thử lại.');
+    }
   };
 
   /**
@@ -917,8 +929,14 @@ function TrainingView() {
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-blue-400 font-grotesk font-bold text-2xl tabular-nums">{restCountdown}</span>
-                  <span className="text-blue-400/60 text-[11px] uppercase tracking-widest">giây</span>
+                  <span className="text-blue-400 font-grotesk font-bold text-2xl tabular-nums">
+                    {restCountdown >= 60
+                      ? `${Math.floor(restCountdown / 60)}:${String(restCountdown % 60).padStart(2, '0')}`
+                      : restCountdown}
+                  </span>
+                  <span className="text-blue-400/60 text-[11px] uppercase tracking-widest">
+                    {restCountdown >= 60 ? 'phút' : 'giây'}
+                  </span>
                 </div>
               </div>
               <p className="text-blue-300 font-semibold text-sm">Nghỉ giữa set</p>
@@ -1288,15 +1306,41 @@ function TrainingView() {
               </div>
             </div>
 
+            {checkInError && (
+              <div className="mb-3 px-4 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center">
+                {checkInError}
+              </div>
+            )}
+
             <button onClick={submitCheckIn} disabled={savingCheckIn}
               className="w-full btn-lime py-3.5 rounded-2xl text-sm font-grotesk font-bold flex items-center justify-center gap-2 disabled:opacity-50">
               {savingCheckIn ? 'Đang lưu...' : 'Lưu & hoàn thành'}
               {!savingCheckIn && <Check className="w-4 h-4" />}
             </button>
-            <button onClick={submitCheckIn} disabled={savingCheckIn}
-              className="w-full py-2.5 mt-1 text-xs text-neutral-600 hover:text-neutral-400 transition-colors">
+            <button onClick={() => { setShowCheckIn(false); setCheckInError(null); }} disabled={savingCheckIn}
+              className="w-full py-2.5 mt-1 text-xs text-neutral-600 hover:text-neutral-400 transition-colors disabled:opacity-30">
               Bỏ qua bước này
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Adaptation feedback banner (after check-in saves with fatigue data) ── */}
+      {adaptationNote && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] w-full max-w-sm px-4 animate-fade-in">
+          <div className="rounded-2xl border border-blue-500/20 bg-[#0d1220]/95 backdrop-blur-md p-4 shadow-xl">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                <Activity className="w-4 h-4 text-blue-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-blue-300 text-xs font-bold uppercase tracking-wider mb-1">AI đã thích ứng kế hoạch</p>
+                <p className="text-white/80 text-sm leading-snug">{adaptationNote}</p>
+              </div>
+              <button onClick={() => setAdaptationNote(null)} className="text-neutral-500 hover:text-white transition-colors shrink-0 mt-0.5">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -459,7 +459,7 @@ export default function HomePage() {
                 </div>
                 <div className="text-right">
                   <div className="text-neutral-400 font-grotesk font-bold text-lg leading-none">{Math.round(stats.caloriesGoal)}</div>
-                  <div className="text-neutral-600 text-xs mt-1">mục tiêu/ngày</div>
+                  <div className="text-neutral-600 text-xs mt-1">kcal cần nạp/ngày</div>
                 </div>
               </div>
               <Link
