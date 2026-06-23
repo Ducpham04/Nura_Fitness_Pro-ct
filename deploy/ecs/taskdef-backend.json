@@ -24,7 +24,7 @@
         { "name": "STORAGE_PROVIDER", "value": "s3" },
         { "name": "S3_UPLOAD_BUCKET", "value": "nura-prod-uploads-952669801986-ap-southeast-1-an" },
         { "name": "AWS_REGION", "value": "ap-southeast-1" },
-        { "name": "GOOGLE_CLIENT_ID", "value": "" },
+        { "name": "GOOGLE_CLIENT_ID", "value": "611661427454-r9rij66nd082fg92orfgks94vv64e6ti.apps.googleusercontent.com" },
         { "name": "MAIL_HOST", "value": "smtp.gmail.com" },
         { "name": "MAIL_PORT", "value": "587" },
         { "name": "MAIL_FROM_NAME", "value": "Fitnit Challenge" },

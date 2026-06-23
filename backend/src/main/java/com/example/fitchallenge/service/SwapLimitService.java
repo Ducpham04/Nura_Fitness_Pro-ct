@@ -69,15 +69,16 @@ public class SwapLimitService {
         int exUsed   = user.getExerciseSwapUsed() != null ? user.getExerciseSwapUsed() : 0;
         int mealUsed = user.getMealSwapUsed() != null ? user.getMealSwapUsed() : 0;
 
-        return java.util.Map.of(
-                "exerciseSwapUsed", exUsed,
-                "exerciseSwapLimit", exLimit,
-                "exerciseSwapRemaining", exLimit == -1 ? -1 : Math.max(0, exLimit - exUsed),
-                "mealSwapUsed", mealUsed,
-                "mealSwapLimit", mealLimit,
-                "mealSwapRemaining", mealLimit == -1 ? -1 : Math.max(0, mealLimit - mealUsed),
-                "resetAt", user.getSwapResetAt()
-        );
+        java.util.Map<String, Object> swapInfo = new java.util.LinkedHashMap<>();
+        swapInfo.put("exerciseSwapUsed", exUsed);
+        swapInfo.put("exerciseSwapLimit", exLimit);
+        swapInfo.put("exerciseSwapRemaining", exLimit == -1 ? -1 : Math.max(0, exLimit - exUsed));
+        swapInfo.put("mealSwapUsed", mealUsed);
+        swapInfo.put("mealSwapLimit", mealLimit);
+        swapInfo.put("mealSwapRemaining", mealLimit == -1 ? -1 : Math.max(0, mealLimit - mealUsed));
+        swapInfo.put("resetAt", user.getSwapResetAt() != null
+                ? user.getSwapResetAt().format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null);
+        return swapInfo;
     }
 
     // Reset counter nếu đã qua chu kỳ tháng (dựa theo swap_reset_at)

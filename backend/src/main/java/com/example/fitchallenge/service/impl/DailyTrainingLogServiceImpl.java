@@ -341,18 +341,19 @@ public class DailyTrainingLogServiceImpl implements DailyTrainingLogService {
             }
 
             DailyTrainingLog savedLog = dailyTrainingLogRepository.save(trainingLog);
-            adaptNextWorkoutIfFatigued(userId, dayNumber, savedLog);
-            
-            log.debug("✅ [DailyTrainingLogService] Saved DailyTrainingLog: {}", "userId=" + userId + 
-                    ", trainingPlanId=" + trainingPlanId + 
-                    ", dayNumber=" + dayNumber + 
-                    ", challengeId=" + challengeId + 
+            String adaptationNote = adaptNextWorkoutIfFatigued(userId, dayNumber, savedLog);
+
+            log.debug("✅ [DailyTrainingLogService] Saved DailyTrainingLog: {}", "userId=" + userId +
+                    ", trainingPlanId=" + trainingPlanId +
+                    ", dayNumber=" + dayNumber +
+                    ", challengeId=" + challengeId +
                     ", status=" + status +
                     ", repsCompleted=" + repsCompleted +
                     ", setsCompleted=" + setsCompleted);
 
             // Convert to DTO to avoid circular reference and deep nesting
             DailyTrainingLogResponse responseDTO = convertToResponseDTO(savedLog, trainingPlan);
+            responseDTO.setAdaptationNote(adaptationNote);
             
             return new NotificationResponse(true, 
                     "Daily training log saved successfully", 
@@ -366,10 +367,11 @@ public class DailyTrainingLogServiceImpl implements DailyTrainingLogService {
         }
     }
 
-    private void adaptNextWorkoutIfFatigued(Long userId, Integer currentDayNumber, DailyTrainingLog savedLog) {
+    private String adaptNextWorkoutIfFatigued(Long userId, Integer currentDayNumber, DailyTrainingLog savedLog) {
         Integer fatigue = savedLog.getFatigueLevel();
-        if (fatigue == null || fatigue < 8 || currentDayNumber == null) {
-            return;
+        // Fatigue is on a 1-5 scale from FE; adapt when Mệt (4) or Kiệt sức (5)
+        if (fatigue == null || fatigue < 4 || currentDayNumber == null) {
+            return null;
         }
 
         Optional<PersonalizedPlanDetail> nextOpt = personalizedPlanDetailRepository.findByUser_Id(userId).stream()
@@ -379,7 +381,7 @@ public class DailyTrainingLogServiceImpl implements DailyTrainingLogService {
                 .findFirst();
 
         if (nextOpt.isEmpty()) {
-            return;
+            return null;
         }
 
         PersonalizedPlanDetail next = nextOpt.get();
@@ -387,6 +389,7 @@ public class DailyTrainingLogServiceImpl implements DailyTrainingLogService {
         String type = currentExercise != null && currentExercise.getExerciseType() != null
                 ? currentExercise.getExerciseType().toUpperCase()
                 : "";
+        String exerciseName = next.getExerciseName() != null ? next.getExerciseName() : "bài tập tiếp theo";
 
         if (java.util.Set.of("SQUAT", "DEADLIFT", "BURPEE", "JUMP", "HIIT").contains(type)) {
             Optional<Exercise> stretch = exerciseRepository.findByExerciseTypeIgnoreCase("STRETCH").stream().findFirst();
@@ -395,6 +398,7 @@ public class DailyTrainingLogServiceImpl implements DailyTrainingLogService {
             }
             if (stretch.isPresent()) {
                 Exercise safer = stretch.get();
+                String oldName = exerciseName;
                 next.setExercise(safer);
                 next.setExerciseName(safer.getExerciseName());
                 next.setSets(2);
@@ -403,14 +407,20 @@ public class DailyTrainingLogServiceImpl implements DailyTrainingLogService {
                 next.setDifficulty(safer.getDifficultyLevel() != null ? safer.getDifficultyLevel().name() : "EASY");
                 next.setTargetMuscle(safer.getPrimaryMuscle() != null ? safer.getPrimaryMuscle() : "Mobility");
                 personalizedPlanDetailRepository.save(next);
-                return;
+                return "AI đã đổi \"" + oldName + "\" → \"" + safer.getExerciseName() + "\" (2 hiệp × 8 reps) để bạn hồi phục tốt hơn.";
             }
         }
 
-        next.setSets(Math.max(1, next.getSets() != null ? next.getSets() - 1 : 1));
-        next.setReps(Math.max(5, next.getReps() != null ? (int) Math.round(next.getReps() * 0.8) : 5));
-        next.setRestTime(Math.min(180, (next.getRestTime() != null ? next.getRestTime() : 60) + 30));
+        int oldSets = next.getSets() != null ? next.getSets() : 3;
+        int oldReps = next.getReps() != null ? next.getReps() : 10;
+        int newSets = Math.max(1, oldSets - 1);
+        int newReps = Math.max(5, (int) Math.round(oldReps * 0.8));
+        int newRest = Math.min(180, (next.getRestTime() != null ? next.getRestTime() : 60) + 30);
+        next.setSets(newSets);
+        next.setReps(newReps);
+        next.setRestTime(newRest);
         personalizedPlanDetailRepository.save(next);
+        return "AI đã giảm \"" + exerciseName + "\": " + oldSets + " → " + newSets + " hiệp, " + oldReps + " → " + newReps + " reps, nghỉ thêm 30s để bạn hồi phục.";
     }
 
     /**
