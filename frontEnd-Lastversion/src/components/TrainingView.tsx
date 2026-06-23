@@ -744,20 +744,28 @@ function TrainingView() {
 
   const generateNextWeek = async () => {
     if (!activePlan?.id) {
-      setSaveError('Không tìm thấy UserTraining ID để sinh tuần tiếp theo');
+      toast.error('Không tìm thấy chương trình tập để sinh tuần tiếp theo');
       return;
     }
     setGeneratingNextWeek(true);
-    setSaveError(null);
     try {
       const response = await trainingService.generateNextWorkoutWeek(Number(activePlan.id));
+      const msg = (response as any)?.message || response.error?.message;
       if (!response.success) {
-        setSaveError(response.error?.message || (response as any).message || 'Không thể sinh tuần tiếp theo');
+        // Hết credit → mở modal nâng cấp
+        if ((response as any)?.status === 429 || msg?.includes('hết lượt')) {
+          setUpgradeModalOpen(true);
+        } else {
+          toast.error(msg || 'Không thể sinh tuần tiếp theo. Vui lòng thử lại.');
+        }
         return;
       }
+      toast.success('Đã sinh lịch tập tuần mới!');
+      refreshUsage();
       await loadTrainingSchedule();
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Không thể sinh tuần tiếp theo');
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message || error?.message || 'Không thể sinh tuần tiếp theo';
+      toast.error(errMsg);
     } finally {
       setGeneratingNextWeek(false);
     }
@@ -765,21 +773,38 @@ function TrainingView() {
 
   const autoRegulateNextWeek = async () => {
     if (!user || !activePlan?.id) {
-      setSaveError('Không tìm thấy UserTraining ID để AI thích ứng tuần tiếp theo');
+      toast.error('Không tìm thấy chương trình tập để AI thích ứng');
       return;
     }
     setAdaptingNextWeek(true);
-    setSaveError(null);
     try {
       const response = await trainingService.autoRegulateNextWorkoutWeek(user.id, Number(activePlan.id));
+      const msg = (response as any)?.message || response.error?.message;
       if (!response.success) {
-        setSaveError(response.error?.message || (response as any).message || 'Không thể AI thích ứng tuần tiếp theo');
+        if ((response as any)?.status === 429 || msg?.includes('hết lượt')) {
+          setUpgradeModalOpen(true);
+        } else {
+          toast.error(msg || 'AI thích ứng thất bại. Vui lòng thử lại.');
+        }
         return;
       }
-      toast.success('AI đã cập nhật template và sinh tuần tiếp theo');
+      // Trích xuất ghi chú thích ứng từ phản hồi AI để hiển thị banner
+      const responseData = (response as any)?.data ?? {};
+      const adaptation = responseData?.adaptation ?? {};
+      const adaptNote = adaptation?.adaptation_summary
+        || adaptation?.changes_made
+        || adaptation?.rationale
+        || adaptation?.reasoning
+        || 'AI đã phân tích hiệu suất tuần vừa rồi và điều chỉnh cường độ, khối lượng cho tuần tới.';
+      const noteText = typeof adaptNote === 'string'
+        ? adaptNote
+        : Array.isArray(adaptNote) ? adaptNote.join(' · ') : JSON.stringify(adaptNote);
+      setAdaptationNote(noteText);
+      refreshUsage();
       await loadTrainingSchedule();
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Không thể AI thích ứng tuần tiếp theo');
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message || error?.message || 'AI thích ứng thất bại';
+      toast.error(errMsg);
     } finally {
       setAdaptingNextWeek(false);
     }
@@ -1156,7 +1181,12 @@ function TrainingView() {
   const weekDays = Array.from({ length: weekSize }, (_, i) => currentWeekStart + i)
     .filter(d => d >= 1 && d <= totalScheduleDays);
   const canPrevWeek = currentWeekStart > 1;
-  const canNextWeek = currentWeekStart + weekSize - 1 < totalScheduleDays;
+  // Chỉ cho phép sang tuần tiếp nếu thực sự có bài tập được sinh trong tuần đó
+  const nextWeekStart = currentWeekStart + weekSize;
+  const canNextWeek = scheduleExercises.some(ex => {
+    const d = ex.dayNumber || 1;
+    return d >= nextWeekStart && d < nextWeekStart + weekSize;
+  });
   const currentWeekNum = Math.ceil(selectedDay / weekSize);
   const totalWeeksCount = Math.ceil(totalScheduleDays / weekSize);
 
@@ -1325,17 +1355,22 @@ function TrainingView() {
         </div>
       )}
 
-      {/* ── Adaptation feedback banner (after check-in saves with fatigue data) ── */}
+      {/* ── Adaptation feedback banner (sau AI thích ứng hoặc check-in) ── */}
       {adaptationNote && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] w-full max-w-sm px-4 animate-fade-in">
-          <div className="rounded-2xl border border-blue-500/20 bg-[#0d1220]/95 backdrop-blur-md p-4 shadow-xl">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] w-full max-w-md px-4 animate-fade-in">
+          <div className="rounded-2xl border border-lime/20 bg-[#0a0d08]/95 backdrop-blur-md p-4 shadow-xl">
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                <Activity className="w-4 h-4 text-blue-400" />
+              <div className="w-9 h-9 rounded-xl bg-lime/15 border border-lime/25 flex items-center justify-center shrink-0 mt-0.5">
+                <Sparkles className="w-4 h-4 text-lime" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-blue-300 text-xs font-bold uppercase tracking-wider mb-1">AI đã thích ứng kế hoạch</p>
-                <p className="text-white/80 text-sm leading-snug">{adaptationNote}</p>
+                <p className="text-lime text-xs font-bold uppercase tracking-wider mb-1.5">
+                  AI đã phân tích & điều chỉnh tuần {(activePlan?.weekNumber || 1) + 1}
+                </p>
+                <p className="text-neutral-300 text-sm leading-relaxed">{adaptationNote}</p>
+                <p className="text-neutral-600 text-[10px] mt-2">
+                  Cuộn xuống lịch tuần để xem lịch tập mới.
+                </p>
               </div>
               <button onClick={() => setAdaptationNote(null)} className="text-neutral-500 hover:text-white transition-colors shrink-0 mt-0.5">
                 <X className="w-4 h-4" />
@@ -1357,7 +1392,7 @@ function TrainingView() {
 
         <div className="relative p-6 sm:p-7">
           <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 text-lime text-[11px] font-bold uppercase tracking-[0.28em] mb-2">
                 <Activity className="w-3.5 h-3.5" /> Tập luyện
               </div>
@@ -1365,80 +1400,60 @@ function TrainingView() {
                 Lịch tập cá nhân
               </h2>
               {activePlan?.name && (
-                <p className="text-neutral-300 text-sm mt-2 truncate max-w-md">
-                  {displayPlanName(activePlan.name)} · Tuần {activePlan.weekNumber || currentWeekNum}/{activePlan.totalWeeks || totalWeeksCount}
+                <p className="text-neutral-400 text-sm mt-2 truncate max-w-md">
+                  {displayPlanName(activePlan.name)}
                 </p>
               )}
             </div>
+            {/* Chỉ giữ 2 nút: tải lại nhẹ (icon only) + credit badge */}
             <div className="flex shrink-0 items-center gap-2">
-              <div className="flex flex-col items-end gap-1.5">
-                <button
-                  onClick={() => setAiPlanModalOpen(true)}
-                  className="rounded-xl bg-lime border border-lime px-3.5 py-2 text-black text-xs font-bold hover:bg-lime/90 transition-colors flex items-center gap-1.5"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{activePlan ? 'Tạo lại bằng AI' : 'Tạo kế hoạch AI'}</span>
-                  <span className="sm:hidden">AI</span>
-                </button>
-                <AiUsageBadge usage={usage} actionCost={5} onUpgradeClick={() => setUpgradeModalOpen(true)} />
-              </div>
+              <AiUsageBadge usage={usage} actionCost={5} onUpgradeClick={() => setUpgradeModalOpen(true)} />
               <button
-                onClick={() => window.location.reload()}
-                className="rounded-xl border border-white/15 bg-white/5 backdrop-blur px-3 py-2 text-neutral-200 text-xs font-medium hover:text-white hover:border-white/30 transition-colors flex items-center gap-1.5"
+                onClick={loadTrainingSchedule}
+                title="Tải lại lịch tập"
+                className="w-9 h-9 rounded-xl border border-white/15 bg-white/5 backdrop-blur flex items-center justify-center text-neutral-400 hover:text-white hover:border-white/30 transition-colors"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Tải lại</span>
               </button>
             </div>
           </div>
 
-          {/* Stat badges */}
-          <div className="flex flex-wrap items-center gap-2.5 mt-5">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur border border-white/15 px-3 py-1.5 text-xs text-neutral-200">
-              <Check className="w-3.5 h-3.5 text-lime" />
-              <span className="text-white font-bold">{completedCount}/{scheduleExercises.length}</span> bài hoàn thành
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur border border-white/15 px-3 py-1.5 text-xs text-neutral-200">
-              <Flame className="w-3.5 h-3.5 text-orange-400" />
-              <span className="text-white font-bold">{totalCalories}</span> kcal hôm nay
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-lime/15 backdrop-blur border border-lime/30 px-3 py-1.5 text-xs text-lime font-bold">
-              <Target className="w-3.5 h-3.5" />
-              {progressPercent}% tiến độ
-            </span>
-          </div>
-
-          {/* Progress bar + next-week actions */}
-          {activePlan && (
-            <div className="mt-4">
-              <div className="h-1.5 bg-white/15 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-lime rounded-full transition-all duration-700"
-                  style={{ width: `${activePlan.completionPercentage ?? progressPercent}%` }}
-                />
-              </div>
-              {canGenerateNextWeek && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <button
-                    onClick={autoRegulateNextWeek}
-                    disabled={adaptingNextWeek || generatingNextWeek}
-                    className="rounded-xl border border-lime/30 bg-lime/15 backdrop-blur px-3 py-2 text-lime text-xs font-semibold hover:bg-lime/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-colors"
-                  >
-                    {adaptingNextWeek ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                    AI thích ứng
-                  </button>
-                  <button
-                    onClick={generateNextWeek}
-                    disabled={generatingNextWeek || adaptingNextWeek}
-                    className="rounded-xl border border-white/15 bg-white/5 backdrop-blur px-3 py-2 text-neutral-200 text-xs font-semibold hover:text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-colors"
-                  >
-                    {generatingNextWeek ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CalendarDays className="w-3.5 h-3.5" />}
-                    Tuần tiếp theo
-                  </button>
-                </div>
+          {/* Stat badges + tiến độ */}
+          <div className="mt-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {activePlan && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur border border-white/15 px-3 py-1.5 text-xs text-neutral-200">
+                  <CalendarDays className="w-3.5 h-3.5 text-lime" />
+                  Tuần <span className="text-white font-bold ml-0.5">{activePlan.weekNumber || 1}</span>
+                  <span className="text-neutral-500">/{activePlan.totalWeeks || totalWeeksCount}</span>
+                </span>
               )}
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur border border-white/15 px-3 py-1.5 text-xs text-neutral-200">
+                <Check className="w-3.5 h-3.5 text-lime" />
+                <span className="text-white font-bold">{completedCount}</span>
+                <span className="text-neutral-400">/{scheduleExercises.length} bài</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur border border-white/15 px-3 py-1.5 text-xs text-neutral-200">
+                <Flame className="w-3.5 h-3.5 text-orange-400" />
+                <span className="text-white font-bold">{totalCalories}</span>
+                <span className="text-neutral-400">kcal hôm nay</span>
+              </span>
             </div>
-          )}
+            {activePlan && (
+              <div>
+                <div className="flex items-center justify-between text-[10px] text-neutral-600 mb-1">
+                  <span>Tiến độ chương trình</span>
+                  <span className="text-lime font-bold">{activePlan.completionPercentage ?? progressPercent}%</span>
+                </div>
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-lime rounded-full transition-all duration-700"
+                    style={{ width: `${activePlan.completionPercentage ?? progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1503,6 +1518,55 @@ function TrainingView() {
       {/* ── Main content ── */}
       {!loading && scheduleExercises.length > 0 && (
         <div className="space-y-4">
+
+          {/* ── Sinh tuần tiếp theo ─────────────────────────────────────────── */}
+          {canGenerateNextWeek && (
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-xl bg-lime/15 border border-lime/25 flex items-center justify-center">
+                  <CalendarDays className="w-4 h-4 text-lime" />
+                </div>
+                <div>
+                  <p className="font-grotesk font-bold text-white text-sm leading-none">
+                    Sinh lịch tập tuần {(activePlan?.weekNumber || 1) + 1}
+                  </p>
+                  <p className="text-neutral-500 text-[11px] mt-0.5">Mỗi lần sinh tốn 5 credit AI</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {/* AI thích ứng — phân tích tuần trước, điều chỉnh cường độ */}
+                <button
+                  onClick={autoRegulateNextWeek}
+                  disabled={adaptingNextWeek || generatingNextWeek}
+                  className="flex flex-col items-start gap-1.5 rounded-xl border border-lime/30 bg-lime/[0.08] p-3 text-left hover:bg-lime/15 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <div className="flex items-center gap-1.5 text-lime text-xs font-bold">
+                    {adaptingNextWeek
+                      ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Đang phân tích...</>
+                      : <><Sparkles className="w-3.5 h-3.5" />AI thích ứng</>}
+                  </div>
+                  <p className="text-neutral-400 text-[10px] leading-relaxed">
+                    AI xem xét RPE, độ mệt và số set đã làm tuần trước để điều chỉnh cường độ phù hợp.
+                  </p>
+                </button>
+                {/* Sinh theo template — không dùng AI, nhanh hơn */}
+                <button
+                  onClick={generateNextWeek}
+                  disabled={generatingNextWeek || adaptingNextWeek}
+                  className="flex flex-col items-start gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left hover:bg-white/[0.06] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <div className="flex items-center gap-1.5 text-neutral-200 text-xs font-bold">
+                    {generatingNextWeek
+                      ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Đang tạo...</>
+                      : <><RefreshCw className="w-3.5 h-3.5" />Sinh theo lịch</>}
+                  </div>
+                  <p className="text-neutral-500 text-[10px] leading-relaxed">
+                    Tạo lịch tuần tiếp theo theo chương trình gốc, không thay đổi cường độ.
+                  </p>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Week navigator — lịch tuần nổi bật */}
           <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-b from-white/[0.05] to-white/[0.02] p-4 sm:p-5">

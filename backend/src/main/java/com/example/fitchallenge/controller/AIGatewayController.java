@@ -135,12 +135,22 @@ public class AIGatewayController {
             @Parameter(description = "UserTraining ID") @PathVariable Long utId,
             @Parameter(description = "User ID") @RequestHeader("userId") Long userId) {
         userId = authUser.resolve(userId);
-        aiUsageService.ensureAndConsume(userId, AiCreditCost.PLAN_GENERATE);
-        NotificationResponse response = workoutWeekGenerationService.generateNextWeek(utId);
-        if (response.isSuccess()) {
-            return ResponseEntity.ok(response);
+        try {
+            // Kiểm tra quota trước, chỉ trừ credit sau khi sinh tuần thành công
+            aiUsageService.ensureQuota(userId, AiCreditCost.PLAN_GENERATE);
+            NotificationResponse response = workoutWeekGenerationService.generateNextWeek(utId);
+            if (response.isSuccess()) {
+                aiUsageService.consume(userId, AiCreditCost.PLAN_GENERATE);
+                return ResponseEntity.ok(response);
+            }
+            return ResponseEntity.badRequest().body(response);
+        } catch (com.example.fitchallenge.exception.QuotaExceededException e) {
+            return ResponseEntity.status(429).body(
+                new NotificationResponse(false, e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(
+                new NotificationResponse(false, "Không thể sinh tuần tiếp theo: " + e.getMessage()));
         }
-        return ResponseEntity.badRequest().body(response);
     }
 
     /**
