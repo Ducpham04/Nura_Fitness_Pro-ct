@@ -749,7 +749,7 @@ function TrainingView() {
     }
     setGeneratingNextWeek(true);
     try {
-      const response = await trainingService.generateNextWorkoutWeek(Number(activePlan.id));
+      const response = await trainingService.generateNextWorkoutWeek(Number(activePlan.id), user!.id);
       const msg = (response as any)?.message || response.error?.message;
       if (!response.success) {
         // Hết credit → mở modal nâng cấp

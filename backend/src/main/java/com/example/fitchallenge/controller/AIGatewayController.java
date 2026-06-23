@@ -133,7 +133,7 @@ public class AIGatewayController {
     @Operation(summary = "Generate next workout week", description = "Generate the next 7 days from the stored program template without calling AI")
     public ResponseEntity<NotificationResponse> generateNextWorkoutWeek(
             @Parameter(description = "UserTraining ID") @PathVariable Long utId,
-            @Parameter(description = "User ID") @RequestHeader("userId") Long userId) {
+            @Parameter(description = "User ID") @RequestHeader(value = "userId", required = false) Long userId) {
         userId = authUser.resolve(userId);
         try {
             // Kiểm tra quota trước, chỉ trừ credit sau khi sinh tuần thành công

@@ -308,10 +308,11 @@ class TrainingService {
     );
   }
 
-  async generateNextWorkoutWeek(utId: number): Promise<ApiResponse<any>> {
+  async generateNextWorkoutWeek(utId: number, userId: number): Promise<ApiResponse<any>> {
     return await apiClient.post<any>(
       API_ENDPOINTS.AI.GENERATE_NEXT_WORKOUT_WEEK(utId),
-      {}
+      {},
+      { headers: { userId: userId.toString() } }
     );
   }
 
