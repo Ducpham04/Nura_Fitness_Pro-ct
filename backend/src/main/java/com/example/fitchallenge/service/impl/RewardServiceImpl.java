@@ -35,6 +35,8 @@ public class RewardServiceImpl implements RewardService {
                 .claimed(request.getClaimed())
                 .stock(request.getTotal())
                 .externalPartner(request.getExternalPartner())
+                .rewardType(request.getRewardType() != null ? request.getRewardType().toUpperCase() : "PHYSICAL")
+                .creditValue(request.getCreditValue() != null ? request.getCreditValue() : 0)
                 .build();
 
         if (file != null && !file.isEmpty()) {
@@ -59,6 +61,12 @@ public class RewardServiceImpl implements RewardService {
         reward.setExpireAt(request.getExpireAt() != null ? request.getExpireAt().toInstant().atZone(java.time.ZoneId.systemDefault()) : null);
         reward.setClaimed(request.getClaimed());
         reward.setExternalPartner(request.getExternalPartner());
+        if (request.getRewardType() != null) {
+            reward.setRewardType(request.getRewardType().toUpperCase());
+        }
+        if (request.getCreditValue() != null) {
+            reward.setCreditValue(request.getCreditValue());
+        }
 
         // Upload file mới nếu có
         if (file != null && !file.isEmpty()) {
@@ -94,13 +102,15 @@ public class RewardServiceImpl implements RewardService {
                         .id(reward.getRewardId())
                         .name(reward.getName())
                         .description(reward.getDescription())
-                        .linkImage(reward.getLinkImage()) // sửa typo
+                        .linkImage(reward.getLinkImage())
                         .points(reward.getCostPoints())
                         .total(reward.getStock())
                         .claimed(reward.getClaimed())
-                        .status(reward.getStock() > 0 ? "Available" : "Out of Stock")
+                        .status(reward.getStock() != null && reward.getStock() > 0 ? "Available" : "Out of Stock")
                         .externalPartner(reward.getExternalPartner())
                         .expireAt(reward.getExpireAt() != null ? java.util.Date.from(reward.getExpireAt().toInstant()) : null)
+                        .rewardType(reward.getRewardType() != null ? reward.getRewardType() : "PHYSICAL")
+                        .creditValue(reward.getCreditValue() != null ? reward.getCreditValue() : 0)
                         .build())
                 .collect(Collectors.toList());
         return new NotificationResponse(true, "Success", rewards);

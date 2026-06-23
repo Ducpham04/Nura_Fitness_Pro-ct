@@ -164,6 +164,7 @@ const COL_LABELS: Record<string, string> = {
   dishName: 'Tên món', dishRole: 'Vai trò', suitableMealTypes: 'Bữa phù hợp',
   isActive: 'Hoạt động',
   points: 'Điểm', stock: 'Tồn kho', externalPartner: 'Đối tác', total: 'Tổng kho',
+  rewardType: 'Loại', creditValue: 'Credit AI',
   type: 'Loại', amount: 'Số tiền', reference: 'Mã tham chiếu',
   userFullName: 'Họ tên', userEmail: 'Email', challengeTitle: 'Thử thách',
   score: 'Điểm số', submittedAt: 'Ngày nộp', completedAt: 'Ngày hoàn thành',

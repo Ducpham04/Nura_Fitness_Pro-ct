@@ -7,16 +7,18 @@ import java.util.Date;
 @Data
 @Builder
 public class AdminRewardDTO {
-    private Long id ;
-    private String name ;
+    private Long id;
+    private String name;
     private String linkImage;
-    private String description ;
-    private Integer points ;
-    private Integer total ;
-    private String status ;
-    private String externalPartner ;
-    private Integer claimed ;
-    private java.util.Date expireAt ;
+    private String description;
+    private Integer points;
+    private Integer total;
+    private String status;
+    private String externalPartner;
+    private Integer claimed;
+    private java.util.Date expireAt;
+    private String rewardType;
+    private Integer creditValue;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -38,5 +40,8 @@ public class AdminRewardDTO {
     public void setClaimed(Integer claimed) { this.claimed = claimed; }
     public java.util.Date getExpireAt() { return expireAt; }
     public void setExpireAt(java.util.Date expireAt) { this.expireAt = expireAt; }
-
-    }
+    public String getRewardType() { return rewardType; }
+    public void setRewardType(String rewardType) { this.rewardType = rewardType; }
+    public Integer getCreditValue() { return creditValue; }
+    public void setCreditValue(Integer creditValue) { this.creditValue = creditValue; }
+}
