@@ -43,5 +43,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /** Gói sắp hết hạn trong khoảng [from, to) — dùng để gửi email nhắc gia hạn. */
     @Query("SELECT u FROM User u WHERE u.aiPackageExpiresAt IS NOT NULL AND u.aiPackageExpiresAt >= :from AND u.aiPackageExpiresAt < :to")
     List<User> findUsersExpiringBetween(@Param("from") ZonedDateTime from, @Param("to") ZonedDateTime to);
+
+    /** Đếm paid users theo gói — dùng cho báo cáo doanh thu */
+    @Query("SELECT u.aiPackage.code, COUNT(u), u.aiPackage.priceVnd FROM User u WHERE u.aiPackage IS NOT NULL AND u.aiPackage.code != 'FREE' GROUP BY u.aiPackage.code, u.aiPackage.priceVnd")
+    List<Object[]> countPaidUsersByPackage();
+
+    /** Tổng số user có gói trả phí đang hoạt động */
+    @Query("SELECT COUNT(u) FROM User u WHERE u.aiPackage IS NOT NULL AND u.aiPackage.code != 'FREE' AND (u.aiPackageExpiresAt IS NULL OR u.aiPackageExpiresAt > :now)")
+    long countActivePaidUsers(@Param("now") ZonedDateTime now);
 }
 

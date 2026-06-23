@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Zap, Check, Loader2, Gift, Clock } from 'lucide-react';
+import { X, Zap, Check, Loader2, Gift, Clock, QrCode, Copy, CheckCheck } from 'lucide-react';
 import { AiPackage, AiUsageInfo, aiUsageService } from '../services/aiUsageService';
+import { apiClient } from '../services/apiClient';
 import { trackEvent } from '../analytics';
 
 interface AiUpgradeModalProps {
@@ -57,6 +58,8 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
   const [promoError, setPromoError] = useState('');
   const [loading, setLoading] = useState(false);
   const [checkingPromo, setCheckingPromo] = useState(false);
+  const [paymentCfg, setPaymentCfg] = useState<{ qrUrl: string; bankInfo: string } | null>(null);
+  const [bankCopied, setBankCopied] = useState(false);
 
   // Auto-select PLUS khi mở
   useEffect(() => {
@@ -65,6 +68,14 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
       if (plus) setSelectedId(plus.id);
     }
   }, [isOpen, packages]);
+
+  // Load payment config (QR URL)
+  useEffect(() => {
+    if (!isOpen || paymentCfg !== null) return;
+    apiClient.get('/api/ai-packages/payment-config').then(res => {
+      if (res.success && res.data) setPaymentCfg(res.data as any);
+    }).catch(() => {});
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -242,15 +253,57 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
 
           {/* CTA */}
           {selectedPkg && selectedPkg.priceVnd > 0 ? (
-            /* Gói trả phí — chưa mở thanh toán, hiển thị "Sắp ra mắt" */
+            /* Gói trả phí */
             <div className="space-y-3">
-              <div className="w-full py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-400 text-sm font-bold
-                              flex items-center justify-center gap-2 cursor-default">
-                <Clock className="w-4 h-4" /> Thanh toán sắp ra mắt
-              </div>
+              {paymentCfg?.qrUrl ? (
+                /* ── Có QR chuyển khoản ── */
+                <div className="rounded-xl border border-lime-500/30 bg-zinc-800/60 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <QrCode className="w-4 h-4 text-lime-400" />
+                    <p className="text-sm font-bold text-white">Chuyển khoản ngân hàng</p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-4 items-center">
+                    <img
+                      src={paymentCfg.qrUrl}
+                      alt="QR chuyển khoản"
+                      className="w-36 h-36 rounded-xl border border-zinc-600 object-cover shrink-0 bg-white"
+                    />
+                    <div className="flex-1 space-y-2 text-sm">
+                      {paymentCfg.bankInfo && (
+                        <div className="rounded-lg bg-zinc-700/50 p-2.5 font-mono text-xs text-zinc-200 leading-relaxed whitespace-pre-wrap">
+                          {paymentCfg.bankInfo}
+                        </div>
+                      )}
+                      <p className="text-zinc-400 text-xs">
+                        Nội dung chuyển khoản: <strong className="text-white">VIWAY {usage?.packageCode ?? ''} {userId}</strong>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`VIWAY ${selectedPkg.code} ${userId}`);
+                          setBankCopied(true);
+                          setTimeout(() => setBankCopied(false), 2000);
+                        }}
+                        className="flex items-center gap-1.5 text-xs text-lime-400 hover:text-lime-300 transition-colors"
+                      >
+                        {bankCopied ? <CheckCheck className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        {bankCopied ? 'Đã copy!' : 'Copy nội dung CK'}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-zinc-500">
+                    Sau khi chuyển khoản, admin sẽ kích hoạt gói trong vòng 24h. Liên hệ nếu cần hỗ trợ.
+                  </p>
+                </div>
+              ) : (
+                /* ── Chưa cấu hình QR ── */
+                <div className="w-full py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-400 text-sm font-bold
+                                flex items-center justify-center gap-2 cursor-default">
+                  <Clock className="w-4 h-4" /> Thanh toán sắp ra mắt
+                </div>
+              )}
               <div className="rounded-xl bg-lime-500/10 border border-lime-500/25 p-3 text-xs text-lime-300 space-y-1.5">
-                <p className="font-bold text-lime-400">Giai đoạn beta — nhận gói cao hơn miễn phí!</p>
-                <p>Mời bạn bè qua link trong trang cá nhân:</p>
+                <p className="font-bold text-lime-400">Hoặc nhận gói miễn phí qua referral!</p>
                 <ul className="space-y-0.5 text-lime-300/80">
                   <li>• Mời đủ <strong className="text-white">5 người</strong> → lên <strong className="text-lime-400">PLUS</strong> (200 credit/tháng)</li>
                   <li>• Mời đủ <strong className="text-white">20 người</strong> → lên <strong className="text-violet-400">PRO</strong> (không giới hạn)</li>

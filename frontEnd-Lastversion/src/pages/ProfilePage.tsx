@@ -166,7 +166,7 @@ export default function ProfilePage() {
   }, [user?.id]);
 
   const handleCopyReferralLink = () => {
-    if (!referralInfo) return;
+    if (!referralInfo?.referralCode) return;
     const link = `${window.location.origin}/register?ref=${referralInfo.referralCode}`;
     navigator.clipboard.writeText(link).then(() => {
       setRefCopied(true);

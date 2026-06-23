@@ -182,10 +182,16 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Transactional
     @Override
     public Map<String, Object> getMyReferralInfo(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("User not found: " + userId));
+        // Auto-generate referral code for old users who registered before this feature was added
+        if (user.getReferralCode() == null || user.getReferralCode().isBlank()) {
+            user.setReferralCode(generateReferralCode());
+            userRepository.save(user);
+        }
         int count = user.getReferralCount() == null ? 0 : user.getReferralCount();
         String pkg = user.getAiPackage() != null ? user.getAiPackage().getCode() : "FREE";
         Map<String, Object> res = new LinkedHashMap<>();

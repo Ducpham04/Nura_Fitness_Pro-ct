@@ -1,13 +1,18 @@
 package com.example.fitchallenge.controller.Admin;
 
+import com.example.fitchallenge.repository.User.UserRepository;
 import com.example.fitchallenge.service.AiPackageService;
 import com.example.fitchallenge.service.AiUsageService;
+import com.example.fitchallenge.service.PaymentConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,6 +28,8 @@ public class AdminAiController {
 
     private final AiPackageService aiPackageService;
     private final AiUsageService aiUsageService;
+    private final UserRepository userRepository;
+    private final PaymentConfigService paymentConfigService;
 
     // ── Packages CRUD ─────────────────────────────────────────────────────────
 
@@ -143,5 +150,77 @@ public class AdminAiController {
     @Operation(summary = "Tạo mã khuyến mãi mới")
     public ResponseEntity<Map<String, Object>> createPromoCode(@RequestBody Map<String, Object> body) {
         return ResponseEntity.ok(aiPackageService.createPromoCode(body));
+    }
+
+    // ── Revenue Report ────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/admin/revenue/summary
+     * Báo cáo doanh thu: số user có gói trả phí × giá gói = MRR ước tính
+     */
+    @GetMapping("/revenue/summary")
+    @Operation(summary = "Báo cáo doanh thu gói AI")
+    public ResponseEntity<Map<String, Object>> revenueSummary() {
+        List<Object[]> rows = userRepository.countPaidUsersByPackage();
+        long activePaidUsers = userRepository.countActivePaidUsers(ZonedDateTime.now());
+
+        List<Map<String, Object>> byPackage = new ArrayList<>();
+        long totalMrr = 0;
+        long totalPaidUsers = 0;
+
+        for (Object[] row : rows) {
+            String code     = (String) row[0];
+            long   count    = ((Number) row[1]).longValue();
+            int    price    = ((Number) row[2]).intValue();
+            long   revenue  = count * price;
+            totalMrr       += revenue;
+            totalPaidUsers += count;
+
+            Map<String, Object> pkg = new LinkedHashMap<>();
+            pkg.put("packageCode", code);
+            pkg.put("userCount", count);
+            pkg.put("priceVnd", price);
+            pkg.put("mrrVnd", revenue);
+            byPackage.add(pkg);
+        }
+
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("totalPaidUsers", totalPaidUsers);
+        summary.put("activePaidUsers", activePaidUsers);
+        summary.put("totalMrrVnd", totalMrr);
+        summary.put("byPackage", byPackage);
+        summary.put("generatedAt", ZonedDateTime.now().toString());
+        return ResponseEntity.ok(summary);
+    }
+
+    // ── Payment / QR Config ───────────────────────────────────────────────────
+
+    /**
+     * GET /api/admin/config/payment
+     * Xem cấu hình thanh toán hiện tại (QR URL, bank info)
+     */
+    @GetMapping("/config/payment")
+    @Operation(summary = "Xem cấu hình thanh toán (QR, bank info)")
+    public ResponseEntity<Map<String, Object>> getPaymentConfig() {
+        Map<String, Object> cfg = new LinkedHashMap<>();
+        cfg.put("qrUrl", paymentConfigService.getQrUrl());
+        cfg.put("bankInfo", paymentConfigService.getBankInfo());
+        return ResponseEntity.ok(cfg);
+    }
+
+    /**
+     * PUT /api/admin/config/payment
+     * Body: { "qrUrl": "https://...", "bankInfo": "MB Bank - 0123456789 - Nguyen Van A" }
+     */
+    @PutMapping("/config/payment")
+    @Operation(summary = "Cập nhật QR thanh toán và thông tin ngân hàng")
+    public ResponseEntity<Map<String, Object>> updatePaymentConfig(@RequestBody Map<String, Object> body) {
+        if (body.containsKey("qrUrl"))   paymentConfigService.setQrUrl(String.valueOf(body.get("qrUrl")));
+        if (body.containsKey("bankInfo")) paymentConfigService.setBankInfo(String.valueOf(body.get("bankInfo")));
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "qrUrl", paymentConfigService.getQrUrl(),
+            "bankInfo", paymentConfigService.getBankInfo()
+        ));
     }
 }

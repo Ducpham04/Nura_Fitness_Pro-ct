@@ -2,6 +2,7 @@ package com.example.fitchallenge.controller;
 
 import com.example.fitchallenge.Security.AuthenticatedUserIdResolver;
 import com.example.fitchallenge.service.AiPackageService;
+import com.example.fitchallenge.service.PaymentConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,6 +29,7 @@ public class AiPackageController {
 
     private final AiPackageService aiPackageService;
     private final AuthenticatedUserIdResolver authUser;
+    private final PaymentConfigService paymentConfigService;
 
     // ── Public ────────────────────────────────────────────────────────────────
 
@@ -112,5 +115,15 @@ public class AiPackageController {
         Long packageId  = body.get("packageId") != null
                           ? ((Number) body.get("packageId")).longValue() : null;
         return ResponseEntity.ok(aiPackageService.validatePromoCode(code, packageId));
+    }
+
+    /** GET /api/ai-packages/payment-config — public, dùng trong upgrade modal */
+    @GetMapping("/payment-config")
+    @Operation(summary = "Cấu hình thanh toán (QR, bank info) — public")
+    public ResponseEntity<Map<String, Object>> paymentConfig() {
+        Map<String, Object> cfg = new LinkedHashMap<>();
+        cfg.put("qrUrl", paymentConfigService.getQrUrl());
+        cfg.put("bankInfo", paymentConfigService.getBankInfo());
+        return ResponseEntity.ok(cfg);
     }
 }

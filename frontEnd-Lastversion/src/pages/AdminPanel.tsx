@@ -841,12 +841,17 @@ export default function AdminPanel() {
   const [aiPkgEditing, setAiPkgEditing] = useState<any|null>(null);
   const [aiPkgSaving,  setAiPkgSaving]  = useState(false);
   const [aiPromoSaving,setAiPromoSaving]= useState(false);
-  const [aiPkgTab,     setAiPkgTab]     = useState<'packages'|'promos'|'users'|'report'>('packages');
+  const [aiPkgTab,     setAiPkgTab]     = useState<'packages'|'promos'|'users'|'report'|'revenue'|'qrConfig'>('packages');
   const [aiAdjQuota,   setAiAdjQuota]   = useState('');
   const [aiAdjUsed,    setAiAdjUsed]    = useState('');
   const [aiAdjAdd,     setAiAdjAdd]     = useState('');
   const [aiReport,     setAiReport]     = useState<any[]|null>(null);
   const [aiReportLoading, setAiReportLoading] = useState(false);
+  const [revenueData,  setRevenueData]  = useState<any|null>(null);
+  const [revenueLoading, setRevenueLoading] = useState(false);
+  const [qrConfigForm, setQrConfigForm] = useState({ qrUrl: '', bankInfo: '' });
+  const [qrConfigSaving, setQrConfigSaving] = useState(false);
+  const [qrConfigMsg, setQrConfigMsg] = useState<{ok: boolean; text: string}|null>(null);
   const [aiUserSearch, setAiUserSearch] = useState('');
   const [aiUserResult, setAiUserResult] = useState<any|null>(null);
   const [aiUserLoading,setAiUserLoading]= useState(false);
@@ -1565,8 +1570,8 @@ export default function AdminPanel() {
           {activeTab === 'aiPackages' && (
             <div className="space-y-5">
               {/* Sub-tabs */}
-              <div className="flex gap-1 p-1 bg-white/5 rounded-xl w-fit">
-                {(['packages','promos','users','report'] as const).map(t => (
+              <div className="flex flex-wrap gap-1 p-1 bg-white/5 rounded-xl w-fit">
+                {(['packages','promos','users','report','revenue','qrConfig'] as const).map(t => (
                   <button key={t} onClick={() => {
                     setAiPkgTab(t);
                     if (t === 'report' && aiReport === null) {
@@ -1577,10 +1582,30 @@ export default function AdminPanel() {
                         setAiReportLoading(false);
                       });
                     }
+                    if (t === 'revenue' && revenueData === null) {
+                      setRevenueLoading(true);
+                      apiClient.get('/admin/ai/revenue/summary').then(res => {
+                        if (res.success) setRevenueData(res.data);
+                        setRevenueLoading(false);
+                      });
+                    }
+                    if (t === 'qrConfig' && !qrConfigForm.qrUrl && !qrConfigForm.bankInfo) {
+                      apiClient.get('/admin/ai/config/payment').then(res => {
+                        if (res.success && res.data) {
+                          const d = res.data as any;
+                          setQrConfigForm({ qrUrl: d.qrUrl ?? '', bankInfo: d.bankInfo ?? '' });
+                        }
+                      });
+                    }
                   }}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                       aiPkgTab === t ? 'bg-emerald-500 text-white' : 'text-slate-400 hover:text-white'}`}>
-                    {t === 'packages' ? '📦 Gói AI' : t === 'promos' ? '🎟 Mã KM' : t === 'users' ? '👤 Gán cho User' : '📊 Báo cáo dùng AI'}
+                    {t === 'packages' ? '📦 Gói AI'
+                      : t === 'promos' ? '🎟 Mã KM'
+                      : t === 'users' ? '👤 Gán User'
+                      : t === 'report' ? '📊 Dùng AI'
+                      : t === 'revenue' ? '💰 Doanh thu'
+                      : '🔗 QR Thanh toán'}
                   </button>
                 ))}
               </div>
@@ -1893,6 +1918,125 @@ export default function AdminPanel() {
               )}
 
               {/* ── Tab: Báo cáo dùng AI (tất cả user) ── */}
+              {/* ── Tab: Revenue ── */}
+              {aiPkgTab === 'revenue' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-slate-300">Báo cáo doanh thu</h4>
+                    <button onClick={() => { setRevenueLoading(true); setRevenueData(null); apiClient.get('/admin/ai/revenue/summary').then(res => { if (res.success) setRevenueData(res.data); setRevenueLoading(false); }); }}
+                      className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold rounded-lg transition-colors">
+                      ↻ Làm mới
+                    </button>
+                  </div>
+                  {revenueLoading ? (
+                    <p className="text-slate-500 text-sm">Đang tải…</p>
+                  ) : !revenueData ? (
+                    <p className="text-slate-500 text-sm">Chưa có dữ liệu</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Summary cards */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="rounded-xl border border-white/5 bg-white/3 p-4 text-center">
+                          <p className="text-2xl font-black text-emerald-400">{revenueData.totalPaidUsers ?? 0}</p>
+                          <p className="text-[11px] text-slate-400 mt-1">Tổng user trả phí</p>
+                        </div>
+                        <div className="rounded-xl border border-white/5 bg-white/3 p-4 text-center">
+                          <p className="text-2xl font-black text-cyan-400">{revenueData.activePaidUsers ?? 0}</p>
+                          <p className="text-[11px] text-slate-400 mt-1">Đang hoạt động</p>
+                        </div>
+                        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-center">
+                          <p className="text-xl font-black text-amber-400">
+                            {((revenueData.totalMrrVnd ?? 0) / 1000).toLocaleString('vi-VN')}K
+                          </p>
+                          <p className="text-[11px] text-slate-400 mt-1">MRR ước tính (VND)</p>
+                        </div>
+                      </div>
+                      {/* By package */}
+                      {Array.isArray(revenueData.byPackage) && revenueData.byPackage.length > 0 && (
+                        <div className="rounded-xl border border-white/5 overflow-hidden">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-white/5 text-left text-[10px] uppercase tracking-wider text-slate-500">
+                                <th className="px-4 py-2.5">Gói</th>
+                                <th className="px-4 py-2.5 text-right">Số user</th>
+                                <th className="px-4 py-2.5 text-right">Đơn giá</th>
+                                <th className="px-4 py-2.5 text-right">MRR</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {revenueData.byPackage.map((row: any) => (
+                                <tr key={row.packageCode} className="border-t border-white/5 hover:bg-white/3">
+                                  <td className="px-4 py-2.5">
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${row.packageCode === 'PRO' ? 'bg-violet-500/20 text-violet-300' : 'bg-lime-500/20 text-lime-300'}`}>
+                                      {row.packageCode}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2.5 text-right text-slate-200 font-mono">{row.userCount}</td>
+                                  <td className="px-4 py-2.5 text-right text-slate-400 font-mono text-xs">{row.priceVnd.toLocaleString('vi-VN')}đ</td>
+                                  <td className="px-4 py-2.5 text-right font-mono text-amber-300 font-bold">{row.mrrVnd.toLocaleString('vi-VN')}đ</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                      <p className="text-[10px] text-slate-600">Cập nhật lúc: {new Date(revenueData.generatedAt ?? '').toLocaleString('vi-VN')}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── Tab: QR Config ── */}
+              {aiPkgTab === 'qrConfig' && (
+                <div className="space-y-4 max-w-lg">
+                  <h4 className="text-sm font-bold text-slate-300">Cấu hình QR thanh toán cá nhân</h4>
+                  <p className="text-xs text-slate-500">URL ảnh QR code ngân hàng của bạn. Hiển thị trong màn hình nâng cấp gói AI để user chuyển khoản.</p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">URL ảnh QR code</label>
+                      <input
+                        type="url"
+                        value={qrConfigForm.qrUrl}
+                        onChange={e => setQrConfigForm(f => ({ ...f, qrUrl: e.target.value }))}
+                        placeholder="https://img.vietqr.io/image/..."
+                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
+                      />
+                      {qrConfigForm.qrUrl && (
+                        <img src={qrConfigForm.qrUrl} alt="Preview QR" className="mt-2 w-32 h-32 rounded-lg border border-zinc-600 object-cover bg-white" onError={e => (e.currentTarget.style.display = 'none')} />
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Thông tin ngân hàng (hiển thị kèm QR)</label>
+                      <textarea
+                        value={qrConfigForm.bankInfo}
+                        onChange={e => setQrConfigForm(f => ({ ...f, bankInfo: e.target.value }))}
+                        placeholder={'MB Bank\n0123456789\nNGUYEN VAN A'}
+                        rows={3}
+                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white font-mono focus:outline-none focus:border-emerald-500 resize-none"
+                      />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        disabled={qrConfigSaving}
+                        onClick={async () => {
+                          setQrConfigSaving(true); setQrConfigMsg(null);
+                          const res = await apiClient.put('/admin/ai/config/payment', qrConfigForm);
+                          setQrConfigSaving(false);
+                          setQrConfigMsg(res.success ? { ok: true, text: 'Đã lưu! User sẽ thấy QR mới ngay.' } : { ok: false, text: 'Lưu thất bại' });
+                        }}
+                        className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors"
+                      >
+                        {qrConfigSaving ? 'Đang lưu...' : 'Lưu cấu hình'}
+                      </button>
+                      {qrConfigMsg && (
+                        <span className={`text-xs ${qrConfigMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{qrConfigMsg.text}</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-600">Lưu ý: cài đặt này chỉ tồn tại đến khi server khởi động lại. Để cố định, hãy set env var <code className="bg-zinc-800 px-1 rounded">PAYMENT_QR_URL</code> và <code className="bg-zinc-800 px-1 rounded">PAYMENT_BANK_INFO</code>.</p>
+                  </div>
+                </div>
+              )}
+
               {aiPkgTab === 'report' && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
