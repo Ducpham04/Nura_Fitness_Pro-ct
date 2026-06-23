@@ -158,6 +158,115 @@ public class EmailService {
             """.formatted(name, packageName, daysLeft, upgradeLink);
     }
 
+    /**
+     * Gửi email thông báo cho admin khi user báo đã chuyển khoản.
+     *
+     * @param adminEmail  email admin nhận thông báo
+     * @param userName    tên user
+     * @param userEmail   email user
+     * @param userId      id user (để admin activate nhanh)
+     * @param packageName tên gói muốn mua
+     * @param priceVnd    số tiền cần thanh toán
+     * @param note        ghi chú thêm từ user (nullable)
+     */
+    public void sendPaymentNotificationToAdmin(String adminEmail, String userName, String userEmail,
+                                               Long userId, String packageName, int priceVnd, String note) {
+        if (mailSender == null || mailUsername == null || mailUsername.isBlank()) {
+            log.warn("[Email] SMTP chưa cấu hình. User {} (id={}) báo đã chuyển khoản gói {} - {}đ",
+                    userEmail, userId, packageName, priceVnd);
+            return;
+        }
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromAddress, fromName);
+            helper.setTo(adminEmail);
+            helper.setSubject("[Fitnit] 💰 " + userName + " vừa báo chuyển khoản gói " + packageName);
+            helper.setText(buildPaymentNotifHtml(userName, userEmail, userId, packageName, priceVnd, note), true);
+            mailSender.send(message);
+            log.info("[Email] Đã gửi thông báo CK tới admin {} về user {} gói {}", adminEmail, userEmail, packageName);
+        } catch (MailException | MessagingException e) {
+            log.error("[Email] Gửi email thông báo CK thất bại: {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("[Email] Lỗi không xác định khi gửi thông báo CK: {}", e.getMessage());
+        }
+    }
+
+    private String buildPaymentNotifHtml(String userName, String userEmail, Long userId,
+                                          String packageName, int priceVnd, String note) {
+        String name = (userName != null && !userName.isBlank()) ? userName : userEmail;
+        String noteHtml = (note != null && !note.isBlank())
+            ? "<p style='margin:12px 0 0;color:#a0a0a0;font-size:13px;'><strong style='color:#fff;'>Ghi chú từ user:</strong> " + note + "</p>"
+            : "";
+        return """
+            <!DOCTYPE html>
+            <html lang="vi">
+            <head><meta charset="UTF-8"></head>
+            <body style="margin:0;padding:0;background:#0d0d0d;font-family:'Segoe UI',sans-serif;">
+              <table width="100%%" cellpadding="0" cellspacing="0" style="background:#0d0d0d;padding:40px 0;">
+                <tr><td align="center">
+                  <table width="560" cellpadding="0" cellspacing="0" style="background:#1a1a1a;border-radius:16px;border:1px solid #2a2a2a;overflow:hidden;">
+                    <tr>
+                      <td style="background:#131313;padding:24px 32px;border-bottom:1px solid #2a2a2a;">
+                        <span style="font-size:20px;font-weight:700;color:#fff;">⚡ Fitnit</span>
+                        <span style="margin-left:12px;font-size:13px;color:#ccff00;font-weight:700;">Thông báo chuyển khoản</span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:32px;">
+                        <h2 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#ccff00;">💰 Cần xác nhận thanh toán</h2>
+                        <table cellpadding="0" cellspacing="0" width="100%%" style="background:#111;border-radius:12px;border:1px solid #2a2a2a;margin-bottom:24px;">
+                          <tr><td style="padding:20px;">
+                            <table cellpadding="0" cellspacing="0" width="100%%">
+                              <tr>
+                                <td style="color:#666;font-size:12px;padding-bottom:8px;">Tên</td>
+                                <td style="color:#fff;font-size:14px;font-weight:600;padding-bottom:8px;text-align:right;">%s</td>
+                              </tr>
+                              <tr>
+                                <td style="color:#666;font-size:12px;padding-bottom:8px;">Email</td>
+                                <td style="color:#a0a0a0;font-size:13px;padding-bottom:8px;text-align:right;">%s</td>
+                              </tr>
+                              <tr>
+                                <td style="color:#666;font-size:12px;padding-bottom:8px;">User ID</td>
+                                <td style="color:#ccff00;font-size:14px;font-weight:700;font-family:monospace;padding-bottom:8px;text-align:right;">%d</td>
+                              </tr>
+                              <tr>
+                                <td style="color:#666;font-size:12px;padding-bottom:8px;">Gói muốn mua</td>
+                                <td style="color:#fff;font-size:14px;font-weight:700;padding-bottom:8px;text-align:right;">%s</td>
+                              </tr>
+                              <tr>
+                                <td style="color:#666;font-size:12px;">Số tiền</td>
+                                <td style="color:#ccff00;font-size:16px;font-weight:700;text-align:right;">%s đ</td>
+                              </tr>
+                            </table>
+                          </td></tr>
+                        </table>
+                        <div style="background:#1d2a12;border:1px solid #ccff00;border-radius:12px;padding:16px;margin-bottom:20px;">
+                          <p style="margin:0;color:#ccff00;font-size:13px;font-weight:700;">Bước tiếp theo:</p>
+                          <ol style="margin:10px 0 0;padding-left:18px;color:#a0c060;font-size:13px;line-height:1.8;">
+                            <li>Kiểm tra app ngân hàng — nội dung CK: <strong style="color:#fff;">VIWAY %s %d</strong></li>
+                            <li>Nếu đúng → Admin Panel → Quản lý gói AI → Gán cho User → ID <strong style="color:#ccff00;">%d</strong></li>
+                            <li>Gán gói <strong>%s</strong> và bấm Lưu</li>
+                          </ol>
+                        </div>
+                        %s
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="background:#131313;padding:16px 32px;border-top:1px solid #2a2a2a;">
+                        <p style="margin:0;color:#444;font-size:12px;">© 2026 Fitnit Challenge — email tự động, không cần trả lời</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+            """.formatted(name, userEmail, userId, packageName,
+                         String.format("%,d", priceVnd).replace(',', '.'),
+                         packageName, userId, userId, packageName, noteHtml);
+    }
+
     private String buildResetEmailHtml(String userName, String resetLink) {
         String name = (userName != null && !userName.isBlank()) ? userName : "bạn";
         return """

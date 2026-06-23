@@ -1,12 +1,15 @@
 package com.example.fitchallenge.controller;
 
 import com.example.fitchallenge.Security.AuthenticatedUserIdResolver;
+import com.example.fitchallenge.repository.User.UserRepository;
 import com.example.fitchallenge.service.AiPackageService;
+import com.example.fitchallenge.service.EmailService;
 import com.example.fitchallenge.service.PaymentConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +33,11 @@ public class AiPackageController {
     private final AiPackageService aiPackageService;
     private final AuthenticatedUserIdResolver authUser;
     private final PaymentConfigService paymentConfigService;
+    private final EmailService emailService;
+    private final UserRepository userRepository;
+
+    @Value("${app.admin.email:pvanduc0403@gmail.com}")
+    private String adminEmail;
 
     // ── Public ────────────────────────────────────────────────────────────────
 
@@ -125,5 +133,60 @@ public class AiPackageController {
         cfg.put("qrUrl", paymentConfigService.getQrUrl());
         cfg.put("bankInfo", paymentConfigService.getBankInfo());
         return ResponseEntity.ok(cfg);
+    }
+
+    /**
+     * POST /api/ai-packages/notify-payment
+     * User báo đã chuyển khoản → gửi email cho admin.
+     * Body: { "packageId": 2, "note": "..." }
+     */
+    @PostMapping("/notify-payment")
+    @Operation(summary = "Báo đã chuyển khoản — gửi email cho admin")
+    public ResponseEntity<Map<String, Object>> notifyPayment(
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = "userId", required = false) Long userId) {
+        userId = authUser.resolve(userId);
+        try {
+            Long packageId = body.get("packageId") != null
+                    ? ((Number) body.get("packageId")).longValue() : null;
+            String note = body.get("note") != null ? String.valueOf(body.get("note")) : null;
+
+            var user = userRepository.findById(userId)
+                    .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("User not found"));
+
+            // Lấy thông tin gói
+            String packageName = "Không xác định";
+            int priceVnd = 0;
+            if (packageId != null) {
+                var pkgs = aiPackageService.listActivePackages();
+                var pkg = pkgs.stream()
+                        .filter(p -> packageId.equals(((Number) p.get("id")).longValue()))
+                        .findFirst().orElse(null);
+                if (pkg != null) {
+                    packageName = String.valueOf(pkg.get("name"));
+                    priceVnd = pkg.get("priceVnd") != null ? ((Number) pkg.get("priceVnd")).intValue() : 0;
+                }
+            }
+
+            emailService.sendPaymentNotificationToAdmin(
+                    adminEmail,
+                    user.getFullName(),
+                    user.getEmail(),
+                    userId,
+                    packageName,
+                    priceVnd,
+                    note
+            );
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đã gửi thông báo cho admin. Chúng tôi sẽ kích hoạt gói trong vòng 24h."
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "Không thể gửi thông báo: " + e.getMessage()
+            ));
+        }
     }
 }

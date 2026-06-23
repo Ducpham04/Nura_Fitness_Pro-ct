@@ -60,6 +60,10 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
   const [checkingPromo, setCheckingPromo] = useState(false);
   const [paymentCfg, setPaymentCfg] = useState<{ qrUrl: string; bankInfo: string } | null>(null);
   const [bankCopied, setBankCopied] = useState(false);
+  const [notifyNote, setNotifyNote] = useState('');
+  const [notifySent, setNotifySent] = useState(false);
+  const [notifyLoading, setNotifyLoading] = useState(false);
+  const [notifyError, setNotifyError] = useState('');
 
   // Auto-select PLUS khi mở
   useEffect(() => {
@@ -88,6 +92,28 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
   const discountedPrice = (pkg: AiPackage) => {
     if (!promoValidated || promoValidated.discountPercent === 0) return pkg.priceVnd;
     return pkg.priceVnd - Math.round(pkg.priceVnd * promoValidated.discountPercent / 100);
+  };
+
+  const handleNotifyPayment = async () => {
+    if (!selectedId) return;
+    setNotifyLoading(true);
+    setNotifyError('');
+    try {
+      const res = await apiClient.post('/api/ai-packages/notify-payment',
+        { packageId: selectedId, note: notifyNote.trim() || undefined },
+        { headers: { userId: userId.toString() } }
+      );
+      if ((res as any)?.success || res.success) {
+        setNotifySent(true);
+        trackEvent('PaymentNotified', { package: selectedPkg?.code });
+      } else {
+        setNotifyError('Không gửi được thông báo. Vui lòng liên hệ trực tiếp.');
+      }
+    } catch {
+      setNotifyError('Lỗi kết nối. Vui lòng thử lại.');
+    } finally {
+      setNotifyLoading(false);
+    }
   };
 
   const handleCheckPromo = async () => {
@@ -291,9 +317,35 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
                       </button>
                     </div>
                   </div>
-                  <p className="text-[10px] text-zinc-500">
-                    Sau khi chuyển khoản, admin sẽ kích hoạt gói trong vòng 24h. Liên hệ nếu cần hỗ trợ.
-                  </p>
+                  {/* Nút báo đã CK */}
+                  {!notifySent ? (
+                    <div className="space-y-2 pt-1 border-t border-zinc-700">
+                      <p className="text-[11px] text-zinc-400">Sau khi chuyển xong, bấm nút bên dưới để báo admin kích hoạt nhanh hơn:</p>
+                      <textarea
+                        value={notifyNote}
+                        onChange={e => setNotifyNote(e.target.value)}
+                        placeholder="Ghi chú thêm (không bắt buộc): đã CK lúc 14:30..."
+                        rows={2}
+                        className="w-full px-3 py-2 bg-zinc-700/60 border border-zinc-600 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-lime-500 resize-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={notifyLoading}
+                        onClick={handleNotifyPayment}
+                        className="w-full py-2.5 rounded-xl bg-lime-500 hover:bg-lime-400 text-black text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                      >
+                        {notifyLoading
+                          ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang gửi...</>
+                          : '✓ Tôi đã chuyển khoản — báo admin'}
+                      </button>
+                      {notifyError && <p className="text-xs text-red-400">{notifyError}</p>}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl bg-lime-500/15 border border-lime-500/30 p-3 text-center">
+                      <p className="text-lime-400 font-bold text-sm">Đã gửi thông báo!</p>
+                      <p className="text-zinc-400 text-xs mt-1">Admin sẽ kích hoạt gói trong vòng 24h. Kiểm tra email để xác nhận.</p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* ── Chưa cấu hình QR ── */
