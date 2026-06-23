@@ -197,7 +197,7 @@ public class UserServiceImpl implements UserService {
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("referralCode", user.getReferralCode());
         res.put("referralCount", count);
-        res.put("creditsEarned", count * 20);
+        res.put("creditsEarned", 0);
         res.put("currentPackage", pkg);
         // Milestones: 5 → PLUS, 20 → PRO
         res.put("referralsUntilPlus", Math.max(0, 5 - count));
@@ -244,11 +244,8 @@ public class UserServiceImpl implements UserService {
         int current = referrer.getReferralCount() == null ? 0 : referrer.getReferralCount();
         int newCount = current + 1;
         referrer.setReferralCount(newCount);
-        // +20 credit mỗi lần (cap 500 khi chưa lên gói cao)
-        int newQuota = (referrer.getAiQuota() == null ? 25 : referrer.getAiQuota()) + 20;
-        referrer.setAiQuota(Math.min(newQuota, 500));
-        // Milestone: 20 → PRO, 5 → PLUS
-        if (newCount >= 20) {
+        // Thưởng milestone: 5 → PLUS, 20 → PRO. Không cộng credit lẻ.
+        if (newCount == 20) {
             aiPackageRepository.findByCode("PRO").ifPresent(pkg -> {
                 referrer.setAiPackage(pkg);
                 referrer.setAiQuota(pkg.getAiQuota());
@@ -257,7 +254,7 @@ public class UserServiceImpl implements UserService {
                 referrer.setAiPackageExpiresAt(ZonedDateTime.now().plusDays(30));
                 log.info("Referral milestone PRO: userId={} count={}", referrer.getId(), newCount);
             });
-        } else if (newCount >= 5) {
+        } else if (newCount == 5) {
             aiPackageRepository.findByCode("PLUS").ifPresent(pkg -> {
                 referrer.setAiPackage(pkg);
                 referrer.setAiQuota(pkg.getAiQuota());

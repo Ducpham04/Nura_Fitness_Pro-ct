@@ -504,7 +504,7 @@ export default function ProfilePage() {
           {/* Referral link */}
           <div>
             <p className="text-[11px] text-neutral-500 mb-2">
-              Bạn bè đăng ký qua link → nhận +25 credit. Bạn nhận +20 credit mỗi lần mời thành công.
+              Bạn bè đăng ký qua link → họ nhận <strong className="text-neutral-300">+25 credit</strong>. Bạn tích lũy lượt mời và nhận gói khi đạt mốc.
             </p>
             <div className="flex gap-2 items-center">
               <div className="flex-1 px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-neutral-300 truncate font-mono">
@@ -527,8 +527,8 @@ export default function ProfilePage() {
               <div className="text-[10px] text-neutral-500 mt-0.5">Đã mời</div>
             </div>
             <div className="flex-1 text-center py-2 rounded-xl bg-white/[0.04] border border-white/[0.07]">
-              <div className="text-xl font-black text-lime">+{referralInfo.creditsEarned}</div>
-              <div className="text-[10px] text-neutral-500 mt-0.5">Credit nhận</div>
+              <div className="text-xl font-black text-lime">{referralInfo.referralsUntilPlus > 0 ? referralInfo.referralsUntilPlus : referralInfo.referralsUntilPro}</div>
+              <div className="text-[10px] text-neutral-500 mt-0.5">{referralInfo.referralsUntilPlus > 0 ? 'Còn đến PLUS' : 'Còn đến PRO'}</div>
             </div>
           </div>
 

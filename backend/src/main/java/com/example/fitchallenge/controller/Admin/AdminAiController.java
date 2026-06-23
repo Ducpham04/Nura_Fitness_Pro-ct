@@ -5,12 +5,15 @@ import com.example.fitchallenge.repository.PaymentRequestRepository;
 import com.example.fitchallenge.repository.User.UserRepository;
 import com.example.fitchallenge.service.AiPackageService;
 import com.example.fitchallenge.service.AiUsageService;
+import com.example.fitchallenge.service.FileStorageService;
 import com.example.fitchallenge.service.PaymentConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -33,6 +36,7 @@ public class AdminAiController {
     private final UserRepository userRepository;
     private final PaymentConfigService paymentConfigService;
     private final PaymentRequestRepository paymentRequestRepository;
+    private final FileStorageService fileStorageService;
 
     // ── Packages CRUD ─────────────────────────────────────────────────────────
 
@@ -224,6 +228,27 @@ public class AdminAiController {
             "success", true,
             "qrUrl", paymentConfigService.getQrUrl(),
             "bankInfo", paymentConfigService.getBankInfo()
+        ));
+    }
+
+    /**
+     * POST /api/admin/ai/config/payment-qr-upload
+     * Upload ảnh QR thanh toán — lưu vào storage, set URL tự động.
+     */
+    @PostMapping(value = "/config/payment-qr-upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload ảnh QR thanh toán")
+    public ResponseEntity<Map<String, Object>> uploadPaymentQr(
+            @RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "File rỗng"));
+        }
+        String key = fileStorageService.uploadFile(file);
+        paymentConfigService.setQrKey(key);
+        String qrUrl = paymentConfigService.getQrUrl();
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "qrUrl", qrUrl,
+            "message", "Upload QR thành công"
         ));
     }
 

@@ -852,6 +852,9 @@ export default function AdminPanel() {
   const [qrConfigForm, setQrConfigForm] = useState({ qrUrl: '', bankInfo: '' });
   const [qrConfigSaving, setQrConfigSaving] = useState(false);
   const [qrConfigMsg, setQrConfigMsg] = useState<{ok: boolean; text: string}|null>(null);
+  const [qrFile, setQrFile] = useState<File|null>(null);
+  const [qrFilePreview, setQrFilePreview] = useState<string>('');
+  const [qrUploadLoading, setQrUploadLoading] = useState(false);
   const [paymentRequests, setPaymentRequests] = useState<any[]|null>(null);
   const [paymentReqLoading, setPaymentReqLoading] = useState(false);
   const [paymentFilter, setPaymentFilter] = useState<'ALL'|'PENDING'|'APPROVED'|'REJECTED'>('PENDING');
@@ -2117,21 +2120,87 @@ export default function AdminPanel() {
               {aiPkgTab === 'qrConfig' && (
                 <div className="space-y-4 max-w-lg">
                   <h4 className="text-sm font-bold text-slate-300">Cấu hình QR thanh toán cá nhân</h4>
-                  <p className="text-xs text-slate-500">URL ảnh QR code ngân hàng của bạn. Hiển thị trong màn hình nâng cấp gói AI để user chuyển khoản.</p>
-                  <div className="space-y-3">
+                  <p className="text-xs text-slate-500">Upload ảnh QR code ngân hàng. Hiển thị trong màn hình nâng cấp gói AI để user chuyển khoản.</p>
+                  <div className="space-y-4">
+                    {/* QR Image Upload */}
                     <div>
-                      <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">URL ảnh QR code</label>
-                      <input
-                        type="url"
-                        value={qrConfigForm.qrUrl}
-                        onChange={e => setQrConfigForm(f => ({ ...f, qrUrl: e.target.value }))}
-                        placeholder="https://img.vietqr.io/image/..."
-                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
-                      />
-                      {qrConfigForm.qrUrl && (
-                        <img src={qrConfigForm.qrUrl} alt="Preview QR" className="mt-2 w-32 h-32 rounded-lg border border-zinc-600 object-cover bg-white" onError={e => (e.currentTarget.style.display = 'none')} />
-                      )}
+                      <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-2">Ảnh QR code</label>
+                      <div className="flex items-start gap-4">
+                        {/* Preview box */}
+                        <div className="flex-shrink-0 w-32 h-32 rounded-lg border-2 border-dashed border-zinc-600 bg-zinc-800/50 flex items-center justify-center overflow-hidden">
+                          {qrFilePreview ? (
+                            <img src={qrFilePreview} alt="QR preview" className="w-full h-full object-contain" />
+                          ) : qrConfigForm.qrUrl ? (
+                            <img src={resolveMediaUrl(qrConfigForm.qrUrl)} alt="QR hiện tại" className="w-full h-full object-contain" onError={e => (e.currentTarget.style.display = 'none')} />
+                          ) : (
+                            <div className="text-center p-2">
+                              <Upload className="w-6 h-6 text-zinc-500 mx-auto mb-1" />
+                              <span className="text-[10px] text-zinc-500">Chưa có QR</span>
+                            </div>
+                          )}
+                        </div>
+                        {/* Upload controls */}
+                        <div className="flex-1 space-y-2">
+                          <label className="block cursor-pointer">
+                            <div className="px-3 py-2 bg-zinc-700 hover:bg-zinc-600 border border-zinc-500 rounded-lg text-xs text-slate-300 text-center transition-colors">
+                              {qrFile ? qrFile.name : 'Chọn ảnh QR...'}
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={e => {
+                                const f = e.target.files?.[0] ?? null;
+                                setQrFile(f);
+                                setQrConfigMsg(null);
+                                if (f) {
+                                  const url = URL.createObjectURL(f);
+                                  setQrFilePreview(url);
+                                } else {
+                                  setQrFilePreview('');
+                                }
+                              }}
+                            />
+                          </label>
+                          <button
+                            disabled={!qrFile || qrUploadLoading}
+                            onClick={async () => {
+                              if (!qrFile) return;
+                              setQrUploadLoading(true); setQrConfigMsg(null);
+                              try {
+                                const formData = new FormData();
+                                formData.append('file', qrFile);
+                                const token = localStorage.getItem('token');
+                                const resp = await fetch(`${API_CONFIG.BASE_URL}/api/admin/ai/config/payment-qr-upload`, {
+                                  method: 'POST',
+                                  headers: { Authorization: `Bearer ${token}` },
+                                  body: formData,
+                                });
+                                const data = await resp.json();
+                                if (data.success) {
+                                  setQrConfigForm(f => ({ ...f, qrUrl: data.qrUrl ?? '' }));
+                                  setQrFile(null);
+                                  setQrFilePreview('');
+                                  setQrConfigMsg({ ok: true, text: 'Upload QR thành công!' });
+                                } else {
+                                  setQrConfigMsg({ ok: false, text: data.message ?? 'Upload thất bại' });
+                                }
+                              } catch {
+                                setQrConfigMsg({ ok: false, text: 'Lỗi kết nối khi upload' });
+                              } finally {
+                                setQrUploadLoading(false);
+                              }
+                            }}
+                            className="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg disabled:opacity-40 transition-colors"
+                          >
+                            {qrUploadLoading ? 'Đang upload...' : 'Upload QR'}
+                          </button>
+                          <p className="text-[10px] text-zinc-500">JPG, PNG, WebP — tối đa 10MB</p>
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Bank Info */}
                     <div>
                       <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Thông tin ngân hàng (hiển thị kèm QR)</label>
                       <textarea
@@ -2142,24 +2211,25 @@ export default function AdminPanel() {
                         className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white font-mono focus:outline-none focus:border-emerald-500 resize-none"
                       />
                     </div>
+
                     <div className="flex items-center gap-3">
                       <button
                         disabled={qrConfigSaving}
                         onClick={async () => {
                           setQrConfigSaving(true); setQrConfigMsg(null);
-                          const res = await apiClient.put('/admin/ai/config/payment', qrConfigForm);
+                          const res = await apiClient.put('/admin/ai/config/payment', { bankInfo: qrConfigForm.bankInfo });
                           setQrConfigSaving(false);
-                          setQrConfigMsg(res.success ? { ok: true, text: 'Đã lưu! User sẽ thấy QR mới ngay.' } : { ok: false, text: 'Lưu thất bại' });
+                          setQrConfigMsg(res.success ? { ok: true, text: 'Đã lưu thông tin ngân hàng!' } : { ok: false, text: 'Lưu thất bại' });
                         }}
-                        className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors"
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors"
                       >
-                        {qrConfigSaving ? 'Đang lưu...' : 'Lưu cấu hình'}
+                        {qrConfigSaving ? 'Đang lưu...' : 'Lưu thông tin NH'}
                       </button>
                       {qrConfigMsg && (
                         <span className={`text-xs ${qrConfigMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{qrConfigMsg.text}</span>
                       )}
                     </div>
-                    <p className="text-[10px] text-slate-600">Lưu ý: cài đặt này chỉ tồn tại đến khi server khởi động lại. Để cố định, hãy set env var <code className="bg-zinc-800 px-1 rounded">PAYMENT_QR_URL</code> và <code className="bg-zinc-800 px-1 rounded">PAYMENT_BANK_INFO</code>.</p>
+                    <p className="text-[10px] text-slate-600">Cài đặt lưu vào database — không mất khi server khởi động lại.</p>
                   </div>
                 </div>
               )}
