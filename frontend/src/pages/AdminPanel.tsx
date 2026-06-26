@@ -51,9 +51,17 @@ interface AiStatsData {
   topUsers: UserAiUsage[]; recentLogs: AiCallLog[];
 }
 
+interface RecentUserSummary {
+  userId: number; fullName: string; email: string;
+  aiPackageCode: string; createdAt: string | null; lastLoginAt: string | null; role: string;
+}
+interface DailyPoint { date: string; count: number; }
 interface UserStatsData {
   totalUsers: number; activeUsers: number; inactiveUsers: number; bannedUsers: number;
   loggedInToday?: number; loggedInThisWeek?: number; loggedInThisMonth?: number;
+  recentRegistrations?: RecentUserSummary[];
+  recentLogins?: RecentUserSummary[];
+  dailyLoginsLast7Days?: DailyPoint[];
 }
 
 /* ─── Nav structure ──────────────────────────────────────────────────────── */
@@ -1484,6 +1492,117 @@ export default function AdminPanel() {
                   </div>
                 )}
               </div>
+
+              {/* Activity feed: biểu đồ 7 ngày + danh sách đăng ký / đăng nhập gần đây */}
+              {!loading && dashboard.userStats && (() => {
+                const us = dashboard.userStats as UserStatsData;
+                const daily7 = us.dailyLoginsLast7Days ?? [];
+                const maxVal = Math.max(...daily7.map(d => d.count), 1);
+                const regs   = us.recentRegistrations ?? [];
+                const logins = us.recentLogins ?? [];
+                const pkgColor = (code: string) =>
+                  code === 'FREE' ? 'text-slate-500' : code === 'PLUS' ? 'text-amber-400' : 'text-violet-400';
+                const fmtDate = (iso: string | null) => {
+                  if (!iso) return '—';
+                  const d = new Date(iso);
+                  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) +
+                    ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                };
+                return (
+                  <div className="space-y-4">
+                    {/* Biểu đồ login 7 ngày */}
+                    {daily7.length > 0 && (
+                      <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
+                        <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-500">Đăng nhập theo ngày (7 ngày gần nhất)</h2>
+                        <div className="flex items-end gap-1.5 h-20">
+                          {daily7.map(d => {
+                            const pct = maxVal > 0 ? Math.max((d.count / maxVal) * 100, d.count > 0 ? 8 : 2) : 2;
+                            const isToday = d.date === new Date().toISOString().slice(0, 10);
+                            return (
+                              <div key={d.date} className="flex flex-col items-center gap-1 flex-1">
+                                <span className="text-[10px] text-slate-500">{d.count > 0 ? d.count : ''}</span>
+                                <div
+                                  className={`w-full rounded-t-md transition-all ${isToday ? 'bg-emerald-400' : 'bg-sky-600/70'}`}
+                                  style={{ height: `${pct}%` }}
+                                />
+                                <span className={`text-[9px] ${isToday ? 'text-emerald-400 font-bold' : 'text-slate-600'}`}>
+                                  {d.date.slice(5).replace('-', '/')}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Đăng ký & đăng nhập gần đây */}
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      {/* Đăng ký gần đây */}
+                      <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">Đăng ký gần đây</h2>
+                          <button onClick={() => changeTab('users')} className="text-xs text-sky-400 hover:text-sky-300">Xem tất cả →</button>
+                        </div>
+                        {regs.length === 0 ? (
+                          <p className="text-slate-600 text-sm py-4 text-center">Chưa có dữ liệu</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {regs.map(u => (
+                              <div key={u.userId} className="flex items-center gap-3 rounded-xl hover:bg-white/3 px-2 py-1.5 transition">
+                                <div className="w-7 h-7 rounded-full bg-violet-500/20 flex items-center justify-center flex-shrink-0">
+                                  <span className="text-[10px] font-bold text-violet-300">
+                                    {(u.fullName || u.email || '?')[0].toUpperCase()}
+                                  </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-slate-200 truncate">{u.fullName || u.email}</p>
+                                  <p className="text-[11px] text-slate-500 truncate">{u.email}</p>
+                                </div>
+                                <div className="text-right flex-shrink-0">
+                                  <p className="text-[11px] text-slate-400">{fmtDate(u.createdAt)}</p>
+                                  <p className={`text-[10px] font-bold ${pkgColor(u.aiPackageCode)}`}>{u.aiPackageCode}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Đăng nhập gần đây */}
+                      <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">Đăng nhập gần đây</h2>
+                          <button onClick={() => changeTab('userActivity')} className="text-xs text-sky-400 hover:text-sky-300">Chi tiết →</button>
+                        </div>
+                        {logins.length === 0 ? (
+                          <p className="text-slate-600 text-sm py-4 text-center">Chưa có dữ liệu</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {logins.map(u => {
+                              const isToday = u.lastLoginAt?.startsWith(new Date().toISOString().slice(0, 10));
+                              return (
+                                <div key={u.userId} className="flex items-center gap-3 rounded-xl hover:bg-white/3 px-2 py-1.5 transition">
+                                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isToday ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-slate-200 truncate">{u.fullName || u.email}</p>
+                                    <p className="text-[11px] text-slate-500 truncate">{u.email}</p>
+                                  </div>
+                                  <div className="text-right flex-shrink-0">
+                                    <p className={`text-[11px] font-semibold ${isToday ? 'text-emerald-400' : 'text-slate-400'}`}>
+                                      {fmtDate(u.lastLoginAt)}
+                                    </p>
+                                    <p className={`text-[10px] font-bold ${pkgColor(u.aiPackageCode)}`}>{u.aiPackageCode}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Quick-access grid */}
               <div>

@@ -99,6 +99,29 @@ public class DashboardServiceImpl implements DashboardService {
         long loggedInThisWeek  = userRepository.countByLastLoginAtAfter(weekStart);
         long loggedInThisMonth = userRepository.countByLastLoginAtAfter(monthStart);
 
+        // Recent registrations & logins (top 10 mỗi loại)
+        org.springframework.data.domain.Pageable top10 = org.springframework.data.domain.PageRequest.of(0, 10);
+        List<DashboardDTO.RecentUserSummary> recentRegs = userRepository.findRecentRegistrations(top10)
+                .stream().map(this::toRecentSummary).collect(Collectors.toList());
+        List<DashboardDTO.RecentUserSummary> recentLogins = userRepository.findRecentLogins(top10)
+                .stream().map(this::toRecentSummary).collect(Collectors.toList());
+
+        // Daily logins last 7 days — luôn tính bất kể period
+        Map<String, Long> last7Map = userRepository.findLoginsLast7Days(weekStart).stream()
+                .filter(u -> u.getLastLoginAt() != null)
+                .collect(Collectors.groupingBy(
+                        u -> u.getLastLoginAt().toLocalDate().toString(),
+                        Collectors.counting()));
+        // Đảm bảo đủ 7 ngày (kể cả ngày 0 login)
+        List<DashboardDTO.DailyActiveUsers> dailyLast7 = new ArrayList<>();
+        for (int i = 6; i >= 0; i--) {
+            String date = now.toLocalDate().minusDays(i).toString();
+            DashboardDTO.DailyActiveUsers d = new DashboardDTO.DailyActiveUsers();
+            d.setDate(date);
+            d.setCount(last7Map.getOrDefault(date, 0L));
+            dailyLast7.add(d);
+        }
+
         DashboardDTO.UserStatsResponse userResponse = new DashboardDTO.UserStatsResponse();
         userResponse.setTotalUsers(totalUsers);
         userResponse.setActiveUsers(activeUsers);
@@ -109,7 +132,22 @@ public class DashboardServiceImpl implements DashboardService {
         userResponse.setLoggedInThisMonth(loggedInThisMonth);
         userResponse.setDailyNewUsers(dailyNewUsers);
         userResponse.setDailyActiveUsers(dailyActiveUsers);
+        userResponse.setRecentRegistrations(recentRegs);
+        userResponse.setRecentLogins(recentLogins);
+        userResponse.setDailyLoginsLast7Days(dailyLast7);
         return userResponse;
+    }
+
+    private DashboardDTO.RecentUserSummary toRecentSummary(User u) {
+        return DashboardDTO.RecentUserSummary.builder()
+                .userId(u.getId())
+                .fullName(u.getFullName() != null ? u.getFullName() : u.getUserName())
+                .email(u.getEmail())
+                .aiPackageCode(u.getAiPackage() != null ? u.getAiPackage().getCode() : "FREE")
+                .createdAt(u.getCreatedAt() != null ? u.getCreatedAt().toString() : null)
+                .lastLoginAt(u.getLastLoginAt() != null ? u.getLastLoginAt().toString() : null)
+                .role(u.getRole() != null ? u.getRole().getRoleName() : "USER")
+                .build();
     }
 
     @Override

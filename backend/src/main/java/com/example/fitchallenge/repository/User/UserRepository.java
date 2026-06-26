@@ -55,5 +55,17 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /** Đếm users đăng nhập sau mốc thời gian — dùng cho DAU/WAU/MAU */
     @Query("SELECT COUNT(u) FROM User u WHERE u.lastLoginAt >= :since")
     long countByLastLoginAtAfter(@Param("since") ZonedDateTime since);
+
+    /** Top N user đăng ký gần nhất */
+    @Query("SELECT u FROM User u ORDER BY u.createdAt DESC")
+    List<User> findRecentRegistrations(org.springframework.data.domain.Pageable pageable);
+
+    /** Top N user đăng nhập gần nhất */
+    @Query("SELECT u FROM User u WHERE u.lastLoginAt IS NOT NULL ORDER BY u.lastLoginAt DESC")
+    List<User> findRecentLogins(org.springframework.data.domain.Pageable pageable);
+
+    /** Đăng nhập trong 7 ngày qua — để vẽ biểu đồ daily logins */
+    @Query("SELECT u FROM User u WHERE u.lastLoginAt >= :since ORDER BY u.lastLoginAt DESC")
+    List<User> findLoginsLast7Days(@Param("since") ZonedDateTime since);
 }
 

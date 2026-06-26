@@ -22,13 +22,18 @@ public class DashboardDTO {
         private Long activeUsers;
         private Long inactiveUsers;
         private Long bannedUsers;
-        private Long loggedInToday;    // DAU
-        private Long loggedInThisWeek; // WAU
-        private Long loggedInThisMonth; // MAU
-        private List<DailyUserCount> dailyNewUsers; // Biểu đồ người dùng mới
-        private List<DailyActiveUsers> dailyActiveUsers; // Số user active theo ngày
+        private Long loggedInToday;
+        private Long loggedInThisWeek;
+        private Long loggedInThisMonth;
+        private List<DailyUserCount> dailyNewUsers;
+        private List<DailyActiveUsers> dailyActiveUsers;
+        /** 10 user đăng ký gần nhất */
+        private List<RecentUserSummary> recentRegistrations;
+        /** 10 user đăng nhập gần nhất */
+        private List<RecentUserSummary> recentLogins;
+        /** Login theo ngày — 7 ngày gần nhất (luôn có, không phụ thuộc period) */
+        private List<DailyActiveUsers> dailyLoginsLast7Days;
 
-        // Manual getters/setters for Lombok compatibility
         public Long getTotalUsers() { return totalUsers; }
         public void setTotalUsers(Long totalUsers) { this.totalUsers = totalUsers; }
         public Long getActiveUsers() { return activeUsers; }
@@ -47,6 +52,23 @@ public class DashboardDTO {
         public void setDailyNewUsers(List<DailyUserCount> dailyNewUsers) { this.dailyNewUsers = dailyNewUsers; }
         public List<DailyActiveUsers> getDailyActiveUsers() { return dailyActiveUsers; }
         public void setDailyActiveUsers(List<DailyActiveUsers> dailyActiveUsers) { this.dailyActiveUsers = dailyActiveUsers; }
+        public List<RecentUserSummary> getRecentRegistrations() { return recentRegistrations; }
+        public void setRecentRegistrations(List<RecentUserSummary> v) { this.recentRegistrations = v; }
+        public List<RecentUserSummary> getRecentLogins() { return recentLogins; }
+        public void setRecentLogins(List<RecentUserSummary> v) { this.recentLogins = v; }
+        public List<DailyActiveUsers> getDailyLoginsLast7Days() { return dailyLoginsLast7Days; }
+        public void setDailyLoginsLast7Days(List<DailyActiveUsers> v) { this.dailyLoginsLast7Days = v; }
+    }
+
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class RecentUserSummary {
+        private Long userId;
+        private String fullName;
+        private String email;
+        private String aiPackageCode;
+        private String createdAt;
+        private String lastLoginAt;
+        private String role;
     }
 
     @Data
