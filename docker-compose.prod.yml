@@ -162,7 +162,7 @@ services:
   # ── Frontend (nginx: SPA + reverse proxy) — điểm vào public ─────────
   frontend:
     build:
-      context: ./frontEnd-Lastversion
+      context: ./frontend
       dockerfile: Dockerfile
       args:
         # Trống = gọi /api tương đối (same-origin). Đổi nếu tách subdomain API.

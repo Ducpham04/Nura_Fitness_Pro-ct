@@ -18,7 +18,7 @@ cd "$(dirname "$0")/../.."   # về thư mục gốc repo
 # map service ECS → "ecr_repo|build_context" (dùng case cho tương thích bash 3.2 macOS)
 svc_spec() {
   case "$1" in
-    frontend)   echo "nura-prod/nura-frontend|./frontEnd-Lastversion" ;;
+    frontend)   echo "nura-prod/nura-frontend|./frontend" ;;
     backend)    echo "nura-prod/nura-backend|./backend" ;;
     ai-service) echo "nura-prod/nura-ai-service|./ai-service" ;;
     fitness-ai) echo "nura-prod/nura-fitness-ai|./fitness-ai" ;;

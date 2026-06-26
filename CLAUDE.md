@@ -49,7 +49,7 @@ User, HealthProfile, UserBodyProfile, Goals, TrainingPlan, TrainingPlanDetail, D
 - `app/schemas/` — Pydantic schemas: `full_plan.py`, `nutrition.py`, `workout.py`
 - `app/core/analyzer.py` — BodyAnalyzer
 
-## Frontend (`frontEnd-Lastversion/`)
+## Frontend (`frontend/`)
 **Entry:** `src/main.tsx` → `App.tsx`  
 **Key dirs:**
 - `src/components/` — UI components (WorkoutTab, DietTab, ChallengesView, TrainingPlansView, TrainingView, CyberpunkWorkoutModal, CyberpunkMealModal...)

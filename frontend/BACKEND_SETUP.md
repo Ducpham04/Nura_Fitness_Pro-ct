@@ -9,7 +9,7 @@
 ## 📁 Files Đã Tạo
 
 ```
-frontEnd-Lastversion/
+frontend/
 ├── src/
 │   ├── config/
 │   │   └── api.ts           ✅ API config + endpoints

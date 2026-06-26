@@ -508,7 +508,7 @@ cho phép `http://localhost`, `https://*.ngrok-free.app`, `https://*.ngrok.io` �
 | backend/.../utils/ | BodyMetricsCalculator, CaloriesCalculator |
 | backend/.../Security/ | JWT filter, Security config, CORS, PoseResultVerifier |
 | backend/src/main/resources/db/migration/ | Flyway V1–V5 |
-| frontEnd-Lastversion/ | React + Vite + TypeScript frontend |
+| frontend/ | React + Vite + TypeScript frontend |
 | ai-service/ | FastAPI AI Service (Groq planners, vision) |
 | fitness-ai-service/ | Pose Service (MediaPipe analyzers + HMAC) |
 | docs/ | Tài liệu dự án (báo cáo, API docs, entity docs) |
