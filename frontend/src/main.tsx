@@ -27,3 +27,11 @@ createRoot(document.getElementById('root')!).render(
     ? <GoogleOAuthProvider clientId={googleClientId}>{app}</GoogleOAuthProvider>
     : app
 );
+
+// PWA: đăng ký service worker (chỉ production) → bật "Cài app" trên Android + offline tối thiểu.
+// Dev không đăng ký để tránh cache cản trở HMR.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => { /* bỏ qua nếu lỗi */ });
+  });
+}

@@ -356,6 +356,8 @@ public class UserServiceImpl implements UserService {
             newUser.setStatus("active");
             newUser.setPoints(0);
             newUser.setLevelPoints(0);
+            // referral_code có ràng buộc NOT NULL — phải sinh mã cho user Google mới (giống đăng ký thường)
+            newUser.setReferralCode(generateReferralCode());
             if (g.picture() != null && !g.picture().isBlank()) {
                 newUser.setLinkImage(g.picture());
             }

@@ -139,6 +139,35 @@ public class AiPackageController {
     }
 
     /**
+     * GET /api/ai-packages/{id}/payment-qr
+     * Trả VietQR động đã nhúng số tiền + nội dung CK riêng cho user → SePay tự đối soát.
+     * Nếu chưa cấu hình tài khoản ngân hàng (BIN/STK) thì fallback QR tĩnh.
+     */
+    @GetMapping("/{id}/payment-qr")
+    @Operation(summary = "QR thanh toán động cho 1 gói (nhúng nội dung CK)")
+    public ResponseEntity<Map<String, Object>> paymentQr(
+            @PathVariable Long id,
+            @RequestHeader(value = "userId", required = false) Long userId) {
+        userId = authUser.resolve(userId);
+
+        Map<String, Object> pkg = aiPackageService.getPackageById(id);
+        int amount = pkg.get("priceVnd") != null ? ((Number) pkg.get("priceVnd")).intValue() : 0;
+        String code = String.valueOf(pkg.get("code"));
+        // VietinBank (SePay) bắt buộc nội dung CK bắt đầu bằng "SEVQR"
+        String content = "SEVQR VIWAY " + code + " " + userId;
+
+        String dynamicQr = paymentConfigService.buildVietQrUrl(amount, content);
+
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("qrUrl", dynamicQr != null ? dynamicQr : paymentConfigService.getQrUrl());
+        res.put("dynamic", dynamicQr != null);
+        res.put("content", content);
+        res.put("amount", amount);
+        res.put("bankInfo", paymentConfigService.getBankInfo());
+        return ResponseEntity.ok(res);
+    }
+
+    /**
      * POST /api/ai-packages/notify-payment
      * User báo đã chuyển khoản → lưu DB pending + gửi email admin (nếu SMTP đã cấu hình).
      * Body: { "packageId": 2, "note": "..." }

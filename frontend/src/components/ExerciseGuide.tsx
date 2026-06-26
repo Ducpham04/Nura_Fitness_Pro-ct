@@ -1,8 +1,10 @@
 /**
- * SVG body-guide figures for each exercise.
- * Blueprint/schematic style with camera placement indicator and key joint markers.
- * Used in ChallengeCameraModal guide screen.
+ * Body-guide cho mỗi bài tập.
+ * Ưu tiên ẢNH RENDER 3D (đặt ở /public/guides/{type}.webp); nếu chưa có ảnh
+ * → tự fallback về hình SVG blueprint bên dưới. Dùng ở màn hướng dẫn của ChallengeCameraModal.
  */
+import { useState } from 'react';
+import { Camera } from 'lucide-react';
 
 function SvgGrid() {
   return (
@@ -402,12 +404,54 @@ export function PlankGuide() {
   );
 }
 
+// Map type → component SVG fallback
+const SVG_MAP: Record<string, () => JSX.Element> = {
+  'squat': SquatGuide,
+  'pull-up': PullUpGuide,
+  'sit-up': SitUpGuide,
+  'plank': PlankGuide,
+  'push-up': PushUpGuide,
+};
+
+// Metadata mỗi bài: ảnh render 3D + nhãn + cách đặt điện thoại (overlay lên ảnh).
+// Khi có ảnh: đặt file tại /public/guides/{key}.webp (vd: /public/guides/push-up.webp).
+const GUIDE_META: Record<string, { label: string; camera: string; distance: string; img: string }> = {
+  'push-up': { label: 'Hít đất', camera: 'Camera nhìn từ hông', distance: '~50cm', img: '/guides/push-up.webp' },
+  'squat':   { label: 'Squat', camera: 'Nhìn từ hông, ngang đùi', distance: '~80cm', img: '/guides/squat.webp' },
+  'pull-up': { label: 'Kéo xà', camera: 'Camera chính diện', distance: 'cao ~1.2m', img: '/guides/pull-up.webp' },
+  'sit-up':  { label: 'Gập bụng', camera: 'Camera thấp, nhìn hông', distance: '~25cm', img: '/guides/sit-up.webp' },
+  'plank':   { label: 'Plank', camera: 'Camera nhìn từ hông', distance: '~35cm', img: '/guides/plank.webp' },
+};
+
 export function ExerciseGuide({ type }: { type: string }) {
-  switch (type) {
-    case 'squat':   return <SquatGuide />;
-    case 'pull-up': return <PullUpGuide />;
-    case 'sit-up':  return <SitUpGuide />;
-    case 'plank':   return <PlankGuide />;
-    default:        return <PushUpGuide />;
-  }
+  const key = GUIDE_META[type] ? type : 'push-up';
+  const meta = GUIDE_META[key];
+  const Svg = SVG_MAP[key] || PushUpGuide;
+  // Khi chưa có ảnh render (404) → ẩn ảnh, hiện SVG fallback.
+  const [imgFailed, setImgFailed] = useState(false);
+
+  if (imgFailed) return <Svg />;
+
+  return (
+    <div className="relative w-full overflow-hidden rounded-xl" style={{ background: '#070f1e' }}>
+      <img
+        src={meta.img}
+        alt={`Hướng dẫn tư thế ${meta.label}`}
+        className="w-full max-h-[300px] object-contain mx-auto"
+        loading="lazy"
+        onError={() => setImgFailed(true)}
+      />
+      {/* Nhãn bài (trên) */}
+      <div className="absolute top-2 left-0 right-0 text-center pointer-events-none">
+        <span className="text-[11px] font-semibold text-neutral-200 uppercase tracking-wide"
+          style={{ textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{meta.label}</span>
+      </div>
+      {/* Vị trí đặt điện thoại (dưới) */}
+      <div className="absolute bottom-2 left-2 right-2 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5"
+        style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(6px)', border: '1px solid rgba(59,130,246,0.25)' }}>
+        <Camera className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+        <span className="text-[11px] text-blue-200 font-medium">{meta.camera} · {meta.distance}</span>
+      </div>
+    </div>
+  );
 }

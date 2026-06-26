@@ -11,6 +11,7 @@ import ProgressRing from '../components/ProgressRing';
 import { useDashboard } from '../hooks/useDashboard';
 import { useAuthContext } from '../context/AuthContext';
 import SetupWizard from '../components/SetupWizard';
+import DailyGoals from '../components/DailyGoals';
 import BodyCheckInModal from '../components/BodyCheckInModal';
 import { nutritionService } from '../services/nutritionService';
 import { userService } from '../services/userService';
@@ -100,10 +101,14 @@ export default function HomePage() {
   const [guideDismissed, setGuideDismissed] = useState(() => {
     try { return localStorage.getItem('home_guide_dismissed') === '1'; } catch { return false; }
   });
+  // Cho phép mở lại hướng dẫn bất cứ lúc nào (kể cả sau khi đã tắt)
+  const [guideOpen, setGuideOpen] = useState(false);
   const dismissGuide = () => {
     setGuideDismissed(true);
+    setGuideOpen(false);
     try { localStorage.setItem('home_guide_dismissed', '1'); } catch { /* ignore */ }
   };
+  const reopenGuide = () => setGuideOpen(true);
   const { data, isLoading, error, refresh } = useDashboard();
   const navigate = useNavigate();
 
@@ -257,10 +262,10 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-r from-[#08090a] via-[#08090a]/92 to-[#08090a]/48" />
           <div className="absolute inset-0 grid-overlay opacity-60" />
 
-          <div className="relative z-10 grid gap-6 p-5 sm:p-7 lg:grid-cols-[1.05fr_0.95fr]">
-            <div className="flex min-h-[330px] flex-col justify-between">
+          <div className="relative z-10 grid gap-4 sm:gap-6 p-4 sm:p-7 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="flex min-h-0 sm:min-h-[330px] flex-col justify-between">
               <div>
-                <div className="mb-6 flex flex-wrap items-center gap-2">
+                <div className="mb-4 sm:mb-6 flex flex-wrap items-center gap-2">
                   <span className="rounded-full border border-lime/25 bg-lime/[0.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-lime">
                     {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}
                   </span>
@@ -268,16 +273,16 @@ export default function HomePage() {
                     Lv.{userSummary.level} · {userSummary.streakDays} streak
                   </span>
                 </div>
-                <h1 className="font-grotesk text-4xl font-bold leading-[0.98] tracking-tight text-white sm:text-5xl">
+                <h1 className="font-grotesk text-3xl font-bold leading-[0.98] tracking-tight text-white sm:text-5xl">
                   {greeting},<br />
                   <span className="text-lime">{userName}</span>
                 </h1>
-                <p className="mt-5 max-w-lg text-sm leading-relaxed text-neutral-300 sm:text-base">
+                <p className="mt-3 sm:mt-5 max-w-lg text-sm leading-relaxed text-neutral-300 sm:text-base">
                   Ưu tiên hôm nay: <span className="font-semibold text-white">{primaryTask}</span>. Theo dõi tư thế, bữa ăn và phục hồi trong một luồng duy nhất.
                 </p>
               </div>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-5 sm:mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link to={nextWorkout ? '/dashboard/workout' : hasActiveMealPlan ? '/dashboard/diet' : '/dashboard/coach'}
                   className="btn-lime group inline-flex items-center justify-center gap-3 px-6 py-3 text-xs font-black uppercase tracking-wider active:scale-[0.98]">
                   {nextWorkout ? 'Bắt đầu buổi tập' : hasActiveMealPlan ? 'Ghi bữa ăn' : 'Thiết lập coach'}
@@ -341,8 +346,26 @@ export default function HomePage() {
         </div>
       </motion.div>
 
-      {/* ── Hướng dẫn bắt đầu cho user mới ── */}
-      {!guideDismissed && userSummary.streakDays === 0 && stats.caloriesBurned === 0 && (
+      {/* ── Bảng mục tiêu hôm nay (lớp gắn kết: avatar tiến hóa + vòng mục tiêu) ── */}
+      <motion.div variants={fadeUp}>
+        <DailyGoals
+          level={userSummary.level}
+          currentExp={userSummary.currentExp}
+          nextLevelExp={userSummary.nextLevelExp}
+          streakDays={userSummary.streakDays}
+          completedWorkoutsToday={stats.completedWorkoutsToday}
+          scheduledWorkoutsToday={stats.scheduledWorkoutsToday}
+          workoutsThisWeek={stats.workoutsThisWeek}
+          workoutsWeeklyGoal={stats.workoutsWeeklyGoal}
+          caloriesConsumed={stats.caloriesConsumed}
+          caloriesGoal={stats.caloriesGoal}
+        />
+      </motion.div>
+
+      {/* ── Hướng dẫn bắt đầu cho user mới ──
+          Hiện rộng hơn cho người mới (còn Lv.1 & streak < 5 ngày), và LUÔN có
+          lối mở lại — tắt rồi vẫn bấm "Xem lại hướng dẫn" được bất cứ lúc nào. */}
+      {(guideOpen || (!guideDismissed && userSummary.level <= 1 && userSummary.streakDays < 5)) ? (
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
           <div className="flex items-start justify-between gap-3 mb-4">
             <div>
@@ -372,6 +395,17 @@ export default function HomePage() {
             ))}
           </div>
         </div>
+      ) : (
+        /* Đã tắt / không còn là người mới → vẫn cho mở lại hướng dẫn */
+        <button
+          onClick={reopenGuide}
+          className="w-full rounded-2xl border border-white/[0.06] bg-white/[0.02] px-5 py-3 flex items-center justify-between gap-3 hover:border-white/15 hover:bg-white/[0.04] transition-all group"
+        >
+          <span className="flex items-center gap-2 text-neutral-400 text-sm group-hover:text-white transition-colors">
+            <Compass className="w-4 h-4 text-lime" /> Xem lại hướng dẫn bắt đầu
+          </span>
+          <ChevronRight className="w-4 h-4 text-neutral-600 group-hover:text-lime transition-colors" />
+        </button>
       )}
 
       {/* ── Setup notification ── */}
@@ -416,8 +450,8 @@ export default function HomePage() {
         </motion.div>
       )}
 
-      {/* ── 3 stats cards ── */}
-      <motion.div variants={fadeUp} className="grid sm:grid-cols-3 gap-4">
+      {/* ── 2 stats cards (đã bỏ card Phục hồi HRV/RHR — metric chết) ── */}
+      <motion.div variants={fadeUp} className="grid sm:grid-cols-2 gap-4">
 
         {/* Calories — 2 layout: có data / chưa log ăn */}
         <div className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.045] to-white/[0.015] p-5 flex flex-col gap-4 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-1 hover:border-white/[0.14] hover:shadow-[0_16px_44px_-14px_rgba(0,0,0,0.65)]">
@@ -524,172 +558,8 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* Recovery */}
-        <div className="rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.045] to-white/[0.015] p-5 flex flex-col gap-4 shadow-[0_4px_24px_-10px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-1 hover:border-white/[0.14] hover:shadow-[0_16px_44px_-14px_rgba(0,0,0,0.65)]">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Phục hồi</span>
-            <span className={`text-[10px] font-bold px-2 py-1 rounded-lg bg-white/[0.06] ${recoveryColor}`}>
-              {recoveryLabel}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Moon className="w-7 h-7 text-blue-400 shrink-0" />
-            <div className="flex-1">
-              {sleepLogged ? (
-                <>
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="text-neutral-400">Giấc ngủ</span>
-                    <span className="text-white font-semibold">{recovery.sleepHours}h / {recovery.sleepGoal}h</span>
-                  </div>
-                  <div className="h-1.5 bg-white/[0.08] rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-400 rounded-full" style={{ width: `${pct(recovery.sleepHours, recovery.sleepGoal)}%` }} />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="text-neutral-400">Giấc ngủ</span>
-                    <span className="text-neutral-600">Chưa có dữ liệu</span>
-                  </div>
-                  <div className="h-1.5 bg-white/[0.06] rounded-full" />
-                </>
-              )}
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { label: 'HRV', value: recovery.hrv || '—' },
-              { label: 'RHR', value: recovery.restingHR || '—' },
-              { label: 'Năng lượng', value: recovery.energyLevel ? `${recovery.energyLevel}/5` : '—' },
-            ].map(({ label, value }) => (
-              <div key={label} className="rounded-xl bg-white/[0.05] p-2.5 text-center">
-                <div className="text-white font-bold text-xs">{value}</div>
-                <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">{label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
       </motion.div>
 
-      {/* ── AI Coach + Quick actions ── */}
-      <motion.div variants={fadeUp} className="grid gap-4 lg:grid-cols-[1fr_260px]">
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-9 h-9 rounded-xl bg-blue-400/10 border border-blue-400/20 flex items-center justify-center shrink-0">
-              <Brain className="w-4 h-4 text-blue-400" />
-            </div>
-            <div>
-              <h3 className="text-white font-semibold text-sm">AI Coach gợi ý hôm nay</h3>
-              <p className="text-neutral-500 text-xs">Phân tích dựa trên chỉ số của bạn</p>
-            </div>
-          </div>
-          <div className="rounded-xl bg-white/[0.04] border border-white/[0.05] p-4 mb-4">
-            <p className="text-neutral-300 text-sm leading-relaxed">
-              {aiSuggestion || `Chào ${userName}, hãy chia sẻ hôm nay bạn thấy thế nào hoặc thực đơn bạn mong muốn để tôi có thể đưa ra gợi ý phù hợp nhất!`}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link to="/dashboard/coach" className="btn-lime px-5 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <Brain className="w-3.5 h-3.5" /> Chat với Coach
-            </Link>
-            <Link
-              to="/dashboard/diet"
-              className="rounded-xl border border-white/[0.07] bg-white/[0.04] px-5 py-2.5 text-xs font-semibold text-neutral-300 hover:text-white transition-colors"
-            >
-              Tạo thực đơn
-            </Link>
-          </div>
-        </div>
-
-        {/* Quick actions 2×2 */}
-        <div className="grid grid-cols-2 gap-2">
-          {[
-            { label: 'Tập luyện', icon: Dumbbell, path: '/dashboard/workout', color: 'text-lime' },
-            { label: 'AI Coach', icon: Brain, path: '/dashboard/coach', color: 'text-blue-400' },
-            { label: 'Dinh dưỡng', icon: ShoppingCart, path: '/dashboard/diet', color: 'text-lime' },
-            { label: 'Nhật ký', icon: History, path: '/dashboard/logbook', color: 'text-orange-400' },
-          ].map(action => (
-            <Link
-              key={action.label}
-              to={action.path}
-              className="rounded-2xl border border-white/[0.07] bg-white/[0.04] p-4 flex flex-col items-center justify-center gap-2 hover:bg-white/[0.07] transition-colors"
-            >
-              <action.icon className={`w-5 h-5 ${action.color}`} />
-              <span className="text-white text-xs font-semibold">{action.label}</span>
-            </Link>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* ── Tiến độ tập luyện tuần này ── */}
-      <motion.div variants={fadeUp} className="grid sm:grid-cols-2 gap-4">
-
-        {/* Weekly workout progress */}
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-lime" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Tuần này</span>
-            </div>
-            <span className="text-white font-grotesk font-bold text-sm">
-              {stats.workoutsThisWeek} <span className="text-neutral-500 font-normal">/ {stats.workoutsWeeklyGoal} buổi</span>
-            </span>
-          </div>
-          <div className="flex gap-1 mb-3">
-            {Array.from({ length: stats.workoutsWeeklyGoal || 5 }).map((_, i) => (
-              <div key={i} className={`flex-1 h-2 rounded-full ${
-                i < stats.workoutsThisWeek ? 'bg-lime shadow-[0_0_6px_rgba(204,255,0,0.4)]' : 'bg-white/[0.07]'
-              }`} />
-            ))}
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-xl bg-white/[0.05] p-2.5 text-center">
-              <div className="text-lime font-bold text-sm">{stats.completedWorkoutsToday}</div>
-              <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">Hôm nay</div>
-            </div>
-            <div className="rounded-xl bg-white/[0.05] p-2.5 text-center">
-              <div className="text-orange-400 font-bold text-sm">{stats.caloriesBurned}</div>
-              <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">kcal đốt</div>
-            </div>
-            <div className="rounded-xl bg-white/[0.05] p-2.5 text-center">
-              <div className="text-blue-400 font-bold text-sm">{userSummary.streakDays}</div>
-              <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">streak</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Active plan progress */}
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-electric" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Plan hiện tại</span>
-            </div>
-            <span className="text-white font-grotesk font-bold text-sm">{stats.activePlanProgress}%</span>
-          </div>
-          <div className="h-2 bg-white/[0.07] rounded-full overflow-hidden mb-3">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-electric to-lime transition-all duration-700"
-              style={{ width: `${stats.activePlanProgress}%` }}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-xl bg-white/[0.05] p-2.5">
-              <div className="text-white font-bold text-sm">{stats.scheduledWorkoutsToday}</div>
-              <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">Bài hôm nay</div>
-            </div>
-            <div className="rounded-xl bg-white/[0.05] p-2.5">
-              <div className={`font-bold text-sm ${
-                stats.completedWorkoutsToday >= stats.scheduledWorkoutsToday && stats.scheduledWorkoutsToday > 0
-                  ? 'text-lime' : 'text-neutral-300'
-              }`}>
-                {stats.completedWorkoutsToday}/{stats.scheduledWorkoutsToday}
-              </div>
-              <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">Hoàn thành</div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
 
       {/* ── Biểu đồ xu hướng (cân nặng / calo đốt) ── */}
       {user?.id && (

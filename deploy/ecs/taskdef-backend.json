@@ -37,7 +37,8 @@
         { "name": "MAIL_USERNAME", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/mail-XSEcCG:username::" },
         { "name": "MAIL_PASSWORD", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/mail-XSEcCG:password::" },
         { "name": "VNPAY_TMN_CODE", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/vnpay-riMM2H:tmnCode::" },
-        { "name": "VNPAY_HASH_SECRET", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/vnpay-riMM2H:hashSecret::" }
+        { "name": "VNPAY_HASH_SECRET", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/vnpay-riMM2H:hashSecret::" },
+        { "name": "SEPAY_API_KEY", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/sepay-b31sB8" }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",

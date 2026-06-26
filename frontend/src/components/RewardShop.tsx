@@ -12,6 +12,11 @@ const resolveImg = (url?: string) => {
   return `${API_CONFIG.BASE_URL}/${clean}`;
 };
 
+// Đồng xu credit Viway — ảnh mặc định cho phần thưởng credit khi chưa có ảnh riêng
+const CREDIT_COIN = '/brand/coin-credit.svg';
+const isCreditReward = (r: RewardItem) =>
+  /credit|tín dụng|xu ai|ai credit/i.test(`${r.name} ${r.description ?? ''}`);
+
 export default function RewardShop({ userId, onClose }: { userId: number; onClose: () => void }) {
   const [rewards, setRewards] = useState<RewardItem[]>([]);
   const [points, setPoints] = useState(0);
@@ -98,7 +103,8 @@ export default function RewardShop({ userId, onClose }: { userId: number; onClos
           ) : (
             <div className="grid sm:grid-cols-2 gap-4">
               {rewards.map(r => {
-                const img = resolveImg(r.linkImage);
+                const img = resolveImg(r.linkImage) ?? (isCreditReward(r) ? CREDIT_COIN : null);
+                const isCoinFallback = img === CREDIT_COIN;
                 const outOfStock = (r.total ?? 0) <= 0 || r.status === 'Out of Stock';
                 const affordable = points >= r.points;
                 const canRedeem = !outOfStock && affordable && redeeming === null;
@@ -114,7 +120,7 @@ export default function RewardShop({ userId, onClose }: { userId: number; onClos
                           src={img}
                           alt={r.name}
                           onError={e => { e.currentTarget.style.display = 'none'; }}
-                          className="relative w-full h-full object-cover"
+                          className={`relative w-full h-full ${isCoinFallback ? 'object-contain p-3' : 'object-cover'}`}
                         />
                       )}
                       {outOfStock && (

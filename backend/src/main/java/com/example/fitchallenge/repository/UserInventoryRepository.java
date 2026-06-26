@@ -20,6 +20,11 @@ import java.util.Optional;
 @Repository
 public interface UserInventoryRepository extends JpaRepository<UserInventory, Long> {
 
+    /** Gỡ link food (food_id nullable) khi admin xoá food — giữ lại bản ghi kho, vẫn còn foodName. */
+    @Modifying
+    @Query("UPDATE UserInventory ui SET ui.food = null WHERE ui.food.foodId = :foodId")
+    void unlinkFood(@Param("foodId") Long foodId);
+
     /**
      * 🔍 Lấy tất cả items trong tủ lạnh của user (chưa xóa)
      */

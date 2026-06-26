@@ -850,7 +850,9 @@ export default function AdminPanel() {
   const [aiReportLoading, setAiReportLoading] = useState(false);
   const [revenueData,  setRevenueData]  = useState<any|null>(null);
   const [revenueLoading, setRevenueLoading] = useState(false);
-  const [qrConfigForm, setQrConfigForm] = useState({ qrUrl: '', bankInfo: '' });
+  const [qrConfigForm, setQrConfigForm] = useState({ qrUrl: '', bankInfo: '', bankBin: '', bankAccountNo: '', bankAccountName: '' });
+  const [bankAcctSaving, setBankAcctSaving] = useState(false);
+  const [bankAcctMsg, setBankAcctMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [qrConfigSaving, setQrConfigSaving] = useState(false);
   const [qrConfigMsg, setQrConfigMsg] = useState<{ok: boolean; text: string}|null>(null);
   const [qrFile, setQrFile] = useState<File|null>(null);
@@ -1601,7 +1603,10 @@ export default function AdminPanel() {
                       apiClient.get('/admin/ai/config/payment').then(res => {
                         if (res.success && res.data) {
                           const d = res.data as any;
-                          setQrConfigForm({ qrUrl: d.qrUrl ?? '', bankInfo: d.bankInfo ?? '' });
+                          setQrConfigForm({
+                            qrUrl: d.qrUrl ?? '', bankInfo: d.bankInfo ?? '',
+                            bankBin: d.bankBin ?? '', bankAccountNo: d.bankAccountNo ?? '', bankAccountName: d.bankAccountName ?? '',
+                          });
                         }
                       });
                     }
@@ -2171,7 +2176,7 @@ export default function AdminPanel() {
                               try {
                                 const formData = new FormData();
                                 formData.append('file', qrFile);
-                                const token = localStorage.getItem('token');
+                                const token = localStorage.getItem('accessToken');
                                 const resp = await fetch(`${API_CONFIG.BASE_URL}/api/admin/ai/config/payment-qr-upload`, {
                                   method: 'POST',
                                   headers: { Authorization: `Bearer ${token}` },
@@ -2231,6 +2236,71 @@ export default function AdminPanel() {
                       )}
                     </div>
                     <p className="text-[10px] text-slate-600">Cài đặt lưu vào database — không mất khi server khởi động lại.</p>
+
+                    {/* ── Tài khoản NH cho VietQR động + SePay tự động ── */}
+                    <div className="mt-2 pt-4 border-t border-zinc-700 space-y-3">
+                      <div>
+                        <h5 className="text-sm font-bold text-emerald-400">⚡ Thanh toán tự động (SePay)</h5>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Nhập tài khoản ngân hàng để hệ thống <strong>tự sinh VietQR</strong> (đã điền sẵn số tiền + nội dung CK)
+                          và <strong>tự kích hoạt gói</strong> khi SePay báo nhận tiền — không cần duyệt tay.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                          <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Mã NH (BIN)</label>
+                          <input
+                            value={qrConfigForm.bankBin}
+                            onChange={e => setQrConfigForm(f => ({ ...f, bankBin: e.target.value }))}
+                            placeholder="970415 (Vietinbank)"
+                            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white font-mono focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Số tài khoản</label>
+                          <input
+                            value={qrConfigForm.bankAccountNo}
+                            onChange={e => setQrConfigForm(f => ({ ...f, bankAccountNo: e.target.value }))}
+                            placeholder="103xxxxxxxx"
+                            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white font-mono focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Tên chủ TK</label>
+                          <input
+                            value={qrConfigForm.bankAccountName}
+                            onChange={e => setQrConfigForm(f => ({ ...f, bankAccountName: e.target.value }))}
+                            placeholder="PHAM VAN DUC"
+                            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-sm text-white font-mono focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          disabled={bankAcctSaving}
+                          onClick={async () => {
+                            setBankAcctSaving(true); setBankAcctMsg(null);
+                            const res = await apiClient.put('/admin/ai/config/bank-account', {
+                              bankBin: qrConfigForm.bankBin.trim(),
+                              bankAccountNo: qrConfigForm.bankAccountNo.trim(),
+                              bankAccountName: qrConfigForm.bankAccountName.trim(),
+                            });
+                            setBankAcctSaving(false);
+                            setBankAcctMsg(res.success ? { ok: true, text: 'Đã lưu tài khoản NH — VietQR động đã bật!' } : { ok: false, text: 'Lưu thất bại' });
+                          }}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors"
+                        >
+                          {bankAcctSaving ? 'Đang lưu...' : 'Lưu tài khoản NH'}
+                        </button>
+                        {bankAcctMsg && (
+                          <span className={`text-xs ${bankAcctMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>{bankAcctMsg.text}</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-600 leading-relaxed">
+                        Webhook URL cho SePay: <code className="text-slate-400">/api/ai-packages/payment/webhook/sepay</code> ·
+                        Tra cứu BIN ngân hàng: api.vietqr.io/v2/banks · Cần đặt env <code className="text-slate-400">SEPAY_API_KEY</code> ở backend.
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}

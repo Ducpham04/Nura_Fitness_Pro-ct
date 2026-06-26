@@ -46,10 +46,8 @@ export default function FoodInventoryPicker({ items, onChange }: Props) {
 
   const filteredFoods = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    const source = needle
-      ? foods.filter((food) => food.name.toLowerCase().includes(needle))
-      : foods;
-    return source.slice(0, 30);
+    if (!needle) return foods;
+    return foods.filter((food) => food.name.toLowerCase().includes(needle));
   }, [foods, query]);
 
   const selectedByFoodId = useMemo(() => {

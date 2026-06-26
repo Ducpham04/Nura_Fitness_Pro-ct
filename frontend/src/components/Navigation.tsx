@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Dumbbell, Utensils, User, LogOut, Brain, History, Trophy } from 'lucide-react';
+import { Home, Dumbbell, Utensils, User, LogOut, Brain } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuthContext } from '../context/AuthContext';
 import LanguageSelector from './LanguageSelector';
@@ -16,9 +16,7 @@ export default function Navigation() {
     { id: 'home', icon: Home, label: t('nav.home'), path: '/dashboard' },
     { id: 'workout', icon: Dumbbell, label: t('nav.workout'), path: '/dashboard/workout' },
     { id: 'diet', icon: Utensils, label: t('nav.diet'), path: '/dashboard/diet' },
-    { id: 'challenges', icon: Trophy, label: t('nav.challenges'), path: '/dashboard/challenges' },
     { id: 'coach', icon: Brain, label: t('nav.coach'), path: '/dashboard/coach' },
-    { id: 'logbook', icon: History, label: t('nav.logbook'), path: '/dashboard/logbook' },
     { id: 'profile', icon: User, label: t('nav.profile'), path: '/dashboard/profile' },
   ];
 
@@ -88,17 +86,17 @@ export default function Navigation() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-white/5 flex items-center justify-around py-4 pb-8 px-4 z-50 backdrop-blur-2xl">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-white/5 flex items-stretch justify-around pt-2 px-1 z-50 backdrop-blur-2xl bottom-nav-safe">
         {navItems.map(({ id, icon: Icon, label, path }) => (
           <Link
             key={id}
             to={path}
-            className={`p-2.5 rounded-2xl transition-all flex flex-col items-center gap-1.5 ${
+            className={`flex-1 min-w-0 py-1.5 rounded-xl transition-all flex flex-col items-center gap-1 ${
               isActive(path) ? 'text-lime' : 'text-neutral-500'
             }`}
           >
-            <Icon className={`w-6 h-6 ${id === 'coach' ? 'text-electric' : ''}`} />
-            <span className="text-[11px] font-bold font-grotesk uppercase tracking-widest">{label}</span>
+            <Icon className={`w-5 h-5 shrink-0 ${id === 'coach' ? 'text-electric' : ''}`} />
+            <span className="w-full text-center text-[9px] leading-none font-bold font-grotesk uppercase tracking-tight truncate">{label}</span>
           </Link>
         ))}
       </nav>

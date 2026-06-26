@@ -49,4 +49,8 @@ public class PaymentRequest {
 
     @Column(name = "processed_note", length = 200)
     private String processedNote;
+
+    /** Mã giao dịch của cổng thanh toán (SePay referenceCode) — dùng để chống activate trùng. */
+    @Column(name = "gateway_ref", length = 100)
+    private String gatewayRef;
 }

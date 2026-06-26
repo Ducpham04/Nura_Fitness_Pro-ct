@@ -126,23 +126,25 @@ public class DashboardServiceImpl implements DashboardService {
                 .filter(uc -> uc.getStatus() == UserChallenge.UserChallengeStatus.FAILED)
                 .count();
 
-        // Average score
-        BigDecimal averageScore = allSubmissions.stream()
-                .filter(uc -> uc.getScore() != null)
-                .map(uc -> BigDecimal.valueOf(uc.getScore()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .divide(BigDecimal.valueOf(
-                        allSubmissions.stream().filter(uc -> uc.getScore() != null).count()),
-                       2, RoundingMode.HALF_UP);
+        // Average score — guard mẫu số = 0 (không có submission nào có score) để tránh chia cho 0
+        long scoreCount = allSubmissions.stream().filter(uc -> uc.getScore() != null).count();
+        BigDecimal averageScore = scoreCount == 0
+                ? BigDecimal.ZERO
+                : allSubmissions.stream()
+                        .filter(uc -> uc.getScore() != null)
+                        .map(uc -> BigDecimal.valueOf(uc.getScore()))
+                        .reduce(BigDecimal.ZERO, BigDecimal::add)
+                        .divide(BigDecimal.valueOf(scoreCount), 2, RoundingMode.HALF_UP);
 
-        // Average confidence
-        BigDecimal averageConfidence = allSubmissions.stream()
-                .filter(uc -> uc.getConfidence() != null)
-                .map(uc -> BigDecimal.valueOf(uc.getConfidence()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .divide(BigDecimal.valueOf(
-                        allSubmissions.stream().filter(uc -> uc.getConfidence() != null).count()),
-                       2, RoundingMode.HALF_UP);
+        // Average confidence — guard tương tự
+        long confidenceCount = allSubmissions.stream().filter(uc -> uc.getConfidence() != null).count();
+        BigDecimal averageConfidence = confidenceCount == 0
+                ? BigDecimal.ZERO
+                : allSubmissions.stream()
+                        .filter(uc -> uc.getConfidence() != null)
+                        .map(uc -> BigDecimal.valueOf(uc.getConfidence()))
+                        .reduce(BigDecimal.ZERO, BigDecimal::add)
+                        .divide(BigDecimal.valueOf(confidenceCount), 2, RoundingMode.HALF_UP);
 
         // Daily completed challenges
         List<DashboardDTO.DailyChallengeCount> dailyCompleted = new ArrayList<>();

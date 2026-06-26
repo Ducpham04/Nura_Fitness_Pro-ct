@@ -212,7 +212,31 @@ public class AdminAiController {
         Map<String, Object> cfg = new LinkedHashMap<>();
         cfg.put("qrUrl", paymentConfigService.getQrUrl());
         cfg.put("bankInfo", paymentConfigService.getBankInfo());
+        cfg.put("bankBin", paymentConfigService.getBankBin());
+        cfg.put("bankAccountNo", paymentConfigService.getBankAccountNo());
+        cfg.put("bankAccountName", paymentConfigService.getBankAccountName());
         return ResponseEntity.ok(cfg);
+    }
+
+    /**
+     * PUT /api/admin/ai/config/bank-account
+     * Cấu hình tài khoản ngân hàng để sinh VietQR động (auto-fill nội dung CK cho SePay).
+     * Body: { "bankBin": "970415", "bankAccountNo": "1031...", "bankAccountName": "PHAM VAN DUC" }
+     *   Vietinbank BIN = 970415. Tra cứu BIN: https://api.vietqr.io/v2/banks
+     */
+    @PutMapping("/config/bank-account")
+    @Operation(summary = "Cấu hình tài khoản ngân hàng cho VietQR động")
+    public ResponseEntity<Map<String, Object>> updateBankAccount(@RequestBody Map<String, Object> body) {
+        paymentConfigService.setBankAccount(
+                body.get("bankBin") != null ? String.valueOf(body.get("bankBin")) : null,
+                body.get("bankAccountNo") != null ? String.valueOf(body.get("bankAccountNo")) : null,
+                body.get("bankAccountName") != null ? String.valueOf(body.get("bankAccountName")) : null);
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "bankBin", paymentConfigService.getBankBin(),
+            "bankAccountNo", paymentConfigService.getBankAccountNo(),
+            "bankAccountName", paymentConfigService.getBankAccountName()
+        ));
     }
 
     /**

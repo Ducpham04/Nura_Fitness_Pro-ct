@@ -377,6 +377,22 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Thanh nav dưới (mobile): nâng lên trên home-indicator / thanh trình duyệt */
+  .bottom-nav-safe {
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  }
+
+  /* Vùng nội dung chính: chừa đủ chỗ cho thanh nav mobile + safe area
+     để nút bấm cuối trang không bị thanh nav đè */
+  .main-pad-mobile {
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+  }
+  @media (min-width: 768px) {
+    .main-pad-mobile {
+      padding-bottom: 2rem;
+    }
+  }
 }
 
 /* Particle background */

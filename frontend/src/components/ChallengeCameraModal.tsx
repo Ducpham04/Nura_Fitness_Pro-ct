@@ -320,9 +320,9 @@ export default function ChallengeCameraModal({
 
   // ── CAMERA / ACTIVE SCREEN ───────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-stretch sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
       <div
-        className="relative w-full max-w-lg rounded-3xl overflow-hidden border border-white/10"
+        className="relative w-full max-w-3xl h-full sm:h-auto flex flex-col rounded-none sm:rounded-3xl overflow-hidden sm:border border-white/10"
         style={{ background: '#07101f' }}
         onClick={e => e.stopPropagation()}
       >
@@ -340,8 +340,8 @@ export default function ChallengeCameraModal({
           </div>
         </div>
 
-        {/* Camera viewport */}
-        <div className="relative" style={{ aspectRatio: '4/3', background: '#000' }}>
+        {/* Camera viewport — full màn trên mobile (flex-1), 4:3 dạng card trên desktop */}
+        <div className="relative flex-1 sm:flex-none sm:aspect-[4/3] min-h-0" style={{ background: '#000' }}>
           <video ref={videoRef} playsInline muted className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
           <canvas ref={canvasRef} className="hidden" />
 
@@ -350,12 +350,12 @@ export default function ChallengeCameraModal({
             <>
               {/* Top-left: rep counter */}
               <div className="absolute top-3 left-3">
-                <div className="rounded-2xl px-4 py-2 text-center" style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div className="font-grotesk font-black text-4xl leading-none tabular-nums" style={{ color: '#4ade80', textShadow: '0 0 20px rgba(74,222,128,0.4)' }}>
+                <div className="rounded-2xl px-5 py-2.5 text-center" style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="font-grotesk font-black text-5xl md:text-6xl leading-none tabular-nums" style={{ color: '#4ade80', textShadow: '0 0 20px rgba(74,222,128,0.4)' }}>
                     {reps}
-                    {targetReps > 0 && <span className="text-neutral-500 text-lg font-normal">/{targetReps}</span>}
+                    {targetReps > 0 && <span className="text-neutral-500 text-xl font-normal">/{targetReps}</span>}
                   </div>
-                  <div className="text-[9px] uppercase tracking-[0.2em] text-neutral-500 mt-0.5">Reps</div>
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-neutral-500 mt-1">Reps</div>
                 </div>
               </div>
 
@@ -366,17 +366,17 @@ export default function ChallengeCameraModal({
 
               {/* Top-center: state badge */}
               <div className="absolute top-3 left-1/2 -translate-x-1/2">
-                <div className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider" style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', border: `1px solid ${stateMeta.color}40`, color: stateMeta.color }}>
+                <div className="rounded-full px-4 py-1.5 text-sm md:text-base font-bold uppercase tracking-wider" style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)', border: `1px solid ${stateMeta.color}40`, color: stateMeta.color }}>
                   {stateMeta.label}
                 </div>
               </div>
 
-              {/* Bottom: form errors */}
+              {/* Bottom: form errors — chữ lớn để đọc được khi đang tập, cách xa camera */}
               {metrics?.form_errors && metrics.form_errors.length > 0 && (
-                <div className="absolute bottom-3 left-3 right-3 space-y-1.5">
+                <div className="absolute bottom-4 left-4 right-4 space-y-2">
                   {metrics.form_errors.slice(0, 2).map((fe, i) => (
-                    <div key={i} className="rounded-xl px-3 py-2 flex items-center gap-2 text-xs" style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(8px)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }}>
-                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <div key={i} className="rounded-2xl px-4 py-3 flex items-center gap-3 text-base md:text-lg font-bold leading-snug" style={{ background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(8px)', border: '1px solid rgba(251,191,36,0.35)', color: '#fbbf24' }}>
+                      <AlertTriangle className="w-6 h-6 md:w-7 md:h-7 shrink-0" />
                       <span>{fe.message}</span>
                     </div>
                   ))}
@@ -385,7 +385,7 @@ export default function ChallengeCameraModal({
 
               {/* Hint (AI not seeing pose) */}
               {hint && !metrics?.form_errors?.length && (
-                <div className="absolute bottom-3 inset-x-3 rounded-xl px-3 py-2 text-center text-xs text-neutral-300" style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div className="absolute bottom-4 inset-x-4 rounded-2xl px-4 py-3 text-center text-base md:text-lg font-semibold text-neutral-200" style={{ background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.10)' }}>
                   {hint}
                 </div>
               )}

@@ -115,6 +115,20 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, "CONFLICT", ex.getMessage(), request);
     }
 
+    /**
+     * Vi phạm ràng buộc DB (FK, NOT NULL, UNIQUE...) — thường gặp khi xoá bản ghi
+     * đang được tham chiếu (vd: xoá food còn nằm trong kho/món ăn của user).
+     * Trả 409 với thông báo thân thiện thay vì 500.
+     */
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(
+            org.springframework.dao.DataIntegrityViolationException ex, WebRequest request) {
+        log.warn("Data integrity violation [{}]: {}", path(request), ex.getMostSpecificCause().getMessage());
+        return build(HttpStatus.CONFLICT, "DATA_INTEGRITY_VIOLATION",
+                "Không thể thực hiện: dữ liệu này đang được sử dụng ở nơi khác (vd: thực phẩm đang có trong kho hoặc món ăn của người dùng). Hãy gỡ các liên kết trước khi xoá.",
+                request);
+    }
+
     // ── 429 Too Many Requests (AI quota exceeded) ─────────────────────────────
 
     @ExceptionHandler(QuotaExceededException.class)

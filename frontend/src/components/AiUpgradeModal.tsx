@@ -59,6 +59,7 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [checkingPromo, setCheckingPromo] = useState(false);
   const [paymentCfg, setPaymentCfg] = useState<{ qrUrl: string; bankInfo: string } | null>(null);
+  const [qrInfo, setQrInfo] = useState<{ qrUrl: string; dynamic: boolean; content: string; amount: number; bankInfo: string } | null>(null);
   const [bankCopied, setBankCopied] = useState(false);
   const [notifyNote, setNotifyNote] = useState('');
   const [notifySent, setNotifySent] = useState(false);
@@ -73,18 +74,36 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
     }
   }, [isOpen, packages]);
 
-  // Load payment config (QR URL)
+  // Load payment config (QR URL) — fetch lại MỖI lần mở modal để luôn lấy QR mới nhất
+  // (tránh kẹt state cũ "sắp ra mắt" khi admin vừa cập nhật QR mà user chưa reload trang).
   useEffect(() => {
-    if (!isOpen || paymentCfg !== null) return;
+    if (!isOpen) return;
     apiClient.get('/api/ai-packages/payment-config').then(res => {
       if (res.success && res.data) setPaymentCfg(res.data as any);
     }).catch(() => {});
   }, [isOpen]);
 
+  // Lấy VietQR động (nhúng số tiền + nội dung CK riêng) cho gói trả phí đang chọn
+  // → SePay tự đối soát & kích hoạt khi nhận được tiền.
+  useEffect(() => {
+    if (!isOpen || !selectedId) { setQrInfo(null); return; }
+    const pkg = packages.find(p => p.id === selectedId);
+    if (!pkg || pkg.priceVnd <= 0) { setQrInfo(null); return; }
+    setNotifySent(false);
+    apiClient.get(`/api/ai-packages/${selectedId}/payment-qr`, { headers: { userId: userId.toString() } })
+      .then(res => { if (res.success && res.data) setQrInfo(res.data as any); })
+      .catch(() => setQrInfo(null));
+  }, [isOpen, selectedId]);
+
   if (!isOpen) return null;
 
   const selectedPkg = packages.find(p => p.id === selectedId);
   const currentCode = usage?.packageCode ?? 'FREE';
+
+  // QR + nội dung CK: ưu tiên QR động theo gói (auto-fill), fallback QR tĩnh admin cấu hình
+  const qrUrl = qrInfo?.qrUrl || paymentCfg?.qrUrl || '';
+  const ckContent = qrInfo?.content || `SEVQR VIWAY ${selectedPkg?.code ?? ''} ${userId}`;
+  const ckBankInfo = qrInfo?.bankInfo || paymentCfg?.bankInfo || '';
 
   const formatPrice = (vnd: number) =>
     vnd === 0 ? 'Miễn phí' : `${vnd.toLocaleString('vi-VN')}đ/tháng`;
@@ -281,7 +300,7 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
           {selectedPkg && selectedPkg.priceVnd > 0 ? (
             /* Gói trả phí */
             <div className="space-y-3">
-              {paymentCfg?.qrUrl ? (
+              {qrUrl ? (
                 /* ── Có QR chuyển khoản ── */
                 <div className="rounded-xl border border-lime-500/30 bg-zinc-800/60 p-4 space-y-3">
                   <div className="flex items-center gap-2">
@@ -290,23 +309,23 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
                   </div>
                   <div className="flex flex-col sm:flex-row gap-4 items-center">
                     <img
-                      src={paymentCfg.qrUrl}
+                      src={qrUrl}
                       alt="QR chuyển khoản"
-                      className="w-36 h-36 rounded-xl border border-zinc-600 object-cover shrink-0 bg-white"
+                      className="w-36 h-36 rounded-xl border border-zinc-600 object-contain shrink-0 bg-white p-1"
                     />
                     <div className="flex-1 space-y-2 text-sm">
-                      {paymentCfg.bankInfo && (
+                      {ckBankInfo && (
                         <div className="rounded-lg bg-zinc-700/50 p-2.5 font-mono text-xs text-zinc-200 leading-relaxed whitespace-pre-wrap">
-                          {paymentCfg.bankInfo}
+                          {ckBankInfo}
                         </div>
                       )}
                       <p className="text-zinc-400 text-xs">
-                        Nội dung chuyển khoản: <strong className="text-white">VIWAY {usage?.packageCode ?? ''} {userId}</strong>
+                        Nội dung chuyển khoản: <strong className="text-white">{ckContent}</strong>
                       </p>
                       <button
                         type="button"
                         onClick={() => {
-                          navigator.clipboard.writeText(`VIWAY ${selectedPkg.code} ${userId}`);
+                          navigator.clipboard.writeText(ckContent);
                           setBankCopied(true);
                           setTimeout(() => setBankCopied(false), 2000);
                         }}
@@ -317,10 +336,15 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
                       </button>
                     </div>
                   </div>
-                  {/* Nút báo đã CK */}
+                  {qrInfo?.dynamic && (
+                    <div className="rounded-lg bg-lime-500/10 border border-lime-500/25 p-2.5 text-[11px] text-lime-300 leading-relaxed">
+                      ⚡ <strong className="text-lime-400">Tự động kích hoạt:</strong> giữ nguyên nội dung CK ở trên — gói sẽ được bật <strong>tự động trong 1–2 phút</strong> sau khi ngân hàng nhận tiền. Không cần chờ admin duyệt.
+                    </div>
+                  )}
+                  {/* Nút báo đã CK — fallback khi auto chưa kích hoạt / ghi sai nội dung */}
                   {!notifySent ? (
                     <div className="space-y-2 pt-1 border-t border-zinc-700">
-                      <p className="text-[11px] text-zinc-400">Sau khi chuyển xong, bấm nút bên dưới để báo admin kích hoạt nhanh hơn:</p>
+                      <p className="text-[11px] text-zinc-400">Nếu sau vài phút gói chưa được bật, bấm nút bên dưới để admin xử lý thủ công:</p>
                       <textarea
                         value={notifyNote}
                         onChange={e => setNotifyNote(e.target.value)}

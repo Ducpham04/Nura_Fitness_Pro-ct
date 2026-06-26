@@ -56,6 +56,50 @@ public class PaymentConfigService {
         return load().getBankInfo();
     }
 
+    public String getBankBin()         { return load().getBankBin(); }
+    public String getBankAccountNo()   { return load().getBankAccountNo(); }
+    public String getBankAccountName() { return load().getBankAccountName(); }
+
+    @Transactional
+    public void setBankAccount(String bin, String accountNo, String accountName) {
+        PaymentConfig cfg = load();
+        if (bin != null)         cfg.setBankBin(bin.trim());
+        if (accountNo != null)   cfg.setBankAccountNo(accountNo.trim());
+        if (accountName != null) cfg.setBankAccountName(accountName.trim());
+        cfg.setUpdatedAt(ZonedDateTime.now());
+        paymentConfigRepository.save(cfg);
+    }
+
+    /**
+     * Sinh URL ảnh VietQR động (img.vietqr.io) đã nhúng sẵn số tiền + nội dung CK.
+     * Trả về null nếu chưa cấu hình đủ BIN + số tài khoản → caller fallback QR tĩnh.
+     */
+    public String buildVietQrUrl(int amount, String content) {
+        PaymentConfig cfg = load();
+        String bin = cfg.getBankBin().trim();
+        String acc = cfg.getBankAccountNo().trim();
+        if (bin.isBlank() || acc.isBlank()) return null;
+
+        StringBuilder url = new StringBuilder("https://img.vietqr.io/image/")
+                .append(bin).append('-').append(acc).append("-compact2.png");
+        StringBuilder qs = new StringBuilder();
+        if (amount > 0) qs.append("amount=").append(amount);
+        if (content != null && !content.isBlank()) {
+            if (qs.length() > 0) qs.append('&');
+            qs.append("addInfo=").append(enc(content));
+        }
+        if (!cfg.getBankAccountName().isBlank()) {
+            if (qs.length() > 0) qs.append('&');
+            qs.append("accountName=").append(enc(cfg.getBankAccountName()));
+        }
+        if (qs.length() > 0) url.append('?').append(qs);
+        return url.toString();
+    }
+
+    private static String enc(String s) {
+        return java.net.URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+    }
+
     @Transactional
     public void setQrUrl(String qrUrl) {
         PaymentConfig cfg = load();
