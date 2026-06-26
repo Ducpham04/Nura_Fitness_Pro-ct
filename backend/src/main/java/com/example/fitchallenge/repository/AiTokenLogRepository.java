@@ -27,4 +27,22 @@ public interface AiTokenLogRepository extends JpaRepository<AiTokenLog, Long> {
     @Query("SELECT t.userId, COALESCE(SUM(t.totalTokens), 0) FROM AiTokenLog t " +
            "WHERE t.userId IS NOT NULL GROUP BY t.userId")
     List<Object[]> sumByUserAllTime();
+
+    /** Token phân theo callType từ mốc thời gian: [callType, sumTotal, count]. */
+    @Query("SELECT t.callType, COALESCE(SUM(t.totalTokens), 0), COUNT(t) FROM AiTokenLog t " +
+           "WHERE t.createdAt >= :from GROUP BY t.callType")
+    List<Object[]> sumByCallTypeSince(@Param("from") ZonedDateTime from);
+
+    /** Token phân theo callType (all-time): [callType, sumTotal, count]. */
+    @Query("SELECT t.callType, COALESCE(SUM(t.totalTokens), 0), COUNT(t) FROM AiTokenLog t GROUP BY t.callType")
+    List<Object[]> sumByCallTypeAllTime();
+
+    /** Lần gọi AI gần nhất của từng user: [userId, maxCreatedAt]. */
+    @Query("SELECT t.userId, MAX(t.createdAt) FROM AiTokenLog t WHERE t.userId IS NOT NULL GROUP BY t.userId")
+    List<Object[]> lastCallByUser();
+
+    /** Tổng lượt gọi của từng user trong tháng: [userId, count]. */
+    @Query("SELECT t.userId, COUNT(t) FROM AiTokenLog t " +
+           "WHERE t.userId IS NOT NULL AND t.createdAt >= :from GROUP BY t.userId")
+    List<Object[]> countByUserSince(@Param("from") ZonedDateTime from);
 }

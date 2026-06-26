@@ -29,10 +29,12 @@ import {
   type AdminModuleKey,
   type ExerciseMetadataAuditReport,
   type SeederResult,
+  type UserActivityRow,
+  type FeedbackItem,
 } from '../services/adminService';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-type AdminTab = 'dashboard' | 'dataSeeder' | 'aiStats' | 'aiPackages' | AdminModuleKey;
+type AdminTab = 'dashboard' | 'dataSeeder' | 'aiStats' | 'aiPackages' | 'userActivity' | 'feedback' | AdminModuleKey;
 
 /* ─── AI Stats types (mirrors backend DashboardDTO) ─────────────────────── */
 interface UserAiUsage { userId: number; fullName: string; email: string; totalCalls: number; realTokensThisMonth?: number; realTokensAllTime?: number; }
@@ -42,7 +44,16 @@ interface AiStatsData {
   estimatedTokensToday: number; estimatedTokensThisMonth: number;
   realTokensToday?: number; realTokensThisMonth?: number; realTokensAllTime?: number;
   mealPlanCalls: number; workoutPlanCalls: number; poseEvalCalls: number;
+  tokensByTypeThisMonth?: Record<string, number>;
+  callsByTypeThisMonth?: Record<string, number>;
+  tokensByTypeAllTime?: Record<string, number>;
+  callsByTypeAllTime?: Record<string, number>;
   topUsers: UserAiUsage[]; recentLogs: AiCallLog[];
+}
+
+interface UserStatsData {
+  totalUsers: number; activeUsers: number; inactiveUsers: number; bannedUsers: number;
+  loggedInToday?: number; loggedInThisWeek?: number; loggedInThisMonth?: number;
 }
 
 /* ─── Nav structure ──────────────────────────────────────────────────────── */
@@ -95,8 +106,10 @@ const NAV: {
   {
     id: 'ai', label: 'AI & Gói dịch vụ', icon: Zap, accent: 'text-cyan-400',
     children: [
-      { id: 'aiStats',    label: 'Thống kê AI / Token' },
-      { id: 'aiPackages', label: 'Quản lý gói AI' },
+      { id: 'userActivity', label: 'Hoạt động người dùng' },
+      { id: 'aiStats',      label: 'Thống kê AI / Token' },
+      { id: 'aiPackages',   label: 'Quản lý gói AI' },
+      { id: 'feedback',     label: 'Phản hồi người dùng' },
     ],
   },
   { id: 'seeder', label: 'Nhập dữ liệu mẫu', icon: Zap, single: 'dataSeeder', accent: 'text-fuchsia-400' },
@@ -124,8 +137,10 @@ const TAB_META: Record<string, { title: string; subtitle: string; icon: typeof B
   challengeSubmissions: { title: 'Bài nộp thử thách',     subtitle: 'Bài nộp của người dùng cho từng thử thách', icon: ClipboardList },
   userChallenges:       { title: 'Tham gia thử thách',    subtitle: 'Theo dõi người dùng tham gia thử thách',  icon: Trophy },
   leaderboard:          { title: 'Bảng xếp hạng',         subtitle: 'Xếp hạng người dùng theo điểm & streak', icon: BarChart3 },
+  userActivity:         { title: 'Hoạt động người dùng', subtitle: 'Last login, DAU/WAU/MAU, AI calls per user', icon: Activity },
   aiStats:              { title: 'Thống kê AI / Token',  subtitle: 'Lượt gọi Groq, ước tính token & log người dùng', icon: Zap },
   aiPackages:           { title: 'Quản lý gói AI',       subtitle: 'Gói Free/Plus/Pro, mã khuyến mãi, gán gói cho user', icon: Zap },
+  feedback:             { title: 'Phản hồi người dùng',  subtitle: 'Góp ý, báo lỗi, đề xuất từ người dùng', icon: Users },
   dataSeeder:           { title: 'Nhập dữ liệu mẫu',     subtitle: 'Import dữ liệu mẫu vào hệ thống',         icon: Zap },
 };
 
@@ -149,7 +164,7 @@ const COL_LABELS: Record<string, string> = {
   challengeId: 'Thử thách', trainingPlanId: 'Kế hoạch', exerciseId: 'Bài tập',
   fullName: 'Họ và tên', email: 'Email', role: 'Vai trò', status: 'Trạng thái',
   aiPackageCode: 'Gói AI',
-  createdAt: 'Ngày tạo', updatedAt: 'Cập nhật',
+  createdAt: 'Ngày tạo', updatedAt: 'Cập nhật', lastLoginAt: 'Đăng nhập gần nhất',
   name: 'Tên', title: 'Tiêu đề', description: 'Mô tả',
   imageLink: 'Ảnh', imageUrl: 'Ảnh', linkImage: 'Ảnh',
   videoUrl: 'Video',
@@ -862,6 +877,13 @@ export default function AdminPanel() {
   const [paymentReqLoading, setPaymentReqLoading] = useState(false);
   const [paymentFilter, setPaymentFilter] = useState<'ALL'|'PENDING'|'APPROVED'|'REJECTED'>('PENDING');
   const [paymentProcessing, setPaymentProcessing] = useState<number|null>(null);
+  const [userActivity, setUserActivity] = useState<UserActivityRow[]|null>(null);
+  const [userActivityLoading, setUserActivityLoading] = useState(false);
+  const [feedbackList, setFeedbackList] = useState<FeedbackItem[]|null>(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackTypeFilter, setFeedbackTypeFilter] = useState('');
+  const [userActivitySearch, setUserActivitySearch] = useState('');
+
   const [aiUserSearch, setAiUserSearch] = useState('');
   const [aiUserResult, setAiUserResult] = useState<any|null>(null);
   const [aiUserLoading,setAiUserLoading]= useState(false);
@@ -1109,6 +1131,14 @@ export default function AdminPanel() {
         ]);
         if (pkgRes.success)   setAiPkgs(pkgRes.data   as any[] ?? []);
         if (promoRes.success) setAiPromos(promoRes.data as any[] ?? []);
+        setRows([]);
+      } else if (activeTab === 'userActivity') {
+        setUserActivityLoading(true);
+        try { setUserActivity(await adminService.getUserActivity()); } finally { setUserActivityLoading(false); }
+        setRows([]);
+      } else if (activeTab === 'feedback') {
+        setFeedbackLoading(true);
+        try { setFeedbackList(await adminService.getFeedbackList()); } finally { setFeedbackLoading(false); }
         setRows([]);
       } else if (activeTab === 'dataSeeder') {
         setRows([]);
@@ -1416,6 +1446,31 @@ export default function AdminPanel() {
           {/* ── Dashboard ── */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
+              {/* DAU / WAU / MAU + tổng user */}
+              {!loading && dashboard.userStats && (() => {
+                const us = dashboard.userStats as UserStatsData;
+                const cards = [
+                  { label: 'Đăng nhập hôm nay',  value: us.loggedInToday  ?? 0, sub: 'DAU', color: 'text-emerald-400', bg: 'border-emerald-400/20' },
+                  { label: 'Đăng nhập tuần này',  value: us.loggedInThisWeek  ?? 0, sub: 'WAU (7 ngày)', color: 'text-sky-400', bg: 'border-sky-400/20' },
+                  { label: 'Đăng nhập tháng này', value: us.loggedInThisMonth ?? 0, sub: 'MAU (tháng hiện tại)', color: 'text-violet-400', bg: 'border-violet-400/20' },
+                  { label: 'Tổng tài khoản',      value: us.totalUsers ?? 0, sub: `${us.activeUsers ?? 0} active`, color: 'text-amber-400', bg: 'border-amber-400/20' },
+                ];
+                return (
+                  <div>
+                    <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">Hoạt động người dùng</h2>
+                    <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
+                      {cards.map(c => (
+                        <div key={c.label} className={`rounded-2xl border ${c.bg} bg-white/3 p-4`}>
+                          <p className={`text-2xl font-bold ${c.color}`}>{c.value.toLocaleString()}</p>
+                          <p className="text-sm text-slate-300 mt-1 font-semibold">{c.label}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">{c.sub}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 {Object.entries(dashboard).map(([key, value], i) => {
                   const m = dashboardMetric(value);
@@ -1505,6 +1560,33 @@ export default function AdminPanel() {
                       })}
                     </div>
                   </div>
+
+                  {/* Token THẬT theo loại (từ ai_token_log) */}
+                  {aiStats.tokensByTypeThisMonth && Object.keys(aiStats.tokensByTypeThisMonth).length > 0 && (
+                    <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
+                      <h3 className="text-sm font-bold text-slate-300 mb-4 uppercase tracking-widest">Token thật tháng này (theo loại call)</h3>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        {Object.entries(aiStats.tokensByTypeThisMonth).map(([type, tokens]) => {
+                          const calls = aiStats.callsByTypeThisMonth?.[type] ?? 0;
+                          const typeLabel: Record<string, { label: string; color: string }> = {
+                            meal: { label: 'Bữa ăn', color: 'text-amber-400' },
+                            meal_hybrid: { label: 'Bữa ăn tổng hợp', color: 'text-orange-400' },
+                            workout: { label: 'Tập luyện', color: 'text-emerald-400' },
+                            chat: { label: 'Chat AI', color: 'text-sky-400' },
+                            pose: { label: 'Tư thế', color: 'text-violet-400' },
+                          };
+                          const meta = typeLabel[type] ?? { label: type, color: 'text-slate-400' };
+                          return (
+                            <div key={type} className="rounded-xl bg-white/3 p-3 space-y-1">
+                              <p className={`text-xs font-bold uppercase ${meta.color}`}>{meta.label}</p>
+                              <p className="text-xl font-bold text-white">{(tokens as number).toLocaleString()}</p>
+                              <p className="text-xs text-slate-500">{calls.toLocaleString()} lần gọi · ≈ {calls > 0 ? Math.round((tokens as number) / calls).toLocaleString() : 0} tk/lần</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid gap-6 lg:grid-cols-2">
                     {/* Top users */}
@@ -2360,6 +2442,182 @@ export default function AdminPanel() {
                     </div>
                   )}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Hoạt động người dùng ── */}
+          {activeTab === 'userActivity' && (
+            <div className="space-y-4">
+              {userActivityLoading && (
+                <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-cyan-400" /></div>
+              )}
+              {!userActivityLoading && userActivity && (
+                <>
+                  {/* Summary row */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Đăng nhập hôm nay', value: userActivity.filter(u => u.daysSinceLogin === 'Hôm nay').length, color: 'text-emerald-400' },
+                      { label: 'Hôm qua', value: userActivity.filter(u => u.daysSinceLogin === 'Hôm qua').length, color: 'text-sky-400' },
+                      { label: 'Dùng AI tháng này', value: userActivity.filter(u => u.aiCallsThisMonth > 0).length, color: 'text-violet-400' },
+                      { label: 'Chưa đăng nhập lần nào', value: userActivity.filter(u => !u.lastLoginAt).length, color: 'text-rose-400' },
+                    ].map(c => (
+                      <div key={c.label} className="rounded-2xl border border-white/5 bg-white/3 p-4">
+                        <p className={`text-2xl font-bold ${c.color}`}>{c.value}</p>
+                        <p className="text-xs text-slate-400 mt-1">{c.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Search */}
+                  <div className="flex gap-2 items-center">
+                    <Search className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                    <input
+                      value={userActivitySearch}
+                      onChange={e => setUserActivitySearch(e.target.value)}
+                      placeholder="Tìm theo tên, email..."
+                      className="flex-1 bg-white/5 rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-white/20"
+                    />
+                  </div>
+
+                  {/* Table */}
+                  <div className="rounded-2xl border border-white/5 bg-white/3 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-white/5 text-left">
+                            {['Người dùng', 'Gói AI', 'Đăng nhập gần nhất', 'AI tháng này', 'Token tháng này', 'AI lần cuối', 'Tình trạng'].map(h => (
+                              <th key={h} className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-500">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/3">
+                          {userActivity
+                            .filter(u => {
+                              if (!userActivitySearch) return true;
+                              const q = userActivitySearch.toLowerCase();
+                              return u.fullName?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
+                            })
+                            .map(u => {
+                              const loginColor = u.daysSinceLogin === 'Hôm nay'
+                                ? 'text-emerald-400'
+                                : u.daysSinceLogin === 'Hôm qua'
+                                  ? 'text-sky-400'
+                                  : u.daysSinceLogin.includes('ngày trước') && parseInt(u.daysSinceLogin) <= 7
+                                    ? 'text-amber-400'
+                                    : u.lastLoginAt
+                                      ? 'text-rose-400'
+                                      : 'text-slate-600';
+                              const pkgColor = u.aiPackageCode === 'FREE' ? 'text-slate-500' : u.aiPackageCode === 'PLUS' ? 'text-amber-400' : 'text-violet-400';
+                              return (
+                                <tr key={u.userId} className="hover:bg-white/2 transition-colors">
+                                  <td className="px-4 py-2.5">
+                                    <p className="font-medium text-slate-200 text-xs">{u.fullName}</p>
+                                    <p className="text-slate-500 text-[11px]">{u.email}</p>
+                                  </td>
+                                  <td className="px-4 py-2.5"><span className={`text-xs font-bold ${pkgColor}`}>{u.aiPackageCode}</span></td>
+                                  <td className="px-4 py-2.5">
+                                    <span className={`text-xs font-semibold ${loginColor}`}>{u.daysSinceLogin}</span>
+                                    {u.lastLoginAt && <p className="text-[11px] text-slate-600">{u.lastLoginAt.substring(0,10)}</p>}
+                                  </td>
+                                  <td className="px-4 py-2.5 text-slate-300 text-xs">{u.aiCallsThisMonth > 0 ? u.aiCallsThisMonth.toLocaleString() : <span className="text-slate-600">—</span>}</td>
+                                  <td className="px-4 py-2.5 text-slate-300 text-xs">{u.aiTokensThisMonth > 0 ? u.aiTokensThisMonth.toLocaleString() : <span className="text-slate-600">—</span>}</td>
+                                  <td className="px-4 py-2.5 text-xs text-slate-500">{u.lastAiCallAt ? u.lastAiCallAt.substring(0,10) : <span className="text-slate-600">—</span>}</td>
+                                  <td className="px-4 py-2.5">
+                                    {u.aiCallsThisMonth > 0
+                                      ? <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">Đang dùng</span>
+                                      : u.lastLoginAt
+                                        ? <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400">Đã login</span>
+                                        : <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-700 text-slate-500">Chưa login</span>
+                                    }
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── Phản hồi người dùng ── */}
+          {activeTab === 'feedback' && (
+            <div className="space-y-4">
+              {feedbackLoading && (
+                <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-cyan-400" /></div>
+              )}
+              {!feedbackLoading && feedbackList && (
+                <>
+                  {/* Summary */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Tổng phản hồi', value: feedbackList.length, color: 'text-sky-400' },
+                      { label: 'Báo lỗi', value: feedbackList.filter(f => f.feedbackType === 'bug').length, color: 'text-rose-400' },
+                      { label: 'Góp ý UX', value: feedbackList.filter(f => f.feedbackType === 'ux').length, color: 'text-amber-400' },
+                      { label: 'Đề xuất tính năng', value: feedbackList.filter(f => f.feedbackType === 'feature').length, color: 'text-violet-400' },
+                    ].map(c => (
+                      <div key={c.label} className="rounded-2xl border border-white/5 bg-white/3 p-4">
+                        <p className={`text-2xl font-bold ${c.color}`}>{c.value}</p>
+                        <p className="text-xs text-slate-400 mt-1">{c.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Filter */}
+                  <div className="flex gap-2 flex-wrap">
+                    {['', 'bug', 'ux', 'feature', 'general'].map(t => (
+                      <button
+                        key={t || 'all'}
+                        onClick={() => setFeedbackTypeFilter(t)}
+                        className={`text-xs font-bold px-3 py-1.5 rounded-full border transition ${feedbackTypeFilter === t ? 'bg-white/10 border-white/20 text-white' : 'border-white/5 text-slate-500 hover:border-white/10'}`}
+                      >
+                        {t === '' ? 'Tất cả' : t === 'bug' ? 'Lỗi' : t === 'ux' ? 'UX' : t === 'feature' ? 'Tính năng' : 'Chung'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* List */}
+                  <div className="space-y-3">
+                    {feedbackList
+                      .filter(f => !feedbackTypeFilter || f.feedbackType === feedbackTypeFilter)
+                      .map(f => {
+                        const typeColors: Record<string, string> = {
+                          bug: 'bg-rose-400/10 text-rose-400',
+                          feature: 'bg-violet-400/10 text-violet-400',
+                          ux: 'bg-amber-400/10 text-amber-400',
+                          general: 'bg-slate-700 text-slate-400',
+                        };
+                        const tc = typeColors[f.feedbackType] ?? typeColors.general;
+                        return (
+                          <div key={f.id} className="rounded-2xl border border-white/5 bg-white/3 p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${tc}`}>
+                                  {f.feedbackType === 'bug' ? 'Lỗi' : f.feedbackType === 'feature' ? 'Tính năng' : f.feedbackType === 'ux' ? 'UX' : 'Chung'}
+                                </span>
+                                {f.rating != null && (
+                                  <span className="text-amber-400 text-xs">{'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}</span>
+                                )}
+                                <span className="text-xs text-slate-500 font-medium">{f.userName || f.userEmail}</span>
+                              </div>
+                              <span className="text-xs text-slate-600 flex-shrink-0">{f.createdAt?.substring(0,10)}</span>
+                            </div>
+                            {f.message && <p className="text-sm text-slate-300 leading-relaxed">{f.message}</p>}
+                            {f.page && <p className="text-[11px] text-slate-600">Trang: {f.page}</p>}
+                          </div>
+                        );
+                      })}
+                    {feedbackList.filter(f => !feedbackTypeFilter || f.feedbackType === feedbackTypeFilter).length === 0 && (
+                      <div className="flex flex-col items-center gap-3 py-16 text-slate-500">
+                        <Users className="h-8 w-8 opacity-30" />
+                        <p className="text-sm">Chưa có phản hồi nào</p>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           )}

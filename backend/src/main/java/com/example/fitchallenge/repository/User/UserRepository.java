@@ -51,5 +51,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /** Tổng số user có gói trả phí đang hoạt động */
     @Query("SELECT COUNT(u) FROM User u WHERE u.aiPackage IS NOT NULL AND u.aiPackage.code != 'FREE' AND (u.aiPackageExpiresAt IS NULL OR u.aiPackageExpiresAt > :now)")
     long countActivePaidUsers(@Param("now") ZonedDateTime now);
+
+    /** Đếm users đăng nhập sau mốc thời gian — dùng cho DAU/WAU/MAU */
+    @Query("SELECT COUNT(u) FROM User u WHERE u.lastLoginAt >= :since")
+    long countByLastLoginAtAfter(@Param("since") ZonedDateTime since);
 }
 

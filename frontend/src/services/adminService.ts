@@ -121,6 +121,33 @@ export interface ExerciseMetadataAuditReport {
   issues: ExerciseMetadataIssue[];
 }
 
+export interface UserActivityRow {
+  userId: number;
+  fullName: string;
+  email: string;
+  role: string;
+  aiPackageCode: string;
+  lastLoginAt: string | null;
+  lastAiCallAt: string | null;
+  aiCallsThisMonth: number;
+  aiTokensThisMonth: number;
+  aiCallsAllTime: number;
+  aiTokensAllTime: number;
+  daysSinceLogin: string;
+}
+
+export interface FeedbackItem {
+  id: number;
+  userId: number;
+  userEmail: string;
+  userName: string;
+  rating: number | null;
+  feedbackType: string;
+  message: string;
+  page: string | null;
+  createdAt: string;
+}
+
 const API_ROOT = `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}`;
 
 function authHeaders(extra?: Record<string, string>) {
@@ -244,7 +271,7 @@ export const adminModules: AdminModuleConfig[] = [
     endpoint: '/admin/users',
     idField: 'id',
     createMode: 'json',
-    tableColumns: ['id', 'fullName', 'email', 'role', 'aiPackageCode', 'status', 'createdAt'],
+    tableColumns: ['id', 'fullName', 'email', 'role', 'aiPackageCode', 'status', 'lastLoginAt', 'createdAt'],
     fields: [
       { name: 'fullName',  label: 'Họ và tên',  required: true },
       { name: 'email',     label: 'Email',       required: true },
@@ -632,5 +659,18 @@ export const adminService = {
     if (!response.success) return { success: false, message: response.error?.message };
     const payload = response.data as any;
     return { success: true, data: payload?.data ?? payload, message: payload?.message };
+  },
+
+  async getUserActivity(): Promise<UserActivityRow[]> {
+    const res = await apiClient.get('/admin/dashboard/user-activity');
+    if (!res.success) throw new Error('Failed to load user activity');
+    return (res.data as any) ?? [];
+  },
+
+  async getFeedbackList(type?: string): Promise<FeedbackItem[]> {
+    const q = type ? `?type=${encodeURIComponent(type)}` : '';
+    const res = await apiClient.get(`/admin/feedback${q}`);
+    if (!res.success) throw new Error('Failed to load feedback');
+    return (res.data as any) ?? [];
   },
 };

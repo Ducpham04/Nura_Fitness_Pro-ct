@@ -22,9 +22,12 @@ public class DashboardDTO {
         private Long activeUsers;
         private Long inactiveUsers;
         private Long bannedUsers;
+        private Long loggedInToday;    // DAU
+        private Long loggedInThisWeek; // WAU
+        private Long loggedInThisMonth; // MAU
         private List<DailyUserCount> dailyNewUsers; // Biểu đồ người dùng mới
         private List<DailyActiveUsers> dailyActiveUsers; // Số user active theo ngày
-        
+
         // Manual getters/setters for Lombok compatibility
         public Long getTotalUsers() { return totalUsers; }
         public void setTotalUsers(Long totalUsers) { this.totalUsers = totalUsers; }
@@ -34,6 +37,12 @@ public class DashboardDTO {
         public void setInactiveUsers(Long inactiveUsers) { this.inactiveUsers = inactiveUsers; }
         public Long getBannedUsers() { return bannedUsers; }
         public void setBannedUsers(Long bannedUsers) { this.bannedUsers = bannedUsers; }
+        public Long getLoggedInToday() { return loggedInToday; }
+        public void setLoggedInToday(Long loggedInToday) { this.loggedInToday = loggedInToday; }
+        public Long getLoggedInThisWeek() { return loggedInThisWeek; }
+        public void setLoggedInThisWeek(Long loggedInThisWeek) { this.loggedInThisWeek = loggedInThisWeek; }
+        public Long getLoggedInThisMonth() { return loggedInThisMonth; }
+        public void setLoggedInThisMonth(Long loggedInThisMonth) { this.loggedInThisMonth = loggedInThisMonth; }
         public List<DailyUserCount> getDailyNewUsers() { return dailyNewUsers; }
         public void setDailyNewUsers(List<DailyUserCount> dailyNewUsers) { this.dailyNewUsers = dailyNewUsers; }
         public List<DailyActiveUsers> getDailyActiveUsers() { return dailyActiveUsers; }
@@ -374,14 +383,37 @@ public class DashboardDTO {
         private long realTokensToday;
         private long realTokensThisMonth;
         private long realTokensAllTime;
-        // Phân loại theo loại AI call
+        // Phân loại theo loại AI call (tổng)
         private long mealPlanCalls;
         private long workoutPlanCalls;
         private long poseEvalCalls;
+        // Token & lượt gọi phân theo callType từ ai_token_log (tháng này)
+        private Map<String, Long> tokensByTypeThisMonth;
+        private Map<String, Long> callsByTypeThisMonth;
+        // Token & lượt gọi phân theo callType (all-time)
+        private Map<String, Long> tokensByTypeAllTime;
+        private Map<String, Long> callsByTypeAllTime;
         // Top users theo lượt gọi AI
         private List<UserAiUsage> topUsers;
         // Log 20 lần gọi gần nhất
         private List<AiCallLog> recentLogs;
+    }
+
+    /** Một dòng trong bảng "Hoạt động người dùng" của Admin */
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class UserActivityRow {
+        private Long userId;
+        private String fullName;
+        private String email;
+        private String role;
+        private String aiPackageCode;
+        private String lastLoginAt;      // ISO string
+        private String lastAiCallAt;     // ISO string, null nếu chưa dùng AI
+        private long aiCallsThisMonth;
+        private long aiTokensThisMonth;
+        private long aiCallsAllTime;
+        private long aiTokensAllTime;
+        private String daysSinceLogin;   // "Hôm nay" / "X ngày trước"
     }
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor

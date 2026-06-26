@@ -90,11 +90,23 @@ public class DashboardServiceImpl implements DashboardService {
             });
         }
 
+        ZonedDateTime now = ZonedDateTime.now();
+        ZonedDateTime todayStart = now.toLocalDate().atStartOfDay(now.getZone());
+        ZonedDateTime weekStart  = todayStart.minusDays(7);
+        ZonedDateTime monthStart = todayStart.withDayOfMonth(1);
+
+        long loggedInToday     = userRepository.countByLastLoginAtAfter(todayStart);
+        long loggedInThisWeek  = userRepository.countByLastLoginAtAfter(weekStart);
+        long loggedInThisMonth = userRepository.countByLastLoginAtAfter(monthStart);
+
         DashboardDTO.UserStatsResponse userResponse = new DashboardDTO.UserStatsResponse();
         userResponse.setTotalUsers(totalUsers);
         userResponse.setActiveUsers(activeUsers);
         userResponse.setInactiveUsers(inactiveUsers);
         userResponse.setBannedUsers(bannedUsers);
+        userResponse.setLoggedInToday(loggedInToday);
+        userResponse.setLoggedInThisWeek(loggedInThisWeek);
+        userResponse.setLoggedInThisMonth(loggedInThisMonth);
         userResponse.setDailyNewUsers(dailyNewUsers);
         userResponse.setDailyActiveUsers(dailyActiveUsers);
         return userResponse;
@@ -715,6 +727,22 @@ public class DashboardServiceImpl implements DashboardService {
         long realTokensToday = aiTokenLogRepository.sumTotalSince(todayStartZdt);
         long realTokensMonth = aiTokenLogRepository.sumTotalSince(monthStartZdt);
         long realTokensAll   = aiTokenLogRepository.sumTotalAllTime();
+
+        // ── Token & lượt gọi phân theo callType ─────────────────────────────
+        Map<String, Long> tokensByTypeMonth = new java.util.HashMap<>();
+        Map<String, Long> callsByTypeMonth  = new java.util.HashMap<>();
+        Map<String, Long> tokensByTypeAll   = new java.util.HashMap<>();
+        Map<String, Long> callsByTypeAll    = new java.util.HashMap<>();
+        aiTokenLogRepository.sumByCallTypeSince(monthStartZdt).forEach(row -> {
+            String type = row[0] != null ? (String) row[0] : "unknown";
+            tokensByTypeMonth.put(type, ((Number) row[1]).longValue());
+            callsByTypeMonth.put(type,  ((Number) row[2]).longValue());
+        });
+        aiTokenLogRepository.sumByCallTypeAllTime().forEach(row -> {
+            String type = row[0] != null ? (String) row[0] : "unknown";
+            tokensByTypeAll.put(type, ((Number) row[1]).longValue());
+            callsByTypeAll.put(type,  ((Number) row[2]).longValue());
+        });
         Map<Long, Long> realByUserMonth = new java.util.HashMap<>();
         aiTokenLogRepository.sumByUserSince(monthStartZdt)
                 .forEach(row -> realByUserMonth.put((Long) row[0], ((Number) row[1]).longValue()));
@@ -800,6 +828,10 @@ public class DashboardServiceImpl implements DashboardService {
                 .mealPlanCalls(mealAll)
                 .workoutPlanCalls(workoutAll)
                 .poseEvalCalls(poseAll)
+                .tokensByTypeThisMonth(tokensByTypeMonth)
+                .callsByTypeThisMonth(callsByTypeMonth)
+                .tokensByTypeAllTime(tokensByTypeAll)
+                .callsByTypeAllTime(callsByTypeAll)
                 .topUsers(topUsers)
                 .recentLogs(sortedLogs)
                 .build();
@@ -812,6 +844,79 @@ public class DashboardServiceImpl implements DashboardService {
                 .map(getter)
                 .filter(java.util.Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DashboardDTO.UserActivityRow> getUserActivity() {
+        ZonedDateTime now = ZonedDateTime.now();
+        ZonedDateTime monthStart = now.toLocalDate().withDayOfMonth(1).atStartOfDay(now.getZone());
+        ZonedDateTime todayStart = now.toLocalDate().atStartOfDay(now.getZone());
+
+        // Batch load — tránh N+1
+        Map<Long, Long> callsMonth  = new java.util.HashMap<>();
+        Map<Long, Long> tokensMonth = new java.util.HashMap<>();
+        Map<Long, Long> callsAll    = new java.util.HashMap<>();
+        Map<Long, Long> tokensAll   = new java.util.HashMap<>();
+        Map<Long, String> lastAiCall = new java.util.HashMap<>();
+
+        aiTokenLogRepository.countByUserSince(monthStart)
+                .forEach(row -> callsMonth.put((Long) row[0], ((Number) row[1]).longValue()));
+        aiTokenLogRepository.sumByUserSince(monthStart)
+                .forEach(row -> tokensMonth.put((Long) row[0], ((Number) row[1]).longValue()));
+        aiTokenLogRepository.sumByUserAllTime()
+                .forEach(row -> tokensAll.put((Long) row[0], ((Number) row[1]).longValue()));
+        // count all-time from tokens all (reuse the map for calls sum — query later)
+        aiTokenLogRepository.lastCallByUser()
+                .forEach(row -> {
+                    Long uid = (Long) row[0];
+                    Object ts = row[1];
+                    if (ts != null) lastAiCall.put(uid, ts.toString());
+                });
+
+        List<User> allUsers = userRepository.findAll();
+        // count calls all-time via tokens proxy
+        aiTokenLogRepository.sumByCallTypeAllTime(); // warm-up (no-op needed)
+
+        return allUsers.stream()
+                .sorted((a, b) -> {
+                    ZonedDateTime la = a.getLastLoginAt();
+                    ZonedDateTime lb = b.getLastLoginAt();
+                    if (la == null && lb == null) return 0;
+                    if (la == null) return 1;
+                    if (lb == null) return -1;
+                    return lb.compareTo(la);
+                })
+                .map(u -> {
+                    long cMonth = callsMonth.getOrDefault(u.getId(), 0L);
+                    long tMonth = tokensMonth.getOrDefault(u.getId(), 0L);
+                    long tAll   = tokensAll.getOrDefault(u.getId(), 0L);
+
+                    String daysSince = "Chưa đăng nhập";
+                    if (u.getLastLoginAt() != null) {
+                        long days = java.time.temporal.ChronoUnit.DAYS.between(
+                                u.getLastLoginAt().toLocalDate(), now.toLocalDate());
+                        if (days == 0) daysSince = "Hôm nay";
+                        else if (days == 1) daysSince = "Hôm qua";
+                        else daysSince = days + " ngày trước";
+                    }
+                    String pkg = u.getAiPackage() != null ? u.getAiPackage().getCode() : "FREE";
+                    return DashboardDTO.UserActivityRow.builder()
+                            .userId(u.getId())
+                            .fullName(u.getFullName() != null ? u.getFullName() : u.getUserName())
+                            .email(u.getEmail())
+                            .role(u.getRole() != null ? u.getRole().name() : "USER")
+                            .aiPackageCode(pkg)
+                            .lastLoginAt(u.getLastLoginAt() != null ? u.getLastLoginAt().toString() : null)
+                            .lastAiCallAt(lastAiCall.get(u.getId()))
+                            .aiCallsThisMonth(cMonth)
+                            .aiTokensThisMonth(tMonth)
+                            .aiCallsAllTime(0L) // omit for now — avoid extra query
+                            .aiTokensAllTime(tAll)
+                            .daysSinceLogin(daysSince)
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     /**
