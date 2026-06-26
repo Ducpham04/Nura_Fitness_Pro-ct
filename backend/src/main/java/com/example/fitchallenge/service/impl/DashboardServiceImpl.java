@@ -875,8 +875,6 @@ public class DashboardServiceImpl implements DashboardService {
                 });
 
         List<User> allUsers = userRepository.findAll();
-        // count calls all-time via tokens proxy
-        aiTokenLogRepository.sumByCallTypeAllTime(); // warm-up (no-op needed)
 
         return allUsers.stream()
                 .sorted((a, b) -> {
@@ -901,11 +899,12 @@ public class DashboardServiceImpl implements DashboardService {
                         else daysSince = days + " ngày trước";
                     }
                     String pkg = u.getAiPackage() != null ? u.getAiPackage().getCode() : "FREE";
+                    String role = u.getRole() != null ? u.getRole().getRoleName() : "USER";
                     return DashboardDTO.UserActivityRow.builder()
                             .userId(u.getId())
                             .fullName(u.getFullName() != null ? u.getFullName() : u.getUserName())
                             .email(u.getEmail())
-                            .role(u.getRole() != null ? u.getRole().name() : "USER")
+                            .role(role)
                             .aiPackageCode(pkg)
                             .lastLoginAt(u.getLastLoginAt() != null ? u.getLastLoginAt().toString() : null)
                             .lastAiCallAt(lastAiCall.get(u.getId()))
