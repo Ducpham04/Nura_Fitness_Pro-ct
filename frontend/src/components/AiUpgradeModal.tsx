@@ -78,7 +78,7 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
   // (tránh kẹt state cũ "sắp ra mắt" khi admin vừa cập nhật QR mà user chưa reload trang).
   useEffect(() => {
     if (!isOpen) return;
-    apiClient.get('/api/ai-packages/payment-config').then(res => {
+    apiClient.get('/ai-packages/payment-config').then(res => {
       if (res.success && res.data) setPaymentCfg(res.data as any);
     }).catch(() => {});
   }, [isOpen]);
@@ -90,7 +90,7 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
     const pkg = packages.find(p => p.id === selectedId);
     if (!pkg || pkg.priceVnd <= 0) { setQrInfo(null); return; }
     setNotifySent(false);
-    apiClient.get(`/api/ai-packages/${selectedId}/payment-qr`, { headers: { userId: userId.toString() } })
+    apiClient.get(`/ai-packages/${selectedId}/payment-qr`, { headers: { userId: userId.toString() } })
       .then(res => { if (res.success && res.data) setQrInfo(res.data as any); })
       .catch(() => setQrInfo(null));
   }, [isOpen, selectedId]);
@@ -118,7 +118,7 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
     setNotifyLoading(true);
     setNotifyError('');
     try {
-      const res = await apiClient.post('/api/ai-packages/notify-payment',
+      const res = await apiClient.post('/ai-packages/notify-payment',
         { packageId: selectedId, note: notifyNote.trim() || undefined },
         { headers: { userId: userId.toString() } }
       );
