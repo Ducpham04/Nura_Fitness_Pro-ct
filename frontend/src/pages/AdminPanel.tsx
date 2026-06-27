@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import {
-  Activity, AlertCircle, ArrowLeft, ArrowUpDown, BarChart3, CheckCircle,
-  ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  ClipboardList, Database, Dumbbell, Edit3, ExternalLink, Gift, Layers,
-  ListChecks, Loader2, LogOut, Play, Plus, RefreshCcw, Save, Search, Shield,
-  SortAsc, SortDesc, Target, Trash2, Trophy, Upload, Utensils, Users,
-  WalletCards, X, Zap,
+  Activity, AlertCircle, ArrowLeft, ArrowUpDown, Banknote, BarChart3,
+  BookOpen, Bot, CheckCircle, ChevronDown, ChevronLeft, ChevronRight,
+  ChevronsLeft, ChevronsRight, ClipboardList, Database, Dumbbell, Edit3,
+  ExternalLink, Gift, Layers, ListChecks, Loader2, LogOut, Play, Plus,
+  RefreshCcw, Save, Search, Settings, Shield, SortAsc, SortDesc, Target,
+  Trash2, TrendingUp, Trophy, Upload, Utensils, Users, WalletCards, X, Zap,
 } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
@@ -73,54 +73,57 @@ const NAV: {
   single?: AdminTab;
   accent: string;
 }[] = [
-  { id: 'dashboard', label: 'Tổng quan', icon: BarChart3, single: 'dashboard', accent: 'text-sky-400' },
-
-  // ── Người dùng: chỉ tài khoản ──────────────────────────────────────────
-  { id: 'users', label: 'Tài khoản', icon: Users, single: 'users', accent: 'text-violet-400' },
+  { id: 'overview',   label: 'Tổng quan',    icon: BarChart3,    single: 'dashboard', accent: 'text-sky-400' },
 
   {
-    id: 'fitness', label: 'Nội dung Fitness', icon: Dumbbell, accent: 'text-emerald-400',
-    children: [
-      { id: 'goals', label: 'Mục tiêu' },
-      { id: 'challenges', label: 'Thử thách' },
-      { id: 'exercises', label: 'Bài tập' },
-      { id: 'trainingPlans', label: 'Kế hoạch tập' },
-    ],
-  },
-  {
-    id: 'nutrition', label: 'Dinh dưỡng', icon: Utensils, accent: 'text-amber-400',
-    children: [
-      { id: 'foods', label: 'Thực phẩm' },
-      { id: 'dishes', label: 'Món ăn & Công thức' },
-    ],
-  },
-  {
-    id: 'rewards', label: 'Thưởng & Tài chính', icon: Gift, accent: 'text-rose-400',
-    children: [
-      { id: 'rewards', label: 'Danh mục thưởng' },
-      { id: 'rewardRedemptions', label: 'Đổi thưởng' },
-      { id: 'transactions', label: 'Lịch sử điểm' },
-    ],
-  },
-  {
-    id: 'activity', label: 'Hoạt động & Sức khoẻ', icon: Trophy, accent: 'text-orange-400',
-    children: [
-      { id: 'challengeSubmissions', label: 'Bài nộp thử thách' },
-      { id: 'userChallenges', label: 'Tham gia thử thách' },
-      { id: 'leaderboard', label: 'Bảng xếp hạng' },
-      { id: 'informationBody', label: 'Hồ sơ thể chất' },
-    ],
-  },
-  {
-    id: 'ai', label: 'AI & Gói dịch vụ', icon: Zap, accent: 'text-cyan-400',
+    id: 'analytics', label: 'Phân tích', icon: TrendingUp, accent: 'text-emerald-400',
     children: [
       { id: 'userActivity', label: 'Hoạt động người dùng' },
-      { id: 'aiStats',      label: 'Thống kê AI / Token' },
-      { id: 'aiPackages',   label: 'Quản lý gói AI' },
       { id: 'feedback',     label: 'Phản hồi người dùng' },
     ],
   },
-  { id: 'seeder', label: 'Nhập dữ liệu mẫu', icon: Zap, single: 'dataSeeder', accent: 'text-fuchsia-400' },
+  {
+    id: 'revenueGroup', label: 'Doanh thu', icon: Banknote, accent: 'text-amber-400',
+    children: [
+      { id: 'aiPackages',        label: 'Gói AI & Thanh toán' },
+      { id: 'rewards',           label: 'Danh mục thưởng' },
+      { id: 'rewardRedemptions', label: 'Đổi thưởng' },
+      { id: 'transactions',      label: 'Lịch sử giao dịch' },
+    ],
+  },
+  {
+    id: 'aiGroup', label: 'AI / Token', icon: Bot, accent: 'text-cyan-400',
+    children: [
+      { id: 'aiStats', label: 'Thống kê AI / Token' },
+    ],
+  },
+  {
+    id: 'usersGroup', label: 'Người dùng', icon: Users, accent: 'text-violet-400',
+    children: [
+      { id: 'users',         label: 'Tài khoản' },
+      { id: 'informationBody', label: 'Hồ sơ thể chất' },
+      { id: 'leaderboard',   label: 'Bảng xếp hạng' },
+    ],
+  },
+  {
+    id: 'content', label: 'Nội dung', icon: BookOpen, accent: 'text-rose-400',
+    children: [
+      { id: 'goals',               label: 'Mục tiêu' },
+      { id: 'challenges',          label: 'Thử thách' },
+      { id: 'exercises',           label: 'Bài tập' },
+      { id: 'trainingPlans',       label: 'Kế hoạch tập' },
+      { id: 'foods',               label: 'Thực phẩm' },
+      { id: 'dishes',              label: 'Món ăn & Công thức' },
+      { id: 'challengeSubmissions', label: 'Bài nộp thử thách' },
+      { id: 'userChallenges',      label: 'Tham gia thử thách' },
+    ],
+  },
+  {
+    id: 'system', label: 'Hệ thống', icon: Settings, accent: 'text-slate-400',
+    children: [
+      { id: 'dataSeeder', label: 'Nhập dữ liệu mẫu' },
+    ],
+  },
 ];
 
 // Tab mà role EDITOR (biên tập nội dung) được phép thấy — KHỚP quyền backend
@@ -145,11 +148,11 @@ const TAB_META: Record<string, { title: string; subtitle: string; icon: typeof B
   challengeSubmissions: { title: 'Bài nộp thử thách',     subtitle: 'Bài nộp của người dùng cho từng thử thách', icon: ClipboardList },
   userChallenges:       { title: 'Tham gia thử thách',    subtitle: 'Theo dõi người dùng tham gia thử thách',  icon: Trophy },
   leaderboard:          { title: 'Bảng xếp hạng',         subtitle: 'Xếp hạng người dùng theo điểm & streak', icon: BarChart3 },
-  userActivity:         { title: 'Hoạt động người dùng', subtitle: 'Last login, DAU/WAU/MAU, AI calls per user', icon: Activity },
-  aiStats:              { title: 'Thống kê AI / Token',  subtitle: 'Lượt gọi Groq, ước tính token & log người dùng', icon: Zap },
-  aiPackages:           { title: 'Quản lý gói AI',       subtitle: 'Gói Free/Plus/Pro, mã khuyến mãi, gán gói cho user', icon: Zap },
-  feedback:             { title: 'Phản hồi người dùng',  subtitle: 'Góp ý, báo lỗi, đề xuất từ người dùng', icon: Users },
-  dataSeeder:           { title: 'Nhập dữ liệu mẫu',     subtitle: 'Import dữ liệu mẫu vào hệ thống',         icon: Zap },
+  userActivity:         { title: 'Hoạt động người dùng', subtitle: 'Last login, DAU/WAU/MAU, AI calls per user', icon: TrendingUp },
+  aiStats:              { title: 'Thống kê AI / Token',  subtitle: 'Lượt gọi Groq, ước tính token & log người dùng', icon: Bot },
+  aiPackages:           { title: 'Gói AI & Thanh toán',  subtitle: 'Gói Free/Plus/Pro, mã khuyến mãi, gán gói cho user', icon: Banknote },
+  feedback:             { title: 'Phản hồi người dùng',  subtitle: 'Góp ý, báo lỗi, đề xuất từ người dùng', icon: TrendingUp },
+  dataSeeder:           { title: 'Nhập dữ liệu mẫu',     subtitle: 'Import dữ liệu mẫu vào hệ thống',         icon: Settings },
 };
 
 /* ─── Seeder actions ──────────────────────────────────────────────────────── */
@@ -852,7 +855,7 @@ export default function AdminPanel() {
   const [form, setForm]               = useState<Record<string, string | boolean>>({});
   const [formFiles, setFormFiles]     = useState<Record<string, File>>({});
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
-  const [openGroups, setOpenGroups]   = useState<Set<string>>(new Set(['people']));
+  const [openGroups, setOpenGroups]   = useState<Set<string>>(new Set(['analytics', 'usersGroup']));
   const [exerciseAudit, setExerciseAudit] = useState<ExerciseMetadataAuditReport | null>(null);
   const [exerciseAuditLoading, setExerciseAuditLoading] = useState(false);
   const [aiStats, setAiStats] = useState<AiStatsData | null>(null);
@@ -1126,7 +1129,11 @@ export default function AdminPanel() {
     setLoading(true);
     try {
       if (activeTab === 'dashboard') {
-        setDashboard(await adminService.getDashboard());
+        const [dash] = await Promise.all([
+          adminService.getDashboard(),
+          apiClient.get('/admin/ai/revenue/summary').then(r => { if (r.success) setRevenueData(r.data); }),
+        ]);
+        setDashboard(dash);
         setRows([]);
       } else if (activeTab === 'aiStats') {
         const res = await apiClient.get('/admin/dashboard/ai-stats');
@@ -1479,19 +1486,34 @@ export default function AdminPanel() {
                 );
               })()}
 
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-                {Object.entries(dashboard).map(([key, value], i) => {
-                  const m = dashboardMetric(value);
-                  const c = DASH_COPY[key] || { title: labelize(key), subtitle: '' };
-                  return <StatCard key={key} title={c.title} subtitle={c.subtitle} primary={m.primary} details={m.details} colorIdx={i} />;
-                })}
-                {!loading && Object.keys(dashboard).length === 0 && (
-                  <div className="col-span-full flex flex-col items-center gap-3 rounded-2xl border border-white/5 py-16 text-slate-500">
-                    <BarChart3 className="h-8 w-8 opacity-30" />
-                    <p className="text-sm">Chưa có dữ liệu dashboard</p>
+              {/* Revenue snapshot */}
+              {!loading && (() => {
+                const us = dashboard.userStats as UserStatsData | undefined;
+                const total = us?.totalUsers ?? 0;
+                const paid  = revenueData?.activePaidUsers ?? 0;
+                const mrr   = revenueData?.totalMrrVnd ?? 0;
+                const conv  = total > 0 ? ((paid / total) * 100).toFixed(1) : '0.0';
+                const revenueCards = [
+                  { label: 'Paid users (đang hoạt động)', value: paid.toLocaleString(), sub: 'Gói Plus / Pro còn hiệu lực', color: 'text-amber-400', bg: 'border-amber-400/20' },
+                  { label: 'MRR ước tính',                value: mrr >= 1000 ? `${(mrr/1000).toLocaleString('vi-VN')}K` : mrr.toLocaleString('vi-VN'), sub: 'đ/tháng (tổng gói active)', color: 'text-emerald-400', bg: 'border-emerald-400/20' },
+                  { label: 'Tỷ lệ chuyển đổi',           value: `${conv}%`, sub: 'Free → Paid (tổng tài khoản)', color: 'text-rose-400', bg: 'border-rose-400/20' },
+                  { label: 'Tổng user free',              value: (total - paid).toLocaleString(), sub: 'Chưa nâng cấp gói', color: 'text-slate-400', bg: 'border-slate-400/20' },
+                ];
+                return (
+                  <div>
+                    <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">Doanh thu & Chuyển đổi</h2>
+                    <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
+                      {revenueCards.map(c => (
+                        <div key={c.label} className={`rounded-2xl border ${c.bg} bg-white/3 p-4`}>
+                          <p className={`text-2xl font-bold ${c.color}`}>{c.value}</p>
+                          <p className="text-sm text-slate-300 mt-1 font-semibold">{c.label}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">{c.sub}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                )}
-              </div>
+                );
+              })()}
 
               {/* Activity feed: biểu đồ 7 ngày + danh sách đăng ký / đăng nhập gần đây */}
               {!loading && dashboard.userStats && (() => {

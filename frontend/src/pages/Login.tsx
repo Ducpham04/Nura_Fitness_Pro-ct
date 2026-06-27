@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Mail, Lock, ArrowRight, Eye, EyeOff, AlertTriangle, Zap, Activity, Shield } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff, AlertTriangle, Zap, Activity, Shield, ChevronLeft } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuthContext } from '../context/AuthContext';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
@@ -98,6 +98,12 @@ export default function Login() {
         backgroundSize: '52px 52px',
       }} />
 
+      <div className="absolute left-6 top-6 z-20">
+        <Link to="/" className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-white transition-colors text-sm font-medium">
+          <ChevronLeft className="w-4 h-4" />
+          Về trang chủ
+        </Link>
+      </div>
       <div className="absolute right-6 top-6 z-20">
         <LanguageSelector />
       </div>

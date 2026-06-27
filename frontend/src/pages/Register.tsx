@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { FormEvent } from 'react';
-import { Mail, Lock, Check, ArrowRight, Eye, EyeOff, AlertCircle, User, Gift } from 'lucide-react';
+import { Mail, Lock, Check, ArrowRight, Eye, EyeOff, AlertCircle, User, Gift, ChevronLeft } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { trackEvent } from '../analytics';
 import { useTranslation } from 'react-i18next';
@@ -119,6 +119,12 @@ export default function Register() {
         backgroundSize: '52px 52px',
       }} />
 
+      <div className="absolute left-6 top-6 z-20">
+        <Link to="/" className="inline-flex items-center gap-1.5 text-neutral-400 hover:text-white transition-colors text-sm font-medium">
+          <ChevronLeft className="w-4 h-4" />
+          Về trang chủ
+        </Link>
+      </div>
       <div className="absolute right-6 top-6 z-20">
         <LanguageSelector />
       </div>

@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import Lenis from 'lenis';
 import LanguageSelector from '../components/LanguageSelector';
 import Logo from '../components/Logo';
+import AuthModal from '../components/AuthModal';
 import { useAuthContext } from '../context/AuthContext';
 import { useReveal } from '../hooks/useReveal';
 
@@ -42,6 +43,7 @@ export default function Landing() {
   const { user } = useAuthContext();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [authModal, setAuthModal] = useState<'login' | 'register' | null>(null);
 
   useReveal();
 
@@ -78,7 +80,10 @@ export default function Landing() {
     };
   }, []);
 
-  const onEnter = () => navigate(user ? '/dashboard' : '/login');
+  const onEnter = () => {
+    if (user) { navigate('/dashboard'); return; }
+    setAuthModal('login');
+  };
 
   const navItems = [
     { label: t('landing.features'), href: '#features' },
@@ -666,12 +671,7 @@ export default function Landing() {
       {/* ── Footer ── */}
       <footer className="border-t border-white/[0.06] px-6 py-12 md:px-10">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-8 md:flex-row">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-lime">
-              <Zap className="h-4 w-4 text-black" fill="currentColor" />
-            </div>
-            <span className="font-grotesk text-lg font-bold text-white">Viway</span>
-          </div>
+          <Logo size={32} wordmarkClass="text-lg" />
           <div className="flex flex-wrap justify-center gap-8">
             {[
               { label: t('landing.privacy'), href: '/privacy' },
@@ -693,6 +693,9 @@ export default function Landing() {
           <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">© 2026 Viway</div>
         </div>
       </footer>
+      {authModal && (
+        <AuthModal defaultTab={authModal} onClose={() => setAuthModal(null)} />
+      )}
     </div>
   );
 }
