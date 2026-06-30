@@ -5,8 +5,10 @@ import {
   Brain,
   Camera,
   Check,
+  ChevronDown,
   Menu,
   Shield,
+  Star,
   Trophy,
   Utensils,
   X,
@@ -35,6 +37,27 @@ function tiltMove(e: React.MouseEvent<HTMLElement>) {
 }
 function tiltReset(e: React.MouseEvent<HTMLElement>) {
   e.currentTarget.style.transform = '';
+}
+
+function FaqItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-white/[0.07] rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-white/[0.03] transition-colors"
+        aria-expanded={open}
+      >
+        <span className="font-semibold text-white text-sm leading-snug">{question}</span>
+        <ChevronDown className={`w-4 h-4 text-neutral-500 shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="px-5 pb-5 text-sm text-neutral-400 leading-relaxed border-t border-white/[0.05] pt-4">
+          {answer}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function Landing() {
@@ -145,6 +168,33 @@ export default function Landing() {
     },
   ];
 
+  const testimonials = [
+    {
+      name: 'Nguyễn Minh Tuấn',
+      role: 'Nhân viên văn phòng · Hà Nội',
+      avatar: 'MT',
+      quote: 'Sau 2 tháng dùng Viway, tôi tăng được 3kg cơ. AI gợi ý thực đơn toàn đồ Việt quen thuộc, không cần mua thực phẩm "healthy" đắt tiền.',
+      goal: 'Tăng cơ',
+      stars: 5,
+    },
+    {
+      name: 'Trần Hà Linh',
+      role: 'Sinh viên · TP.HCM',
+      avatar: 'HL',
+      quote: 'Thực đơn giữ trong ngân sách 60k/ngày mà vẫn đủ protein. Ứng dụng tính sẵn macro cho từng bữa, tiện hơn nhiều so với mấy app nước ngoài.',
+      goal: 'Giảm mỡ',
+      stars: 5,
+    },
+    {
+      name: 'Lê Văn Bảo',
+      role: 'Freelancer · Đà Nẵng',
+      avatar: 'LB',
+      quote: 'Bận mấy cũng không thiếu buổi tập vì AI tự điều chỉnh lịch khi tôi bỏ ngày. Tính năng camera chỉnh tư thế ngăn được chấn thương vai từ sớm.',
+      goal: 'Sức khoẻ chung',
+      stars: 5,
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-[#0c0d11] font-inter overflow-x-hidden selection:bg-lime selection:text-black">
 
@@ -152,12 +202,12 @@ export default function Landing() {
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0c0d11]/90 backdrop-blur-md border-b border-white/[0.06] py-4' : 'py-7'}`}>
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 md:px-10">
           <button onClick={onEnter} className="flex items-center gap-2.5">
-            <Logo size={48} wordmarkClass="text-2xl" />
+            <Logo size={48} wordmarkClass="text-2xl" dark />
           </button>
 
           <div className="hidden items-center gap-8 lg:flex">
             {navItems.map(item => (
-              <a key={item.href} href={item.href} className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 hover:text-white transition-colors">
+              <a key={item.href} href={item.href} className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-400 hover:text-white transition-colors">
                 {item.label}
               </a>
             ))}
@@ -190,6 +240,8 @@ export default function Landing() {
         )}
       </nav>
 
+      <main id="main-content">
+
       {/* ── Hero ── */}
       <section className="relative flex min-h-[100dvh] items-center overflow-hidden px-6 pt-24 pb-16 md:px-10 lg:pt-28">
         {/* Nền kỹ thuật tĩnh, giữ cảm giác sport-tech mà không lấn át nội dung */}
@@ -207,7 +259,7 @@ export default function Landing() {
               {t('landing.heroTitle')}
             </h1>
 
-            <p className="reveal mt-7 max-w-lg text-base leading-relaxed text-neutral-300 md:text-lg">
+            <p className="reveal mt-7 max-w-lg text-base leading-relaxed text-neutral-200 md:text-lg">
               {t('landing.heroCopy')}
             </p>
 
@@ -250,10 +302,10 @@ export default function Landing() {
                 <div className="absolute inset-0 bg-gradient-to-t from-[#08090a]/92 via-transparent to-transparent" />
 
                 <div className="absolute left-4 top-4 rounded-2xl border border-white/[0.10] bg-[#0b0d10]/88 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400">giao thức hôm nay</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400">bài tập hôm nay</div>
                   <div className="mt-1 flex items-end gap-2">
                     <span className="font-grotesk text-3xl font-bold leading-none text-lime">12</span>
-                    <span className="pb-1 text-xs font-semibold text-neutral-300">phút core + push</span>
+                    <span className="pb-1 text-xs font-semibold text-neutral-300">phút · Thứ Ba</span>
                   </div>
                 </div>
 
@@ -261,7 +313,7 @@ export default function Landing() {
                   {[
                     { label: 'Tư thế', value: 'ổn định', tone: 'text-lime' },
                     { label: 'Bữa tối', value: '32k', tone: 'text-orange-300' },
-                    { label: 'Cường độ', value: 'RPE 7', tone: 'text-blue-200' },
+                    { label: 'Calo đốt', value: '180 kcal', tone: 'text-blue-200' },
                   ].map(item => (
                     <div key={item.label} className="rounded-2xl border border-white/[0.08] bg-[#0d0f12]/88 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-md">
                       <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-500">{item.label}</div>
@@ -270,12 +322,12 @@ export default function Landing() {
                   ))}
                 </div>
 
-                <div className="absolute right-4 top-4 hidden w-48 rounded-2xl border border-lime/20 bg-lime/[0.08] px-4 py-3 backdrop-blur-md md:block">
+                <div className="absolute right-4 top-4 hidden w-48 rounded-2xl border border-white/[0.10] bg-[#0b0d10]/88 px-4 py-3 backdrop-blur-md md:block">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-lime">gợi ý AI</span>
-                    <Camera className="h-4 w-4 text-lime" />
+                    <span className="text-[10px] font-semibold text-neutral-300">Nhắc tư thế</span>
+                    <Camera className="h-4 w-4 text-neutral-400" />
                   </div>
-                  <p className="mt-2 text-xs leading-relaxed text-lime/80">Giữ cổ tay thẳng, vai khóa nhẹ.</p>
+                  <p className="mt-2 text-xs leading-relaxed text-neutral-200">Giữ cổ tay thẳng, vai khóa nhẹ.</p>
                 </div>
               </div>
             </div>
@@ -288,7 +340,7 @@ export default function Landing() {
         <div className="reveal mb-14 text-center">
           <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.3em] text-lime">{t('landing.coreCapabilities')}</div>
           <h2 className="font-grotesk text-4xl font-bold text-white md:text-5xl">{t('landing.optimizationTitle')}</h2>
-          <p className="mt-4 mx-auto max-w-xl text-neutral-400 leading-relaxed">{t('landing.featuresIntro')}</p>
+          <p className="mt-4 mx-auto max-w-xl text-neutral-300 leading-relaxed">{t('landing.featuresIntro')}</p>
         </div>
 
         {/* Bento grid — Card 1 chiếm toàn bộ chiều cao bên trái, Cards 2+3 xếp chồng bên phải */}
@@ -306,58 +358,54 @@ export default function Landing() {
               style={{backgroundImage: 'radial-gradient(circle, rgba(204,255,0,0.07) 1px, transparent 1px)', backgroundSize: '28px 28px'}} />
 
             <div className="relative z-10 mb-6">
-              <div className="inline-flex items-center gap-2 rounded-full bg-lime/10 border border-lime/25 px-3 py-1 mb-4">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/[0.06] border border-white/[0.12] px-3 py-1 mb-4">
                 <span className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-lime">LIVE AI</span>
+                <span className="text-[10px] font-semibold text-neutral-300">Camera AI phân tích trực tiếp</span>
               </div>
               <h3 className="font-grotesk text-2xl font-bold text-white mb-2">{t('landing.formTrackingTitle')}</h3>
-              <p className="text-sm text-neutral-400 leading-relaxed max-w-sm">{t('landing.formTrackingDesc')}</p>
+              <p className="text-sm text-neutral-300 leading-relaxed max-w-sm">{t('landing.formTrackingDesc')}</p>
             </div>
 
             {/* Camera feed + skeleton pose */}
             <div className="relative z-10 flex-1 rounded-xl bg-[#060809] border border-white/[0.07] overflow-hidden" style={{minHeight: '280px'}}>
 
-              {/* Corner bracket frames */}
-              <div className="absolute inset-5 pointer-events-none rounded-lg border border-lime/20">
-                <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-lime/[0.08]" />
-                <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-lime/[0.08]" />
-              </div>
+              {/* Subtle grid overlay */}
+              <div className="absolute inset-0 pointer-events-none opacity-20"
+                style={{backgroundImage: 'linear-gradient(rgba(163,230,53,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(163,230,53,0.15) 1px, transparent 1px)', backgroundSize: '40px 40px'}} />
 
-              {/* Skeleton pose SVG */}
-              <svg viewBox="0 0 220 330" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid meet">
-                <line className="skeleton-line" x1="110" y1="58" x2="110" y2="76" stroke="#a3e635" strokeWidth="2" strokeLinecap="round" />
-                <line className="skeleton-line" x1="64" y1="90" x2="156" y2="90" stroke="#a3e635" strokeWidth="2" strokeLinecap="round" />
-                <line className="skeleton-line" x1="110" y1="90" x2="110" y2="168" stroke="#a3e635" strokeWidth="2" strokeLinecap="round" />
-                <line className="skeleton-line" x1="64" y1="90" x2="42" y2="150" stroke="#a3e635" strokeWidth="2" strokeLinecap="round" style={{animationDelay: '0.4s'}} />
-                <line className="skeleton-line" x1="42" y1="150" x2="32" y2="200" stroke="#a3e635" strokeWidth="2" strokeLinecap="round" style={{animationDelay: '0.7s'}} />
-                <line className="skeleton-line" x1="156" y1="90" x2="178" y2="150" stroke="#a3e635" strokeWidth="2" strokeLinecap="round" style={{animationDelay: '0.2s'}} />
-                <line className="skeleton-line" x1="178" y1="150" x2="188" y2="200" stroke="#a3e635" strokeWidth="2" strokeLinecap="round" style={{animationDelay: '0.5s'}} />
-                <line className="skeleton-line" x1="80" y1="168" x2="140" y2="168" stroke="#a3e635" strokeWidth="2" strokeLinecap="round" />
-                <line className="skeleton-line" x1="80" y1="168" x2="70" y2="248" stroke="#a3e635" strokeWidth="2" strokeLinecap="round" style={{animationDelay: '0.9s'}} />
-                <line className="skeleton-line" x1="70" y1="248" x2="64" y2="305" stroke="#a3e635" strokeWidth="2" strokeLinecap="round" style={{animationDelay: '1.1s'}} />
-                <line className="skeleton-line" x1="140" y1="168" x2="150" y2="248" stroke="#a3e635" strokeWidth="2" strokeLinecap="round" style={{animationDelay: '0.6s'}} />
-                <line className="skeleton-line" x1="150" y1="248" x2="156" y2="305" stroke="#a3e635" strokeWidth="2" strokeLinecap="round" style={{animationDelay: '0.8s'}} />
-                {/* Head */}
-                <circle cx="110" cy="40" r="15" fill="none" stroke="#a3e635" strokeWidth="2" opacity="0.9" />
-                {/* Keypoints */}
+              {/* Skeleton pose SVG — giảm opacity để không quá chói */}
+              <svg viewBox="0 0 220 330" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid meet" opacity="0.75">
+                <line className="skeleton-line" x1="110" y1="58" x2="110" y2="76" stroke="#a3e635" strokeWidth="1.5" strokeLinecap="round" />
+                <line className="skeleton-line" x1="64" y1="90" x2="156" y2="90" stroke="#a3e635" strokeWidth="1.5" strokeLinecap="round" />
+                <line className="skeleton-line" x1="110" y1="90" x2="110" y2="168" stroke="#a3e635" strokeWidth="1.5" strokeLinecap="round" />
+                <line className="skeleton-line" x1="64" y1="90" x2="42" y2="150" stroke="#a3e635" strokeWidth="1.5" strokeLinecap="round" style={{animationDelay: '0.4s'}} />
+                <line className="skeleton-line" x1="42" y1="150" x2="32" y2="200" stroke="#a3e635" strokeWidth="1.5" strokeLinecap="round" style={{animationDelay: '0.7s'}} />
+                <line className="skeleton-line" x1="156" y1="90" x2="178" y2="150" stroke="#a3e635" strokeWidth="1.5" strokeLinecap="round" style={{animationDelay: '0.2s'}} />
+                <line className="skeleton-line" x1="178" y1="150" x2="188" y2="200" stroke="#a3e635" strokeWidth="1.5" strokeLinecap="round" style={{animationDelay: '0.5s'}} />
+                <line className="skeleton-line" x1="80" y1="168" x2="140" y2="168" stroke="#a3e635" strokeWidth="1.5" strokeLinecap="round" />
+                <line className="skeleton-line" x1="80" y1="168" x2="70" y2="248" stroke="#a3e635" strokeWidth="1.5" strokeLinecap="round" style={{animationDelay: '0.9s'}} />
+                <line className="skeleton-line" x1="70" y1="248" x2="64" y2="305" stroke="#a3e635" strokeWidth="1.5" strokeLinecap="round" style={{animationDelay: '1.1s'}} />
+                <line className="skeleton-line" x1="140" y1="168" x2="150" y2="248" stroke="#a3e635" strokeWidth="1.5" strokeLinecap="round" style={{animationDelay: '0.6s'}} />
+                <line className="skeleton-line" x1="150" y1="248" x2="156" y2="305" stroke="#a3e635" strokeWidth="1.5" strokeLinecap="round" style={{animationDelay: '0.8s'}} />
+                <circle cx="110" cy="40" r="14" fill="none" stroke="#a3e635" strokeWidth="1.5" opacity="0.8" />
                 {([[110,76],[64,90],[156,90],[110,128],[110,168],[42,150],[178,150],[32,200],[188,200],[80,168],[140,168],[70,248],[150,248]] as [number,number][]).map(([cx,cy],i) => (
-                  <circle key={i} cx={cx} cy={cy} r="4" fill="#a3e635" opacity="0.8" />
+                  <circle key={i} cx={cx} cy={cy} r="3.5" fill="#a3e635" opacity="0.7" />
                 ))}
               </svg>
 
               {/* Scan beam */}
               <div className="absolute left-0 right-0 h-16 scan-beam pointer-events-none" style={{top: '35%'}} />
 
-              {/* HUD overlays */}
-              <div className="absolute top-3 left-3 rounded-lg bg-black/60 border border-white/[0.08] px-2 py-1 backdrop-blur-sm">
-                <span className="text-[11px] font-mono text-neutral-500">cam://0 • 30fps</span>
+              {/* Kết quả phân tích — ngôn ngữ đơn giản, dễ hiểu */}
+              <div className="absolute top-3 left-3 rounded-lg bg-black/60 border border-white/[0.10] px-2.5 py-1.5 backdrop-blur-sm">
+                <span className="text-[11px] font-semibold text-neutral-300">Đang phân tích tư thế...</span>
               </div>
-              <div className="absolute top-3 right-3 rounded-lg bg-lime/10 border border-lime/25 px-2 py-1">
-                <span className="text-[11px] font-mono text-lime">∠ 172°</span>
+              <div className="absolute top-3 right-3 rounded-lg bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1.5">
+                <span className="text-[11px] font-semibold text-emerald-400">✓ Vai đúng vị trí</span>
               </div>
-              <div className="absolute bottom-3 right-3 rounded-xl bg-black/70 border border-lime/30 backdrop-blur-sm px-3 py-2 text-right">
+              <div className="absolute bottom-3 right-3 rounded-xl bg-black/70 border border-white/[0.12] backdrop-blur-sm px-3 py-2 text-right">
                 <div className="font-grotesk text-2xl font-bold text-lime leading-none">94%</div>
-                <div className="text-[11px] uppercase tracking-widest text-lime/60 mt-0.5">{t('landing.accuracy')}</div>
+                <div className="text-[11px] text-neutral-400 mt-0.5">{t('landing.accuracy')}</div>
               </div>
             </div>
           </article>
@@ -375,7 +423,7 @@ export default function Landing() {
               </div>
               <div>
                 <h3 className="font-grotesk text-base font-bold text-white leading-tight">{t('landing.smartFuelingTitle')}</h3>
-                <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">{t('landing.smartFuelingDesc')}</p>
+                <p className="text-xs text-neutral-300 mt-0.5 leading-relaxed">{t('landing.smartFuelingDesc')}</p>
               </div>
             </div>
 
@@ -430,7 +478,7 @@ export default function Landing() {
               </div>
               <div>
                 <h3 className="font-grotesk text-base font-bold text-white leading-tight">{t('landing.challengeRewardsTitle')}</h3>
-                <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">{t('landing.challengeRewardsDesc')}</p>
+                <p className="text-xs text-neutral-300 mt-0.5 leading-relaxed">{t('landing.challengeRewardsDesc')}</p>
               </div>
             </div>
 
@@ -476,7 +524,7 @@ export default function Landing() {
           <div className="reveal relative overflow-hidden rounded-3xl border border-white/[0.08]">
             <img
               src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1600&q=80"
-              alt="Tập luyện cùng AI"
+              alt="Người tập gym với hướng dẫn AI theo dõi tư thế và cường độ"
               loading="lazy"
               className="h-[460px] w-full object-cover md:h-[520px]"
             />
@@ -493,8 +541,8 @@ export default function Landing() {
                 <h2 className="font-grotesk text-3xl font-bold leading-tight text-white md:text-5xl">
                   Tập đúng. Ăn đủ.<br />Tiến bộ mỗi ngày.
                 </h2>
-                <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-300 md:text-base">
-                  Giáo án cá nhân hoá an toàn theo thể trạng, thực đơn theo ngân sách, theo dõi tiến triển realtime — tất cả trong một ứng dụng.
+                <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-200 md:text-base">
+                  Giáo án cá nhân hoá theo thể trạng, thực đơn Việt theo ngân sách, theo dõi tiến độ mỗi ngày — tất cả trong một ứng dụng.
                 </p>
                 <button onClick={onEnter} className="btn-lime mt-7 inline-flex items-center gap-2.5 px-7 py-3.5 text-sm font-bold uppercase tracking-[0.15em]">
                   Bắt đầu miễn phí
@@ -511,7 +559,7 @@ export default function Landing() {
         <div className="reveal mb-14 text-center">
           <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-600">{t('landing.intel')}</div>
           <h2 className="font-grotesk text-4xl font-bold text-white md:text-5xl">{t('landing.intelTitle')}</h2>
-          <p className="mt-4 mx-auto max-w-xl text-neutral-400 leading-relaxed">{t('landing.intelCopy')}</p>
+          <p className="mt-4 mx-auto max-w-xl text-neutral-300 leading-relaxed">{t('landing.intelCopy')}</p>
         </div>
 
         <div className="relative grid gap-8 md:grid-cols-3">
@@ -526,7 +574,7 @@ export default function Landing() {
                 <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">0{index + 1}</span>
               </div>
               <h3 className="font-grotesk text-base font-bold text-white mb-2">{title}</h3>
-              <p className="text-sm text-neutral-500 leading-relaxed">{description}</p>
+              <p className="text-sm text-neutral-300 leading-relaxed">{description}</p>
             </div>
           ))}
         </div>
@@ -543,12 +591,12 @@ export default function Landing() {
             <h2 className="font-grotesk text-3xl font-bold leading-tight text-white md:text-4xl">
               Thực đơn theo<br />ngân sách của bạn
             </h2>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-400 md:text-base">
-              AI gợi ý món ăn Việt phù hợp mục tiêu calo & macro, tính sẵn chi phí từ nguyên liệu thật. Ăn đúng mà không vượt ngân sách.
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-neutral-200 md:text-base">
+              AI gợi ý món Việt quen thuộc, tính sẵn calo và chi phí từng bữa từ nguyên liệu thật. Ăn đúng mục tiêu mà không tốn công tính.
             </p>
             <ul className="mt-6 space-y-3">
-              {['Tính macro từ nguyên liệu thật', 'Theo dõi chi phí hằng ngày', 'Ghi bữa bằng câu nói tự nhiên'].map((item) => (
-                <li key={item} className="flex items-center gap-2.5 text-sm text-neutral-300">
+              {['Tính macro từ nguyên liệu thật', 'Theo dõi chi phí ăn uống hằng ngày', 'Ghi bữa bằng câu nói tự nhiên'].map((item) => (
+                <li key={item} className="flex items-center gap-2.5 text-sm text-neutral-200">
                   <Check className="h-4 w-4 flex-shrink-0 text-lime" />
                   {item}
                 </li>
@@ -558,7 +606,7 @@ export default function Landing() {
           <div className="order-1 h-64 md:order-2 md:h-full">
             <img
               src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80"
-              alt="Dinh dưỡng thông minh"
+              alt="Thực đơn Việt theo ngân sách — AI tính sẵn calo và macro từng bữa"
               loading="lazy"
               className="h-full w-full object-cover"
             />
@@ -571,7 +619,7 @@ export default function Landing() {
         <div className="mb-12 text-center">
           <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-600">{t('landing.pricing')}</div>
           <h2 className="font-grotesk text-4xl font-bold text-white md:text-5xl">{t('landing.pricingTitle')}</h2>
-          <p className="mt-4 mx-auto max-w-xl text-neutral-400 leading-relaxed">{t('landing.pricingCopy')}</p>
+          <p className="mt-4 mx-auto max-w-xl text-neutral-300 leading-relaxed">{t('landing.pricingCopy')}</p>
           <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-lime/30 bg-lime/[0.08] px-4 py-2">
             <Zap className="w-3.5 h-3.5 text-lime" fill="currentColor" />
             <span className="text-xs font-bold text-lime">Bắt đầu miễn phí ngay hôm nay — không cần thẻ</span>
@@ -596,7 +644,7 @@ export default function Landing() {
                   </span>
                 )}
               </div>
-              <p className="text-sm text-neutral-400 mb-6 leading-relaxed">{plan.description}</p>
+              <p className="text-sm text-neutral-300 mb-6 leading-relaxed">{plan.description}</p>
               <div className="mb-7">
                 <div className="flex items-baseline gap-2">
                   <span className="font-grotesk text-4xl font-bold text-lime">{plan.price}</span>
@@ -606,7 +654,7 @@ export default function Landing() {
               </div>
               <div className="space-y-3 mb-8 flex-1">
                 {plan.features.map(feature => (
-                  <div key={feature} className="flex items-center gap-2.5 text-sm text-neutral-300">
+                  <div key={feature} className="flex items-center gap-2.5 text-sm text-neutral-200">
                     <Check className="w-3.5 h-3.5 text-lime shrink-0" />
                     {feature}
                   </div>
@@ -626,6 +674,57 @@ export default function Landing() {
                 {plan.cta}
               </button>
             </article>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Testimonials ── */}
+      <section className="mx-auto max-w-7xl px-6 py-20 md:px-10">
+        <div className="reveal mb-12 text-center">
+          <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-600">{t('landing.testimonials')}</div>
+          <h2 className="font-grotesk text-4xl font-bold text-white md:text-5xl">{t('landing.testimonialsTitle')}</h2>
+        </div>
+        <div className="reveal-stagger grid gap-4 md:grid-cols-3">
+          {testimonials.map((item) => (
+            <article key={item.name} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-6 flex flex-col gap-4">
+              <div className="flex gap-0.5">
+                {Array.from({ length: item.stars }).map((_, i) => (
+                  <Star key={i} className="w-3.5 h-3.5 text-lime" fill="currentColor" />
+                ))}
+              </div>
+              <blockquote className="text-sm leading-relaxed text-neutral-300 flex-1">
+                "{item.quote}"
+              </blockquote>
+              <div className="flex items-center gap-3 pt-2 border-t border-white/[0.05]">
+                <div className="w-9 h-9 rounded-full bg-lime/15 border border-lime/25 flex items-center justify-center text-xs font-bold text-lime shrink-0">
+                  {item.avatar}
+                </div>
+                <div>
+                  <div className="text-white text-xs font-semibold">{item.name}</div>
+                  <div className="text-neutral-600 text-[10px] mt-0.5">{item.role}</div>
+                </div>
+                <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-lime/60 bg-lime/[0.07] border border-lime/15 px-2 py-0.5 rounded-full">
+                  {item.goal}
+                </span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section id="faq" className="mx-auto max-w-3xl px-6 py-12 pb-24 md:px-10">
+        <div className="reveal mb-10 text-center">
+          <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-600">{t('landing.faqLabel')}</div>
+          <h2 className="font-grotesk text-4xl font-bold text-white md:text-5xl">{t('landing.faqTitle')}</h2>
+        </div>
+        <div className="reveal space-y-2">
+          {([1, 2, 3, 4, 5, 6] as const).map((n) => (
+            <FaqItem
+              key={n}
+              question={t(`landing.faq.q${n}`)}
+              answer={t(`landing.faq.a${n}`)}
+            />
           ))}
         </div>
       </section>
@@ -659,7 +758,7 @@ export default function Landing() {
           <h2 className="font-grotesk text-5xl font-bold leading-[0.92] tracking-tight text-white md:text-7xl">
             {t('landing.readyTitle')}
           </h2>
-          <p className="mx-auto mt-7 max-w-xl text-lg leading-relaxed text-neutral-400">
+          <p className="mx-auto mt-7 max-w-xl text-lg leading-relaxed text-neutral-300">
             {t('landing.readyCopy')}
           </p>
           <button onClick={onEnter} className="btn-lime mt-10 px-12 py-5 text-sm font-bold uppercase tracking-[0.2em]">
@@ -668,10 +767,12 @@ export default function Landing() {
         </div>
       </section>
 
+      </main>
+
       {/* ── Footer ── */}
       <footer className="border-t border-white/[0.06] px-6 py-12 md:px-10">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-8 md:flex-row">
-          <Logo size={32} wordmarkClass="text-lg" />
+          <Logo size={32} wordmarkClass="text-lg" dark />
           <div className="flex flex-wrap justify-center gap-8">
             {[
               { label: t('landing.privacy'), href: '/privacy' },
@@ -680,17 +781,17 @@ export default function Landing() {
               { label: t('landing.support'), href: 'mailto:hello@fitnit.vn?subject=Hỗ trợ' },
             ].map(({ label, href }) => (
               href.startsWith('/') ? (
-                <Link key={label} to={href} className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-600 hover:text-neutral-300 transition-colors">
+                <Link key={label} to={href} className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-400 hover:text-white transition-colors">
                   {label}
                 </Link>
               ) : (
-                <a key={label} href={href} className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-600 hover:text-neutral-300 transition-colors">
+                <a key={label} href={href} className="text-[10px] font-bold uppercase tracking-[0.25em] text-neutral-400 hover:text-white transition-colors">
                   {label}
                 </a>
               )
             ))}
           </div>
-          <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">© 2026 Viway</div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">© 2026 Viway</div>
         </div>
       </footer>
       {authModal && (

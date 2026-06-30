@@ -368,7 +368,7 @@ export default function AuthModal({ defaultTab = 'login', onClose }: AuthModalPr
 
           {/* Header */}
           <div className="flex items-center justify-between px-7 pt-6 pb-4 border-b border-white/[0.06]">
-            <Logo size={32} wordmarkClass="text-base" />
+            <Logo size={32} wordmarkClass="text-base" dark />
 
             {/* Tab switcher */}
             <div className="flex items-center bg-white/[0.05] border border-white/[0.08] rounded-xl p-0.5 gap-0.5">

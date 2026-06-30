@@ -4,6 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        // ── Legacy dark theme (giữ nguyên, không xóa) ──
         obsidian: '#050505',
         charcoal: '#121216',
         surface: '#18181c',
@@ -32,6 +33,43 @@ export default {
           800: '#1e1e1e',
           900: '#141414',
         },
+        // ── New Viway light theme ──
+        forest: {
+          50:  '#f0fdf4',
+          100: '#dcfce7',
+          200: '#bbf7d0',
+          300: '#86efac',
+          400: '#4ade80',
+          500: '#22c55e',
+          600: '#16a34a',
+          700: '#15803d',
+          800: '#166534',
+          900: '#14532d',
+        },
+        // Semantic aliases cho new theme
+        brand:   '#16a34a', // primary green
+        'brand-light': '#f0fdf4',
+        'brand-mid':   '#22c55e',
+        // New backgrounds
+        'bg-page':    '#f9fafb',
+        'bg-card':    '#ffffff',
+        'bg-muted':   '#f3f4f6',
+        // New text
+        'ink':        '#111827',
+        'ink-2':      '#374151',
+        'ink-3':      '#6b7280',
+        'ink-4':      '#9ca3af',
+        // New borders
+        'line':       '#e5e7eb',
+        'line-2':     '#d1d5db',
+        // Status colors (new)
+        'ok':         '#16a34a',
+        'warn-new':   '#d97706',
+        'err-new':    '#dc2626',
+        'info':       '#2563eb',
+        // Coin / reward
+        'coin':       '#f59e0b',
+        'xp':         '#8b5cf6',
       },
       fontFamily: {
         grotesk: ['Space Grotesk', 'sans-serif'],

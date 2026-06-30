@@ -134,7 +134,7 @@ export default function Register() {
         {/* Logo + tagline */}
         <div className="flex flex-col items-center mb-7">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <Logo size={44} wordmarkClass="text-xl" />
+            <Logo size={44} wordmarkClass="text-xl" dark />
           </Link>
           <p className="text-neutral-500 text-[11px] mt-2.5 text-center tracking-wide">
             Bắt đầu miễn phí · Kế hoạch AI trong 60 giây

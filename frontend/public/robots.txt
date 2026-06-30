@@ -5,4 +5,4 @@ Disallow: /admin/
 Disallow: /onboarding/
 Disallow: /assessment/
 Disallow: /welcome/
-Sitemap: https://fitnit.vn/sitemap.xml
+Sitemap: https://app.viway.id.vn/sitemap.xml

@@ -113,7 +113,7 @@ export default function Login() {
         {/* Logo + tagline */}
         <div className="flex flex-col items-center mb-6">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <Logo size={44} wordmarkClass="text-xl" />
+            <Logo size={44} wordmarkClass="text-xl" dark />
           </Link>
           <p className="text-neutral-500 text-[11px] mt-2.5 text-center tracking-wide">
             AI Coach cá nhân hóa · Tập thông minh hơn mỗi ngày
