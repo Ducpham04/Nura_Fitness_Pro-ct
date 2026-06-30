@@ -29,11 +29,15 @@ public class UserPreferenceController {
     @Autowired
     private com.example.fitchallenge.service.UserService userService;
 
+    @Autowired
+    private com.example.fitchallenge.Security.AuthenticatedUserIdResolver authUser;
+
     /**
      * 📋 GET /api/preferences/{userId} - Lấy tất cả preferences của user
      */
     @GetMapping("/{userId}")
     public ResponseEntity<?> getUserPreferences(@PathVariable Long userId) {
+        userId = authUser.resolve(userId);
         try {
             // Verify user exists
             userService.getUserEntityById(userId);
@@ -52,6 +56,7 @@ public class UserPreferenceController {
     public ResponseEntity<?> getPreferencesByType(
             @PathVariable Long userId,
             @PathVariable String type) {
+        userId = authUser.resolve(userId);
         try {
             UserPreference.PreferenceType preferenceType = UserPreference.PreferenceType.valueOf(type.toUpperCase());
             List<UserPreference> preferences = preferenceService.getPreferencesByType(userId, preferenceType);
@@ -68,6 +73,7 @@ public class UserPreferenceController {
     public ResponseEntity<?> recordDislikedFood(
             @PathVariable Long userId,
             @Valid @RequestBody DislikedFoodRequest request) {
+        userId = authUser.resolve(userId);
         try {
             preferenceService.recordDislikedFood(userId, request.foodName, request.reason);
             return ResponseEntity.ok(createSuccessResponse("Disliked food recorded"));
@@ -83,6 +89,7 @@ public class UserPreferenceController {
     public ResponseEntity<?> recordLikedFood(
             @PathVariable Long userId,
             @Valid @RequestBody LikedFoodRequest request) {
+        userId = authUser.resolve(userId);
         try {
             preferenceService.recordLikedFood(userId, request.foodName, request.reason);
             return ResponseEntity.ok(createSuccessResponse("Liked food recorded"));
@@ -98,6 +105,7 @@ public class UserPreferenceController {
     public ResponseEntity<?> recordSkippedExercise(
             @PathVariable Long userId,
             @Valid @RequestBody SkippedExerciseRequest request) {
+        userId = authUser.resolve(userId);
         try {
             preferenceService.recordSkippedExercise(userId, request.exerciseName, request.reason, request.challengeId);
             return ResponseEntity.ok(createSuccessResponse("Skipped exercise recorded"));
@@ -113,6 +121,7 @@ public class UserPreferenceController {
     public ResponseEntity<?> updateCookingEquipment(
             @PathVariable Long userId,
             @Valid @RequestBody CookingEquipmentRequest request) {
+        userId = authUser.resolve(userId);
         try {
             preferenceService.updateCookingEquipment(userId, request.equipment);
             return ResponseEntity.ok(createSuccessResponse("Cooking equipment updated"));
@@ -128,6 +137,7 @@ public class UserPreferenceController {
     public ResponseEntity<?> updateMealPrepTime(
             @PathVariable Long userId,
             @Valid @RequestBody MealPrepTimeRequest request) {
+        userId = authUser.resolve(userId);
         try {
             preferenceService.updateMealPrepTime(userId, request.maxPrepTimeMinutes);
             return ResponseEntity.ok(createSuccessResponse("Meal prep time updated"));
@@ -143,6 +153,7 @@ public class UserPreferenceController {
     public ResponseEntity<?> updateWorkSchedule(
             @PathVariable Long userId,
             @Valid @RequestBody WorkScheduleRequest request) {
+        userId = authUser.resolve(userId);
         try {
             preferenceService.updateWorkSchedule(userId, request.schedule);
             return ResponseEntity.ok(createSuccessResponse("Work schedule updated"));
@@ -156,6 +167,7 @@ public class UserPreferenceController {
      */
     @GetMapping("/{userId}/foods-to-avoid")
     public ResponseEntity<?> getFoodsToAvoid(@PathVariable Long userId) {
+        userId = authUser.resolve(userId);
         try {
             List<String> foods = preferenceService.getFoodsToAvoid(userId);
             return ResponseEntity.ok(foods);
@@ -169,6 +181,7 @@ public class UserPreferenceController {
      */
     @GetMapping("/{userId}/foods-to-prioritize")
     public ResponseEntity<?> getFoodsToPrioritize(@PathVariable Long userId) {
+        userId = authUser.resolve(userId);
         try {
             List<String> foods = preferenceService.getFoodsToPrioritize(userId);
             return ResponseEntity.ok(foods);
@@ -182,6 +195,7 @@ public class UserPreferenceController {
      */
     @GetMapping("/{userId}/ai-context")
     public ResponseEntity<?> getAiContext(@PathVariable Long userId) {
+        userId = authUser.resolve(userId);
         try {
             Map<String, Object> context = preferenceService.buildAiPromptContext(userId);
             return ResponseEntity.ok(context);
@@ -195,6 +209,7 @@ public class UserPreferenceController {
      */
     @GetMapping("/{userId}/stats")
     public ResponseEntity<?> getPreferenceStats(@PathVariable Long userId) {
+        userId = authUser.resolve(userId);
         try {
             UserPreferenceService.PreferenceStats stats = preferenceService.getPreferenceStats(userId);
             return ResponseEntity.ok(stats);
@@ -209,8 +224,10 @@ public class UserPreferenceController {
     @DeleteMapping("/{preferenceId}")
     public ResponseEntity<?> deactivatePreference(@PathVariable Long preferenceId) {
         try {
-            preferenceService.deactivatePreference(preferenceId);
+            preferenceService.deactivatePreference(preferenceId, authUser.resolve(null));
             return ResponseEntity.ok(createSuccessResponse("Preference deactivated"));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         }

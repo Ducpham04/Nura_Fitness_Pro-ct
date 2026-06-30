@@ -20,6 +20,11 @@ import java.util.Optional;
 @Repository
 public interface UserPreferenceRepository extends JpaRepository<UserPreference, Long> {
 
+    /** Gỡ link food (food_id nullable) khi admin xoá food. */
+    @Modifying
+    @Query("UPDATE UserPreference up SET up.food = null WHERE up.food.foodId = :foodId")
+    void unlinkFood(@Param("foodId") Long foodId);
+
     /**
      * 🔍 Lấy tất cả preferences của user còn active
      */

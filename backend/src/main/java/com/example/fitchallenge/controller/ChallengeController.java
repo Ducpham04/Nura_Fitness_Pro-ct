@@ -82,8 +82,11 @@ public class ChallengeController {
     public ResponseEntity<NotificationResponse> joinChallenge(
             @PathVariable Long id,
             @Valid @RequestBody JoinChallengeRequest request) {
-        
+
         NotificationResponse response = challengeService.joinChallenge(id, request.getUserId());
+        if (!response.isSuccess()) {
+            return ResponseEntity.status(400).body(response);
+        }
         return ResponseEntity.ok(response);
     }
     

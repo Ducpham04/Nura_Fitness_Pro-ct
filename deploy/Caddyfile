@@ -1,0 +1,19 @@
+# =====================================================================
+# Caddy — lớp TLS đứng trước container frontend (chạy trên host EC2)
+#
+# Cài đặt (Amazon Linux 2023):
+#   sudo dnf install -y caddy
+#   # SỬA domain bên dưới thành domain thật rồi:
+#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+#   sudo systemctl enable --now caddy
+#
+# Caddy tự xin + tự gia hạn chứng chỉ Let's Encrypt, tự redirect HTTP->HTTPS.
+# Yêu cầu: DNS record A của domain đã trỏ về Elastic IP, cổng 80/443 mở
+# trong Security Group, và stack chạy kèm docker-compose.caddy.yml
+# (frontend bind 127.0.0.1:8088).
+# =====================================================================
+
+fitnit.vn, www.fitnit.vn {
+    encode gzip
+    reverse_proxy localhost:8088
+}

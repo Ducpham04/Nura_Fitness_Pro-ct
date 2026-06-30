@@ -13,6 +13,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -43,7 +44,14 @@ public class FoodAnalysisController {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Autowired
+    private RestTemplate restTemplate; // bean có timeout từ RestTemplateConfig
+
+    @Autowired
+    private com.example.fitchallenge.Security.AuthenticatedUserIdResolver authUser;
+
+    @Autowired
+    private com.example.fitchallenge.service.AiUsageService aiUsageService;
 
     /**
      * 📸 POST /api/food-analysis/analyze - Phân tích món ăn từ ảnh
@@ -58,6 +66,7 @@ public class FoodAnalysisController {
             @RequestParam("userId") Long userId,
             @RequestParam(value = "language", defaultValue = "vi") String language) {
 
+        userId = authUser.resolve(userId);
         try {
             // ✅ 1. Verify user tồn tại (JWT đã được verify ở Security Filter)
             userService.getUserById(userId);
@@ -77,6 +86,10 @@ public class FoodAnalysisController {
             if (image.getSize() > 5 * 1024 * 1024) {
                 return ResponseEntity.badRequest().body(createErrorResponse("Image size must be less than 5MB"));
             }
+
+            // 💳 3.5 Trừ AI credit (sau khi validate ảnh để không tính phí request hỏng)
+            // Chống lỗ hổng đốt credit qua /analyze — trước đây chỉ /scan mới trừ.
+            aiUsageService.ensureAndConsume(userId, com.example.fitchallenge.service.AiCreditCost.SCAN_IMAGE);
 
             // 🚀 4. Forward ảnh đến AI Service
             String aiUrl = aiServiceUrl + "/track-food";
@@ -111,6 +124,8 @@ public class FoodAnalysisController {
 
             return ResponseEntity.ok(enrichedResponse);
 
+        } catch (com.example.fitchallenge.exception.QuotaExceededException e) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(createErrorResponse("Failed to analyze food image: " + e.getMessage()));
@@ -126,6 +141,7 @@ public class FoodAnalysisController {
             @Valid @RequestBody AnalyzeBase64Request request,
             @RequestParam("userId") Long userId) {
 
+        userId = authUser.resolve(userId);
         try {
             // ✅ Verify user
             userService.getUserById(userId);
@@ -134,6 +150,9 @@ public class FoodAnalysisController {
             if (request.base64Image == null || request.base64Image.isEmpty()) {
                 return ResponseEntity.badRequest().body(createErrorResponse("Base64 image is required"));
             }
+
+            // 💳 Trừ AI credit (sau khi validate) — chống đốt credit qua /analyze-base64
+            aiUsageService.ensureAndConsume(userId, com.example.fitchallenge.service.AiCreditCost.SCAN_IMAGE);
 
             // 🚀 Forward đến AI Service
             String aiUrl = aiServiceUrl + "/track-food-base64";
@@ -164,6 +183,8 @@ public class FoodAnalysisController {
 
             return ResponseEntity.ok(enrichedResponse);
 
+        } catch (com.example.fitchallenge.exception.QuotaExceededException e) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(createErrorResponse("Failed to analyze food image: " + e.getMessage()));
@@ -179,6 +200,7 @@ public class FoodAnalysisController {
             @RequestParam Long userId,
             @Valid @RequestBody FoodLogRequest request) {
 
+        userId = authUser.resolve(userId);
         try {
             // TODO: Implement food log saving
             // This would save to a UserFoodLog entity (to be created)

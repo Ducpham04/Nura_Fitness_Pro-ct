@@ -25,7 +25,7 @@
 FE hiện **chỉ chạy `vite dev`** — không có Dockerfile, không có static server. Không deploy được qua compose.
 
 **2 lựa chọn:**
-- **(a) Build tĩnh + Nginx (khuyến nghị):** tạo `frontEnd-Lastversion/Dockerfile`:
+- **(a) Build tĩnh + Nginx (khuyến nghị):** tạo `frontend/Dockerfile`:
   ```dockerfile
   FROM node:20-alpine AS build
   WORKDIR /app

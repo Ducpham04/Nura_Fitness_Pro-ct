@@ -7,6 +7,7 @@ import os
 import uuid
 from typing import Any, Dict, List
 
+from app.core.llm import make_client
 from app.schemas.smart_meal_catalog import (
     FoodCatalogItem,
     SmartMealCatalogRequest,
@@ -28,7 +29,11 @@ STRICT RULES:
    - The server treats matched inventory foods as 0đ when reconciling budget; your job is selection & portions, not costing.
 7) Respect budget_per_day and target_calories_daily only through PORTION SIZE and CHEAPER catalog choices — do not invent money or kcal numbers.
 8) Spread variety across days; avoid repeating identical meals every day unless inventory forces it.
-9) respect preferences_negative: avoid catalog names that obviously match those dislikes."""
+9) respect preferences_negative: avoid catalog names that obviously match those dislikes.
+
+MEDICAL SAFETY (hard rules, never violate):
+10) disliked_foods_or_keywords may contain ALLERGENS — NEVER pick a catalog food whose name matches any of them.
+11) Respect every constraint in diet_rules (medical conditions, Vietnamese). Examples: diabetes → avoid sugary foods and do not under-portion to extremes; hypertension → avoid salty/processed picks; kidney disease → do not stack high-protein items. When several foods fit, choose the safest for the listed medical_conditions."""
 
 MODEL_NAME = os.getenv("GROQ_SMART_MEAL_MODEL", "llama-3.1-8b-instant")
 
@@ -39,22 +44,7 @@ def _catalog_lines(catalog: List[FoodCatalogItem], max_preview: int = 400) -> st
 
 
 def generate_smart_catalog_plan(req: SmartMealCatalogRequest) -> SmartMealCatalogResponse:
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        raise ValueError("GROQ_API_KEY is not set")
-
-    import httpx
-    from openai import OpenAI
-
-    os.environ.pop("HTTP_PROXY", None)
-    os.environ.pop("HTTPS_PROXY", None)
-    os.environ.pop("ALL_PROXY", None)
-
-    client = OpenAI(
-        base_url="https://api.groq.com/openai/v1",
-        api_key=api_key,
-        http_client=httpx.Client(),
-    )
+    client = make_client(timeout=90.0)
 
     user_blob: Dict[str, Any] = {
         "days": req.days,
@@ -62,6 +52,8 @@ def generate_smart_catalog_plan(req: SmartMealCatalogRequest) -> SmartMealCatalo
         "target_calories_daily": req.target_calories_daily,
         "inventory_phrases": req.inventory,
         "disliked_foods_or_keywords": req.preferences_negative,
+        "diet_rules": req.diet_rules,
+        "medical_conditions": req.medical_conditions,
         "user_profile": req.user_profile,
         "food_catalog_preview": json.loads(_catalog_lines(req.food_catalog)),
     }

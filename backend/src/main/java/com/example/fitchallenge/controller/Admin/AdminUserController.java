@@ -48,8 +48,17 @@ public class AdminUserController {
         
         Pageable pageable = PageRequest.of(page, limit);
         Page<UserDTO> users = userService.getAllUsersPaginated(status, role, search, pageable);
-        
+
         return ResponseEntity.ok(users);
+    }
+
+    /**
+     * GET /api/admin/users/{id}
+     * Chi tiết 1 user (thông tin + gói AI + credit — theo UserDTO).
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<UserDTO> getUser(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getUserById(id));
     }
 
     /**

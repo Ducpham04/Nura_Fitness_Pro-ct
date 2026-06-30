@@ -267,7 +267,7 @@ Sau khi chạy `enhanced-seeder/seed-all`:
 
 Sau khi BE chạy và có data:
 
-1. Vào `frontEnd-Lastversion/`
+1. Vào `frontend/`
 2. Tạo file `.env` với `VITE_API_URL=http://localhost:8080`
 3. Chạy `npm install && npm run dev`
 4. Đăng nhập với `user1@test.com / password123`

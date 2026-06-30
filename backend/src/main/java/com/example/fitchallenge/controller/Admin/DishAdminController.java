@@ -9,13 +9,17 @@ import com.example.fitchallenge.repository.DishRepository;
 import com.example.fitchallenge.repository.FoodRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/admin/dishes")
 @RequiredArgsConstructor
@@ -69,8 +73,15 @@ public class DishAdminController {
 
     @GetMapping("/{dishId}/ingredients")
     public ResponseEntity<NotificationResponse> getIngredients(@PathVariable Long dishId) {
-        List<DishIngredient> ingredients = dishIngredientRepository.findByDishIdWithFood(dishId);
-        return ResponseEntity.ok(new NotificationResponse(true, "Dish ingredients retrieved successfully", ingredients));
+        try {
+            List<Map<String, Object>> views = dishIngredientRepository.findByDishIdWithFood(dishId)
+                    .stream().map(DishAdminController::toView).toList();
+            return ResponseEntity.ok(new NotificationResponse(true, "Dish ingredients retrieved successfully", views));
+        } catch (Exception e) {
+            log.error("[Ingredients] load dish {} failed", dishId, e);
+            return ResponseEntity.status(500)
+                    .body(new NotificationResponse(false, "Lỗi tải công thức: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/{dishId}/ingredients")
@@ -78,17 +89,32 @@ public class DishAdminController {
     public ResponseEntity<NotificationResponse> addIngredient(
             @PathVariable Long dishId,
             @Valid @RequestBody DishIngredientRequest request) {
-        Dish dish = dishRepository.findById(dishId)
-                .orElseThrow(() -> new RuntimeException("Dish not found"));
-        Food food = foodRepository.findById(request.getFoodId())
-                .orElseThrow(() -> new RuntimeException("Food not found"));
+        try {
+            Dish dish = dishRepository.findById(dishId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy món (id=" + dishId + ")"));
+            Food food = foodRepository.findById(request.getFoodId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy thực phẩm (id=" + request.getFoodId() + ")"));
 
-        DishIngredient ingredient = new DishIngredient();
-        ingredient.setDish(dish);
-        ingredient.setFood(food);
-        ingredient.setIsCoreIngredient(request.getIsCoreIngredient() == null || request.getIsCoreIngredient());
-        DishIngredient saved = dishIngredientRepository.save(ingredient);
-        return ResponseEntity.ok(new NotificationResponse(true, "Dish ingredient added successfully", saved));
+            // Tránh trùng (unique constraint dish+food) → báo lỗi thân thiện thay vì 500
+            boolean exists = dishIngredientRepository.findByDishIdWithFood(dishId).stream()
+                    .anyMatch(di -> di.getFood() != null
+                            && di.getFood().getFoodId().equals(request.getFoodId()));
+            if (exists) {
+                return ResponseEntity.badRequest()
+                        .body(new NotificationResponse(false, "Thực phẩm này đã có trong công thức món"));
+            }
+
+            DishIngredient ingredient = new DishIngredient();
+            ingredient.setDish(dish);
+            ingredient.setFood(food);
+            ingredient.setIsCoreIngredient(request.getIsCoreIngredient() == null || request.getIsCoreIngredient());
+            DishIngredient saved = dishIngredientRepository.save(ingredient);
+            return ResponseEntity.ok(new NotificationResponse(true, "Dish ingredient added successfully", toView(saved)));
+        } catch (Exception e) {
+            log.error("[Ingredients] add to dish {} food {} failed", dishId, request.getFoodId(), e);
+            return ResponseEntity.status(500)
+                    .body(new NotificationResponse(false, "Lỗi thêm nguyên liệu: " + e.getMessage()));
+        }
     }
 
     @PutMapping("/ingredients/{ingredientId}")
@@ -109,7 +135,7 @@ public class DishAdminController {
         }
 
         DishIngredient saved = dishIngredientRepository.save(ingredient);
-        return ResponseEntity.ok(new NotificationResponse(true, "Dish ingredient updated successfully", saved));
+        return ResponseEntity.ok(new NotificationResponse(true, "Dish ingredient updated successfully", toView(saved)));
     }
 
     @DeleteMapping("/ingredients/{ingredientId}")
@@ -143,5 +169,20 @@ public class DishAdminController {
     public static class DishIngredientRequest {
         private Long foodId;
         private Boolean isCoreIngredient;
+    }
+
+    // Map gọn — tránh serialize entity Food (có @ElementCollection LAZY gây 500)
+    private static Map<String, Object> toView(DishIngredient di) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("dishIngredientId", di.getDishIngredientId());
+        m.put("isCoreIngredient", di.getIsCoreIngredient());
+        Food f = di.getFood();
+        if (f != null) {
+            Map<String, Object> fm = new HashMap<>();
+            fm.put("foodId", f.getFoodId());
+            fm.put("name", f.getName());
+            m.put("food", fm);
+        }
+        return m;
     }
 }

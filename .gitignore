@@ -67,3 +67,6 @@ backups/
 # Temporary files
 tmp/
 temp/
+
+# Playwright MCP scratch
+.playwright-mcp/

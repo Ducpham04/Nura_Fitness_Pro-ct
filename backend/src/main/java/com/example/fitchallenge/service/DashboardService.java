@@ -1,6 +1,7 @@
 package com.example.fitchallenge.service;
 
 import com.example.fitchallenge.DTO.DashboardDTO;
+import java.util.List;
 
 public interface DashboardService {
     /**
@@ -37,6 +38,16 @@ public interface DashboardService {
      * Lấy tổng quan dashboard cho user cá nhân
      */
     DashboardDTO.CustomerDashboardResponse getCustomerDashboard(Long userId);
+
+    /**
+     * Thống kê lượt gọi AI + ước tính token Groq
+     */
+    DashboardDTO.AiStatsResponse getAiStats();
+
+    /**
+     * Bảng hoạt động người dùng: last login, AI calls, token tháng này
+     */
+    List<DashboardDTO.UserActivityRow> getUserActivity();
 }
 
 

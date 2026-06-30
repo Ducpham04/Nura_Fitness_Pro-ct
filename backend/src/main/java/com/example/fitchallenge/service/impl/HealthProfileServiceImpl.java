@@ -74,6 +74,7 @@ public class HealthProfileServiceImpl implements HealthProfileService {
             profile.setCurrentInjuries(request.getCurrentInjuries());
             profile.setMobilityLevel(request.getMobilityLevel());
             profile.setAvailableEquipment(request.getAvailableEquipment());
+            profile.setPreferredWorkoutDurationMinutes(request.getPreferredWorkoutDurationMinutes());
 
             // ========== Cập nhật hành vi ăn uống ==========
             profile.setMealsPerDay(request.getMealsPerDay());
@@ -254,7 +255,8 @@ public class HealthProfileServiceImpl implements HealthProfileService {
         response.setCurrentInjuries(profile.getCurrentInjuries());
         response.setMobilityLevel(profile.getMobilityLevel());
         response.setAvailableEquipment(profile.getAvailableEquipment());
-        
+        response.setPreferredWorkoutDurationMinutes(profile.getPreferredWorkoutDurationMinutes());
+
         // Hành vi ăn uống
         response.setMealsPerDay(profile.getMealsPerDay());
         response.setFrequentFoods(profile.getFrequentFoods());

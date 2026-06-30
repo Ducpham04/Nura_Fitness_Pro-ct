@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.context.request.WebRequest;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -37,6 +38,14 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     // ── 400 Bad Request ────────────────────────────────────────────────────────
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingHeader(
+            MissingRequestHeaderException ex, WebRequest request) {
+        log.warn("Missing required header [{}]: {}", path(request), ex.getHeaderName());
+        return build(HttpStatus.BAD_REQUEST, "MISSING_HEADER",
+                "Required header '" + ex.getHeaderName() + "' is missing", request);
+    }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(
@@ -73,6 +82,14 @@ public class GlobalExceptionHandler {
 
     // ── 403 Forbidden ──────────────────────────────────────────────────────────
 
+    /** Tài khoản bị vô hiệu hoá (xoá mềm / admin khoá) — báo rõ lý do thay vì "sai mật khẩu". */
+    @ExceptionHandler(org.springframework.security.authentication.DisabledException.class)
+    public ResponseEntity<Map<String, Object>> handleDisabled(
+            org.springframework.security.authentication.DisabledException ex, WebRequest request) {
+        log.warn("Disabled account [{}]: {}", path(request), ex.getMessage());
+        return build(HttpStatus.FORBIDDEN, "ACCOUNT_DISABLED", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(
             AccessDeniedException ex, WebRequest request) {
@@ -96,6 +113,29 @@ public class GlobalExceptionHandler {
             DuplicateResourceException ex, WebRequest request) {
         log.warn("Conflict [{}]: {}", path(request), ex.getMessage());
         return build(HttpStatus.CONFLICT, "CONFLICT", ex.getMessage(), request);
+    }
+
+    /**
+     * Vi phạm ràng buộc DB (FK, NOT NULL, UNIQUE...) — thường gặp khi xoá bản ghi
+     * đang được tham chiếu (vd: xoá food còn nằm trong kho/món ăn của user).
+     * Trả 409 với thông báo thân thiện thay vì 500.
+     */
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(
+            org.springframework.dao.DataIntegrityViolationException ex, WebRequest request) {
+        log.warn("Data integrity violation [{}]: {}", path(request), ex.getMostSpecificCause().getMessage());
+        return build(HttpStatus.CONFLICT, "DATA_INTEGRITY_VIOLATION",
+                "Không thể thực hiện: dữ liệu này đang được sử dụng ở nơi khác (vd: thực phẩm đang có trong kho hoặc món ăn của người dùng). Hãy gỡ các liên kết trước khi xoá.",
+                request);
+    }
+
+    // ── 429 Too Many Requests (AI quota exceeded) ─────────────────────────────
+
+    @ExceptionHandler(QuotaExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleQuotaExceeded(
+            QuotaExceededException ex, WebRequest request) {
+        log.warn("AI quota exceeded [{}]: {}", path(request), ex.getMessage());
+        return build(HttpStatus.TOO_MANY_REQUESTS, "QUOTA_EXCEEDED", ex.getMessage(), request);
     }
 
     // ── 503 Service Unavailable (AI service down, etc.) ───────────────────────

@@ -58,7 +58,8 @@ public class HealthProfileResponse {
     private String currentInjuries;
     private String mobilityLevel;
     private String availableEquipment;
-    
+    private Integer preferredWorkoutDurationMinutes;
+
     // ========== NHÓM E: Hành vi ăn uống ==========
     private Integer mealsPerDay;
     private String frequentFoods;
@@ -326,7 +327,15 @@ public class HealthProfileResponse {
     public void setAvailableEquipment(String availableEquipment) {
         this.availableEquipment = availableEquipment;
     }
-    
+
+    public Integer getPreferredWorkoutDurationMinutes() {
+        return preferredWorkoutDurationMinutes;
+    }
+
+    public void setPreferredWorkoutDurationMinutes(Integer preferredWorkoutDurationMinutes) {
+        this.preferredWorkoutDurationMinutes = preferredWorkoutDurationMinutes;
+    }
+
     public Integer getMealsPerDay() {
         return mealsPerDay;
     }

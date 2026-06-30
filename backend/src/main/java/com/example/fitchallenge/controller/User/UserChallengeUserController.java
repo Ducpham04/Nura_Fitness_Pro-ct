@@ -143,37 +143,7 @@ public class UserChallengeUserController {
         
         try {
             Long userId = userService.getUserByEmail(userDetails.getUsername()).getId();
-            
-            // TODO: Implement getMyChallenges method in service
-            // Hiện tại có thể dùng getAll và filter
-            NotificationResponse allChallenges = userChallengeService.getAll();
-            
-            // Filter by userId and status if provided
-            if (allChallenges.getData() instanceof java.util.List) {
-                java.util.List<?> challenges = (java.util.List<?>) allChallenges.getData();
-                java.util.List<?> filtered = challenges.stream()
-                    .filter(c -> {
-                        try {
-                            java.lang.reflect.Method getUserId = c.getClass().getMethod("getUserId");
-                            Long challengeUserId = (Long) getUserId.invoke(c);
-                            if (!challengeUserId.equals(userId)) return false;
-                            
-                            if (status != null) {
-                                java.lang.reflect.Method getStatus = c.getClass().getMethod("getStatus");
-                                String challengeStatus = (String) getStatus.invoke(c);
-                                return status.equalsIgnoreCase(challengeStatus);
-                            }
-                            return true;
-                        } catch (Exception e) {
-                            return false;
-                        }
-                    })
-                    .collect(java.util.stream.Collectors.toList());
-                
-                return ResponseEntity.ok(new NotificationResponse(true, "My challenges retrieved", filtered));
-            }
-            
-            return ResponseEntity.ok(allChallenges);
+            return ResponseEntity.ok(userChallengeService.getByUserId(userId, status));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(
                 new NotificationResponse(false, "Error: " + e.getMessage())

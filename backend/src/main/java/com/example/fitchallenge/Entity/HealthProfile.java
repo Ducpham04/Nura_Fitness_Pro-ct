@@ -106,6 +106,9 @@ public class HealthProfile {
     @Column(name = "available_equipment", length = 200)
     private String availableEquipment; // none, dumbbells, resistance_bands, full_gym, bodyweight_only
 
+    @Column(name = "preferred_workout_duration_minutes")
+    private Integer preferredWorkoutDurationMinutes; // Thời lượng mỗi buổi mong muốn (15/30/45/60)
+
     // ========== NHÓM E: Hành vi ăn uống ==========
     @Column(name = "meals_per_day")
     private Integer mealsPerDay; // Số bữa ăn/ngày (2, 3, 4, 5+)

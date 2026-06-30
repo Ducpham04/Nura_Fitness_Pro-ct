@@ -7,9 +7,11 @@ import com.example.fitchallenge.Security.JWT.JwtTokenProvider;
 import com.example.fitchallenge.config.NotificationResponse;
 import com.example.fitchallenge.repository.*;
 import com.example.fitchallenge.repository.User.UserRepository;
+import com.example.fitchallenge.service.EmailService;
 import com.example.fitchallenge.service.UserService;
 import com.example.fitchallenge.exception.DuplicateResourceException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -17,9 +19,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,6 +32,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -37,6 +42,15 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final RoleRepository roleRepository;
+
+    // Password reset
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailService emailService;
+
+    // Google login
+    private final com.example.fitchallenge.Security.GoogleTokenVerifier googleTokenVerifier;
+
+    private final com.example.fitchallenge.repository.AiPackageRepository aiPackageRepository;
 
     // Supporting services for better separation of concerns
     private final UserChallengeRepository userChallengeRepository;
@@ -81,6 +95,7 @@ public class UserServiceImpl implements UserService {
         user.setRole(role);
         user.setStatus("active"); // Set default status
         user.setPoints(0); // Set default points
+        user.setLevelPoints(0); // XP tích luỹ ban đầu
         ZonedDateTime now = ZonedDateTime.now();
         user.setCreatedAt(now);
         user.setUpdatedAt(now);
@@ -138,6 +153,8 @@ public class UserServiceImpl implements UserService {
         newUser.setRole(userRole);
         newUser.setStatus("active");
         newUser.setPoints(0);
+        newUser.setLevelPoints(0);
+        newUser.setReferralCode(generateReferralCode());
 
         ZonedDateTime now = ZonedDateTime.now();
         newUser.setCreatedAt(now);
@@ -148,7 +165,6 @@ public class UserServiceImpl implements UserService {
         try {
             User savedUser = userRepository.save(newUser);
 
-            // Generate tokens ngay lập tức để User không cần login lại
             String token = jwtTokenProvider.generateToken(savedUser.getEmail(), savedUser.getRole().getRoleName());
             String refreshToken = jwtTokenProvider.generateRefreshToken(savedUser.getEmail());
 
@@ -166,6 +182,106 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Transactional
+    @Override
+    public Map<String, Object> getMyReferralInfo(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("User not found: " + userId));
+        // Auto-generate referral code for old users who registered before this feature was added
+        if (user.getReferralCode() == null || user.getReferralCode().isBlank()) {
+            user.setReferralCode(generateReferralCode());
+            userRepository.save(user);
+        }
+        int count = user.getReferralCount() == null ? 0 : user.getReferralCount();
+        String pkg = user.getAiPackage() != null ? user.getAiPackage().getCode() : "FREE";
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("referralCode", user.getReferralCode());
+        res.put("referralCount", count);
+        res.put("creditsEarned", 0);
+        res.put("currentPackage", pkg);
+        // Milestones: 5 → PLUS, 20 → PRO
+        res.put("referralsUntilPlus", Math.max(0, 5 - count));
+        res.put("referralsUntilPro", Math.max(0, 20 - count));
+        res.put("plusUnlocked", count >= 5);
+        res.put("proUnlocked", count >= 20);
+        return res;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public Map<String, Object> applyReferralCode(Long userId, String code) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("User not found: " + userId));
+
+        if (user.getReferredBy() != null) {
+            throw new IllegalStateException("Bạn đã nhập mã giới thiệu trước đó rồi.");
+        }
+        String trimmed = code.trim().toUpperCase();
+        User referrer = userRepository.findByReferralCode(trimmed)
+                .orElseThrow(() -> new IllegalArgumentException("Mã giới thiệu không tồn tại: " + trimmed));
+        if (referrer.getId().equals(userId)) {
+            throw new IllegalArgumentException("Không thể dùng mã của chính mình.");
+        }
+
+        // Tặng người được mời +25 credit
+        user.setReferredBy(referrer);
+        int bonusForInvitee = 25;
+        user.setAiQuota((user.getAiQuota() == null ? 25 : user.getAiQuota()) + bonusForInvitee);
+        userRepository.save(user);
+
+        // Thưởng người mời
+        rewardReferrer(referrer);
+
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("success", true);
+        res.put("message", "Mã hợp lệ! Bạn nhận được +" + bonusForInvitee + " AI credit.");
+        res.put("bonusCredits", bonusForInvitee);
+        res.put("referrerName", referrer.getFullName() != null ? referrer.getFullName() : referrer.getUserName());
+        return res;
+    }
+
+    private void rewardReferrer(User referrer) {
+        int current = referrer.getReferralCount() == null ? 0 : referrer.getReferralCount();
+        int newCount = current + 1;
+        referrer.setReferralCount(newCount);
+        // Thưởng milestone: 5 → PLUS, 20 → PRO. Không cộng credit lẻ.
+        if (newCount == 20) {
+            aiPackageRepository.findByCode("PRO").ifPresent(pkg -> {
+                referrer.setAiPackage(pkg);
+                referrer.setAiQuota(pkg.getAiQuota());
+                referrer.setAiUsed(0);
+                referrer.setAiResetAt(ZonedDateTime.now().plusDays(30));
+                referrer.setAiPackageExpiresAt(ZonedDateTime.now().plusDays(30));
+                log.info("Referral milestone PRO: userId={} count={}", referrer.getId(), newCount);
+            });
+        } else if (newCount == 5) {
+            aiPackageRepository.findByCode("PLUS").ifPresent(pkg -> {
+                referrer.setAiPackage(pkg);
+                referrer.setAiQuota(pkg.getAiQuota());
+                referrer.setAiUsed(0);
+                referrer.setAiResetAt(ZonedDateTime.now().plusDays(30));
+                referrer.setAiPackageExpiresAt(ZonedDateTime.now().plusDays(30));
+                log.info("Referral milestone PLUS: userId={} count={}", referrer.getId(), newCount);
+            });
+        }
+        userRepository.save(referrer);
+        log.info("Referral rewarded: referrerId={} newCount={}", referrer.getId(), newCount);
+    }
+
+    private static final String REFERRAL_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    private String generateReferralCode() {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            StringBuilder sb = new StringBuilder(8);
+            for (int i = 0; i < 8; i++) sb.append(REFERRAL_CHARS.charAt(SECURE_RANDOM.nextInt(REFERRAL_CHARS.length())));
+            String code = sb.toString();
+            if (userRepository.findByReferralCode(code).isEmpty()) return code;
+        }
+        // fallback: timestamp-based, guaranteed unique
+        return "R" + Long.toString(System.currentTimeMillis(), 36).toUpperCase().substring(0, 7);
+    }
+
 
     @Override
     public JwtResponse login(LoginRequest loginRequest) {
@@ -178,6 +294,12 @@ public class UserServiceImpl implements UserService {
         User user = userOpt.get();
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             throw new org.springframework.security.authentication.BadCredentialsException("Invalid email or password");
+        }
+
+        // Tài khoản bị vô hiệu hoá (xoá mềm / admin khoá) → chặn đăng nhập
+        if (user.getStatus() != null && "inactive".equalsIgnoreCase(user.getStatus().trim())) {
+            throw new org.springframework.security.authentication.DisabledException(
+                    "Tài khoản đã bị vô hiệu hoá. Vui lòng liên hệ hỗ trợ.");
         }
 
         // Update last login time
@@ -199,6 +321,69 @@ public class UserServiceImpl implements UserService {
         return new JwtResponse(token, refreshToken, userInfo);
     }
 
+
+    @Override
+    @Transactional
+    public JwtResponse loginWithGoogle(String idToken) {
+        // 1. Verify ID token với Google (chữ ký + audience = client-id của ta)
+        com.example.fitchallenge.Security.GoogleTokenVerifier.GoogleUser g =
+                googleTokenVerifier.verify(idToken);
+
+        if (g.email() == null || g.email().isBlank()) {
+            throw new IllegalArgumentException("Tài khoản Google không có email");
+        }
+        if (!g.emailVerified()) {
+            throw new IllegalArgumentException("Email Google chưa được xác thực");
+        }
+        String email = g.email().trim().toLowerCase();
+
+        // 2. Tìm user theo email; chưa có thì tự tạo (đăng nhập = đăng ký luôn)
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            Role userRole = roleRepository.findById(5L)
+                    .orElseThrow(() -> new RuntimeException("Role USER (ID: 5) chưa được khởi tạo trong DB."));
+
+            User newUser = new User();
+            String fullName = (g.name() != null && !g.name().isBlank())
+                    ? g.name().trim()
+                    : email.split("@")[0];
+            newUser.setFullName(fullName);
+            // userName có ràng buộc UNIQUE — dùng email để chắc chắn không đụng giữa các user trùng tên
+            newUser.setUserName(email);
+            newUser.setEmail(email);
+            // User Google không có mật khẩu — set chuỗi ngẫu nhiên đã mã hoá (không ai login local bằng nó được)
+            newUser.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+            newUser.setRole(userRole);
+            newUser.setStatus("active");
+            newUser.setPoints(0);
+            newUser.setLevelPoints(0);
+            // referral_code có ràng buộc NOT NULL — phải sinh mã cho user Google mới (giống đăng ký thường)
+            newUser.setReferralCode(generateReferralCode());
+            if (g.picture() != null && !g.picture().isBlank()) {
+                newUser.setLinkImage(g.picture());
+            }
+            ZonedDateTime created = ZonedDateTime.now();
+            newUser.setCreatedAt(created);
+            newUser.setUpdatedAt(created);
+            newUser.setLastLoginAt(created);
+            log.info("[GoogleAuth] Tạo user mới từ Google: {}", email);
+            return userRepository.save(newUser);
+        });
+
+        // 3. Cập nhật last login + phát JWT giống login thường
+        user.setLastLoginAt(ZonedDateTime.now());
+        userRepository.save(user);
+
+        String token = jwtTokenProvider.generateToken(user.getEmail(), user.getRole().getRoleName());
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
+
+        JwtResponse.JwtUserInfoDTO userInfo = new JwtResponse.JwtUserInfoDTO(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName() != null ? user.getFullName() : user.getUserName(),
+                user.getRole().getRoleName()
+        );
+        return new JwtResponse(token, refreshToken, userInfo);
+    }
 
     @Override
     public UserDetails loadUserByEmail(String email)  {
@@ -230,6 +415,7 @@ public class UserServiceImpl implements UserService {
             dto.setLastLoginAt(user.getLastLoginAt());
             dto.setRole(user.getRole().getRoleName());
             dto.setStatus(user.getStatus());
+            applyAiPackageInfo(dto, user);
             return dto;
         }).collect(Collectors.toList()); // ẩn password trước khi trả về
 
@@ -253,8 +439,22 @@ public class UserServiceImpl implements UserService {
                 .build();
             dto.setUpdatedAt(user.getUpdatedAt());
             dto.setLastLoginAt(user.getLastLoginAt());
+            applyAiPackageInfo(dto, user);
             return dto;
         }).orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    /** Gán thông tin gói AI hiện tại lên DTO để admin xem trực tiếp. */
+    private void applyAiPackageInfo(UserDTO dto, User user) {
+        if (user.getAiPackage() != null) {
+            dto.setAiPackageCode(user.getAiPackage().getCode());
+            dto.setAiPackageName(user.getAiPackage().getName());
+        } else {
+            dto.setAiPackageCode("FREE");
+        }
+        dto.setAiQuota(user.getAiQuota());
+        dto.setAiUsed(user.getAiUsed());
+        dto.setAiPackageExpiresAt(user.getAiPackageExpiresAt());
     }
 
     @Override
@@ -599,6 +799,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<UserDTO> getAllUsersPaginated(String status, String role, String search, Pageable pageable) {
         List<User> allUsers = userRepository.findAll();
 
@@ -641,6 +842,7 @@ public class UserServiceImpl implements UserService {
                     dto.setUpdatedAt(user.getUpdatedAt());
                     dto.setLastLoginAt(user.getLastLoginAt());
                     dto.setRole(user.getRole().getRoleName());
+                    applyAiPackageInfo(dto, user); // gói AI hiện tại cho admin
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -705,6 +907,11 @@ public class UserServiceImpl implements UserService {
                     .orElseThrow(() -> new RuntimeException("Role not found"));
             user.setRole(role);
         }
+        if (request.getStatus() != null && !request.getStatus().isBlank()) {
+            // Khoá/mở tài khoản: chuẩn hoá về "active" | "inactive"
+            String s = request.getStatus().trim().toLowerCase();
+            user.setStatus("active".equals(s) ? "active" : "inactive");
+        }
 
         user.setUpdatedAt(ZonedDateTime.now());
         User savedUser = userRepository.save(user);
@@ -748,12 +955,133 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public NotificationResponse deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
+        // Vô hiệu hoá mềm: giữ dữ liệu (đơn hàng, log...), tránh vỡ ràng buộc khoá ngoại.
+        // Có thể khôi phục bằng cách đặt lại status="active".
+        User user = userRepository.findById(id).orElse(null);
+        if (user == null) {
             return new NotificationResponse(false, "User not found");
         }
+        user.setStatus("inactive");
+        user.setUpdatedAt(ZonedDateTime.now());
+        userRepository.save(user);
+        return new NotificationResponse(true, "User deactivated successfully");
+    }
 
-        userRepository.deleteById(id);
-        return new NotificationResponse(true, "User deleted successfully");
+    // ── User tự quản lý tài khoản ─────────────────────────────────────────────
+
+    @Override
+    @Transactional
+    public UserDTO updateMyProfile(Long userId, String fullName, String email) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (fullName != null && !fullName.isBlank()) {
+            user.setFullName(fullName.trim());
+        }
+        if (email != null && !email.isBlank()) {
+            String normalized = email.trim().toLowerCase();
+            if (!normalized.equals(user.getEmail())) {
+                if (userRepository.existsByEmail(normalized)) {
+                    throw new RuntimeException("Email already exists");
+                }
+                user.setEmail(normalized);
+            }
+        }
+        user.setUpdatedAt(ZonedDateTime.now());
+        return getUserById(userRepository.save(user).getId());
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new RuntimeException("New password must be at least 6 characters");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(ZonedDateTime.now());
+        userRepository.save(user);
+        log.info("[ChangePassword] Đổi mật khẩu thành công cho userId={}", userId);
+    }
+
+    @Override
+    @Transactional
+    public void deactivateMyAccount(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setStatus("inactive");
+        user.setUpdatedAt(ZonedDateTime.now());
+        userRepository.save(user);
+        log.info("[DeactivateAccount] User tự vô hiệu hoá tài khoản userId={}", userId);
+    }
+
+    // ── Forgot / Reset password ───────────────────────────────────────────────
+
+    @Override
+    @Transactional
+    public void forgotPassword(String email) {
+        // Tìm user — nếu không có thì im lặng (không tiết lộ email có tồn tại)
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            log.info("[ForgotPassword] Email không tồn tại, bỏ qua: {}", email);
+            return;
+        }
+        User user = userOpt.get();
+
+        // Xóa token cũ của user (mỗi lần chỉ có 1 token active)
+        passwordResetTokenRepository.deleteByUser(user);
+
+        // Tạo token mới (UUID 36 chars)
+        String tokenValue = java.util.UUID.randomUUID().toString();
+        PasswordResetToken token = PasswordResetToken.builder()
+                .user(user)
+                .token(tokenValue)
+                .expiresAt(ZonedDateTime.now().plusMinutes(30))
+                .used(false)
+                .createdAt(ZonedDateTime.now())
+                .build();
+        passwordResetTokenRepository.save(token);
+
+        // Gửi email
+        String displayName = user.getFullName() != null ? user.getFullName() : user.getUserName();
+        emailService.sendPasswordResetEmail(email, displayName, tokenValue);
+        log.info("[ForgotPassword] Token tạo thành công cho userId={}", user.getId());
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        if (token == null || token.isBlank()) {
+            throw new IllegalArgumentException("Token không hợp lệ");
+        }
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new IllegalArgumentException("Mật khẩu phải có ít nhất 6 ký tự");
+        }
+
+        PasswordResetToken prt = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Token không hợp lệ hoặc đã hết hạn"));
+
+        if (prt.isUsed()) {
+            throw new IllegalArgumentException("Token này đã được sử dụng. Vui lòng yêu cầu đặt lại mật khẩu mới.");
+        }
+        if (ZonedDateTime.now().isAfter(prt.getExpiresAt())) {
+            throw new IllegalArgumentException("Token đã hết hạn. Vui lòng yêu cầu đặt lại mật khẩu mới.");
+        }
+
+        // Cập nhật mật khẩu
+        User user = prt.getUser();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // Đánh dấu token đã dùng
+        prt.setUsed(true);
+        passwordResetTokenRepository.save(prt);
+
+        log.info("[ResetPassword] Đặt lại mật khẩu thành công cho userId={}", user.getId());
     }
 
 }

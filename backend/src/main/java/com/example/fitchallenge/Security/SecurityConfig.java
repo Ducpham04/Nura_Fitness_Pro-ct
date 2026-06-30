@@ -95,16 +95,41 @@ public class SecurityConfig {
                                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
 
                                 // ── Public unauthenticated endpoints ─────────────────────────
-                                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                                .requestMatchers(
+                                    "/api/auth/login", "/api/auth/register",
+                                    "/api/auth/forgot-password", "/api/auth/reset-password",
+                                    "/api/auth/google"
+                                ).permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/goals", "/api/goals/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/foods", "/api/foods/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/challenges/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/training-plans/**").permitAll()
                                 .requestMatchers("/api/files/**", "/uploads/**").permitAll()
+                                // AI Packages: list public, VNPay callbacks public
+                                .requestMatchers(HttpMethod.GET, "/api/ai-packages", "/api/ai-packages/**").permitAll()
+                                .requestMatchers("/api/ai-packages/payment/**").permitAll()
+
+                                // ── Content editing: ADMIN hoặc EDITOR ───────────────────────
+                                // EDITOR (biên tập viên nội dung) chỉ được nhập liệu catalog;
+                                // KHÔNG chạm users / ai / data-seeder / transactions / rewards.
+                                // ⚠️ Phải đặt TRƯỚC rule "/api/admin/**" (Spring match theo thứ tự).
+                                .requestMatchers(
+                                        "/api/admin/exercises/**",
+                                        "/api/admin/foods/**",
+                                        "/api/admin/dishes/**",
+                                        "/api/admin/training-plans/**",
+                                        "/api/admin/training-plan-details/**"
+                                ).hasAnyAuthority("ADMIN", "EDITOR")
 
                                 // ── Admin: requires ADMIN authority ──────────────────────────
                                 // Authority stored as "ADMIN" (no ROLE_ prefix) in CustomUserDetailService
+                                // Mọi /api/admin/** còn lại (users, ai, data-seeder, goals, blog,
+                                // dashboard, challenges, rewards...) vẫn chỉ dành cho ADMIN.
                                 .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
+                                // Reward redemptions: user chỉ được tạo (POST) đơn đổi thưởng;
+                                // xem toàn bộ đơn + đổi trạng thái (duyệt/huỷ→hoàn điểm) là của ADMIN
+                                .requestMatchers(HttpMethod.GET, "/api/reward-redemptions").hasAuthority("ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/api/reward-redemptions/*/status").hasAuthority("ADMIN")
 
                                 // ── AI / Personalized: must be authenticated ──────────────────
                                 .requestMatchers("/api/ai-plans/**", "/api/ai-analysis/**",

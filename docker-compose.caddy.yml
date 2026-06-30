@@ -1,0 +1,14 @@
+# =====================================================================
+# Override khi chạy sau Caddy (TLS terminate trên host) — xem deploy/Caddyfile
+#
+#   docker compose -p fitnit-prod --env-file .env.prod \
+#     -f docker-compose.prod.yml -f docker-compose.caddy.yml up -d --build
+#
+# frontend chỉ bind 127.0.0.1:8088 — internet vào qua Caddy (80/443),
+# không còn đường nào chạm thẳng container.
+# Cần docker compose >= 2.24 (tag !override).
+# =====================================================================
+services:
+  frontend:
+    ports: !override
+      - "127.0.0.1:8088:80"

@@ -7,6 +7,10 @@ import com.example.fitchallenge.DTO.FoodDTO.FoodResponse;
 import com.example.fitchallenge.Entity.Food;
 import com.example.fitchallenge.config.NotificationResponse;
 import com.example.fitchallenge.repository.FoodRepository;
+import com.example.fitchallenge.repository.UserInventoryRepository;
+import com.example.fitchallenge.repository.UserPreferenceRepository;
+import com.example.fitchallenge.repository.PersonalizedMealItemRepository;
+import com.example.fitchallenge.repository.DishIngredientRepository;
 import com.example.fitchallenge.service.FoodService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +26,10 @@ import java.util.stream.Collectors;
 public class FoodServiceImpl implements FoodService {
 
     private final FoodRepository foodRepository;
+    private final UserInventoryRepository userInventoryRepository;
+    private final UserPreferenceRepository userPreferenceRepository;
+    private final PersonalizedMealItemRepository personalizedMealItemRepository;
+    private final DishIngredientRepository dishIngredientRepository;
 
     private FoodResponse toResponse(Food food){
         FoodResponse response = new FoodResponse();
@@ -72,6 +80,13 @@ public class FoodServiceImpl implements FoodService {
         if(!foodRepository.existsById(id)){
             return new NotificationResponse(false, "Food not found");
         }
+        // Gỡ/xoá mọi tham chiếu tới food trước khi xoá để tránh vi phạm khoá ngoại.
+        // - FK NOT NULL (meal item, dish ingredient) → xoá hẳn dòng tham chiếu
+        // - FK nullable (kho user, preference) → gỡ link, giữ lại bản ghi của user
+        personalizedMealItemRepository.deleteByFoodId(id);
+        dishIngredientRepository.deleteByFoodId(id);
+        userInventoryRepository.unlinkFood(id);
+        userPreferenceRepository.unlinkFood(id);
         foodRepository.deleteById(id);
         return new NotificationResponse(true, "Food deleted successfully");
     }

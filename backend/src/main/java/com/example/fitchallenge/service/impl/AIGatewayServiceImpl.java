@@ -7,6 +7,8 @@ import com.example.fitchallenge.Entity.*;
 import com.example.fitchallenge.repository.*;
 import com.example.fitchallenge.repository.User.UserRepository;
 import com.example.fitchallenge.service.AIGatewayService;
+import com.example.fitchallenge.service.AiCreditCost;
+import com.example.fitchallenge.service.AiUsageService;
 import com.example.fitchallenge.service.PersonalizationService;
 import com.example.fitchallenge.service.SmartMealPlanTransactionService;
 import com.example.fitchallenge.service.UserPreferenceService;
@@ -65,6 +67,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     private final ExerciseRepository exerciseRepository;
     private final GoalRepository goalRepository;
     private final com.example.fitchallenge.workout.PersonalizationResolver personalizationResolver;
+    private final com.example.fitchallenge.nutrition.NutritionSafetyResolver nutritionSafetyResolver;
     private final FoodRepository foodRepository;
     private final UserInventoryRepository userInventoryRepository;
     private final SmartMealPlanTransactionService smartMealPlanTransactionService;
@@ -76,12 +79,14 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     private final DailyNutritionLogRepository dailyNutritionLogRepository;
     private final WorkoutWeekGenerationService workoutWeekGenerationService;
     private final UserPreferenceService userPreferenceService;
-
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final AiUsageService aiUsageService;
+    private final com.example.fitchallenge.service.AiTokenLogService aiTokenLogService;
+    private final RestTemplate restTemplate; // injected bean có timeout (RestTemplateConfig)
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Override
     public NotificationResponse scanFoodImage(MultipartFile image, Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.SCAN_IMAGE);
         log.info("Scanning food image for user: {}", userId);
         try {
             String endpoint = aiServiceUrl + "/track-food";
@@ -109,6 +114,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
 
     @Override
     public NotificationResponse scanInventoryImage(MultipartFile image, Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.SCAN_IMAGE);
         log.info("Scanning inventory image for user: {}", userId);
         try {
             // Using same vision model but with context
@@ -132,6 +138,9 @@ public class AIGatewayServiceImpl implements AIGatewayService {
 
     @Override
     public NotificationResponse generateMealPlan(Map<String, Object> request, Long userId) {
+        // Chỉ kiểm tra quota trước (fail-fast). Trừ credit SAU khi AI sinh plan thành công
+        // để tránh đốt credit oan khi AI service lỗi (vd 422). Xem luồng hybrid làm chuẩn.
+        aiUsageService.ensureQuota(userId, AiCreditCost.PLAN_GENERATE);
         log.info("[SmartMeal] Master-data meal flow for user {}", userId);
         try {
             UserBodyProfile profile = bodyProfileRepository.findByUser_Id(userId).orElse(null);
@@ -166,9 +175,23 @@ public class AIGatewayServiceImpl implements AIGatewayService {
                     .toList();
             List<String> prefs = toStringList(request.get("preferences"));
 
+            // An toàn dinh dưỡng: dị ứng/bệnh nền từ HealthProfile (Java enforce, AI chỉ nhận context)
+            HealthProfile healthProfile = healthProfileRepository.findByUser_Id(userId).orElse(null);
+            com.example.fitchallenge.nutrition.NutritionSafetyAdvice safety =
+                    nutritionSafetyResolver.resolve(healthProfile, userPreferenceService.getFoodsToAvoid(userId));
+
             List<Food> catalog = new ArrayList<>(
                     foodRepository.findAll(PageRequest.of(0, SMART_MEAL_CATALOG_LIMIT)).getContent());
             catalog.sort(Comparator.comparing(Food::getFoodId));
+            if (!safety.getAvoidKeywords().isEmpty()) {
+                List<Food> safeCatalog = catalog.stream()
+                        .filter(f -> !matchesAvoidKeyword(f.getName(), safety.getAvoidKeywords()))
+                        .collect(Collectors.toCollection(ArrayList::new));
+                // Chỉ áp filter khi catalog còn đủ món để lập thực đơn
+                if (safeCatalog.size() >= 10) {
+                    catalog = safeCatalog;
+                }
+            }
             if (catalog.isEmpty()) {
                 return new NotificationResponse(false, "Master foods catalog is empty. Seed foods via admin/import first.");
             }
@@ -183,7 +206,11 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             aiPayload.put("target_calories_daily",
                     profile.getRecommendedCalories() != null ? profile.getRecommendedCalories().intValue() : 2000);
             aiPayload.put("inventory", inventoryTags);
-            aiPayload.put("preferences_negative", prefs);
+            List<String> negative = new ArrayList<>(prefs);
+            negative.addAll(safety.getAvoidKeywords());
+            aiPayload.put("preferences_negative", negative.stream().distinct().toList());
+            aiPayload.put("diet_rules", safety.getDietRules());
+            aiPayload.put("medical_conditions", safety.getConditions());
             aiPayload.put("user_profile", buildUserProfileHints(profile, dailyBudget));
             aiPayload.put("food_catalog", slim);
 
@@ -191,6 +218,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             log.info("[SmartMeal] POST {} payloadBytes≈{}", endpoint, mapper.writeValueAsString(aiPayload).length());
 
             ResponseEntity<Map> response = restTemplate.postForEntity(endpoint, aiPayload, Map.class);
+            aiTokenLogService.record(userId, "meal", response.getHeaders());
             Map<String, Object> body = response.getBody();
             if (body == null) {
                 return new NotificationResponse(false, "AI service returned empty body");
@@ -207,6 +235,15 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             Map<String, Object> clientEnvelope = buildLegacyDailyPlansEnvelope(
                     hydrated, details, days, dailyBudget, inventoryTags, catalog);
 
+            // Minh bạch an toàn y khoa (đồng bộ với luồng workout)
+            clientEnvelope.put("requiresMedicalClearance", safety.isRequiresMedicalClearance());
+            if (safety.isRequiresMedicalClearance()) {
+                clientEnvelope.put("medicalDisclaimer", safety.getDisclaimer());
+                clientEnvelope.put("medicalConditions", safety.getConditions());
+            }
+
+            // AI sinh plan + lưu thành công → mới trừ credit
+            aiUsageService.consume(userId, AiCreditCost.PLAN_GENERATE);
             return new NotificationResponse(true, "Meal plan generated from master catalog", clientEnvelope);
         } catch (Exception e) {
             log.error("Smart meal plan failed", e);
@@ -246,6 +283,15 @@ public class AIGatewayServiceImpl implements AIGatewayService {
         userProfile.put("activity_level", activityLevel);
         userProfile.put("budget_per_day", dailyBudget);
         return userProfile;
+    }
+
+    /** So khớp tên thực phẩm với từ khóa loại trừ (đã chuẩn hóa bỏ dấu, lowercase). */
+    private boolean matchesAvoidKeyword(String foodName, List<String> avoidKeywords) {
+        if (foodName == null) return false;
+        String name = java.text.Normalizer.normalize(foodName, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .toLowerCase(Locale.ROOT);
+        return avoidKeywords.stream().anyMatch(name::contains);
     }
 
     @SuppressWarnings("unchecked")
@@ -354,6 +400,9 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     @Override
     @Transactional
     public NotificationResponse generateWorkoutPlan(Map<String, Object> request, Long userId) {
+        // Chỉ kiểm tra quota trước (fail-fast). Trừ credit SAU khi AI sinh plan thành công
+        // để tránh đốt credit oan khi AI service lỗi (vd 422). Xem luồng hybrid làm chuẩn.
+        aiUsageService.ensureQuota(userId, AiCreditCost.PLAN_GENERATE);
         log.info("Generating intelligent workout plan for user: {}", userId);
         try {
             UserBodyProfile profile = bodyProfileRepository.findByUser_Id(userId).orElse(null);
@@ -405,7 +454,17 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             int totalProgramDays = totalWeeks * 7;
             int currentWeek = 1;
 
-            int durationMinutes = ((Number) request.getOrDefault("duration", 45)).intValue();
+            // Thời lượng buổi tập: ưu tiên giá trị truyền lúc generate; nếu không có
+            // thì lấy từ hồ sơ (onboarding đã hỏi "phút/buổi"); cuối cùng mới mặc định 45.
+            int profileDuration = healthProfile.getPreferredWorkoutDurationMinutes() != null
+                    ? healthProfile.getPreferredWorkoutDurationMinutes() : 45;
+            int durationMinutes = ((Number) request.getOrDefault("duration", profileDuration)).intValue();
+            // Nếu user đổi thời lượng lúc generate → lưu lại làm mặc định cho lần sau
+            if (request.get("duration") != null
+                    && !Integer.valueOf(durationMinutes).equals(healthProfile.getPreferredWorkoutDurationMinutes())) {
+                healthProfile.setPreferredWorkoutDurationMinutes(durationMinutes);
+                healthProfileRepository.save(healthProfile);
+            }
             double weightKg = profile.getWeight() != null ? profile.getWeight().doubleValue() : 70.0;
 
             Map<String, Object> aiRequest = new HashMap<>();
@@ -494,6 +553,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             try {
                 String endpoint = aiServiceUrl + "/workout-plan";
                 ResponseEntity<Map> response = restTemplate.postForEntity(endpoint, aiRequest, Map.class);
+                aiTokenLogService.record(userId, "workout", response.getHeaders());
                 programTemplate = response.getBody();
             } catch (Exception ex) {
                 log.error("AI Workout Template Service error. Error: {}", ex.getMessage());
@@ -537,6 +597,8 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             }
 
             saveWorkoutPlan(userId, aiResponse, programTemplate, profile, totalWeeks, programId, totalProgramDays, rx.getDaysPerWeek());
+            // AI sinh plan + lưu thành công → mới trừ credit
+            aiUsageService.consume(userId, AiCreditCost.PLAN_GENERATE);
             return new NotificationResponse(true, "Workout plan generated successfully", aiResponse);
         } catch (Exception e) {
             log.error("Error generating workout plan", e);
@@ -783,10 +845,17 @@ public class AIGatewayServiceImpl implements AIGatewayService {
         Map<Long, Exercise> allowedById = safeExercises.stream()
                 .collect(Collectors.toMap(Exercise::getId, exercise -> exercise, (a, b) -> a));
 
+        // Từ vựng session type phải khớp PersonalizationResolver + ai-service workout_planner.
+        // Ngoài upper_push/upper_pull (PPL) còn có upper (thân trên gộp), push, pull, core
+        // dùng trong split upper_lower / push_pull_legs / *_focus.
         Map<String, Integer> requiredPoolSizes = Map.of(
                 "upper_push", 3,
                 "upper_pull", 3,
+                "upper", 3,
+                "push", 3,
+                "pull", 3,
                 "lower", 3,
+                "core", 2,
                 "full_body", 4,
                 "cardio_core", 2
         );
@@ -1292,6 +1361,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     @Override
     @Transactional(readOnly = true)
     public NotificationResponse chatWithCoach(Map<String, Object> chatRequest, Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.CHAT);
         log.info("AI Coach chat for user: {}", userId);
         try {
             String endpoint = aiServiceUrl + "/chat";
@@ -1315,6 +1385,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     // ── v2.1: Natural Language Food Logging ──────────────────────────────────
     @Override
     public NotificationResponse logFoodNatural(Map<String, Object> body, Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.CHAT);
         log.info("[v2.1] Natural language food log for user: {}", userId);
         try {
             body.put("user_id", userId.toString());
@@ -1334,6 +1405,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
     // ── Gợi ý món ăn từ nguyên liệu ──────────────────────────────────────────
     @Override
     public NotificationResponse suggestDishesFromIngredients(Map<String, Object> body, Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.CHAT);
         log.info("Suggest dishes for user: {}", userId);
         try {
             ResponseEntity<Map> resp = restTemplate.postForEntity(aiServiceUrl + "/suggest-dishes", body, Map.class);
@@ -1350,6 +1422,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
 
     @Override
     public NotificationResponse suggestShoppingList(Map<String, Object> body, Long userId) {
+        aiUsageService.ensureAndConsume(userId, AiCreditCost.CHAT);
         log.info("Suggest shopping for user: {}", userId);
         try {
             ResponseEntity<Map> resp = restTemplate.postForEntity(aiServiceUrl + "/suggest-shopping", body, Map.class);

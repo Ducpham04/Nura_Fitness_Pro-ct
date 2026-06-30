@@ -49,7 +49,8 @@ public class HealthProfileRequest {
     private String currentInjuries; // Chấn thương hiện tại
     private String mobilityLevel; // excellent, good, limited, restricted
     private String availableEquipment; // none, dumbbells, resistance_bands, full_gym, bodyweight_only
-    
+    private Integer preferredWorkoutDurationMinutes; // Thời lượng mỗi buổi mong muốn (15/30/45/60)
+
     // ========== NHÓM E: Hành vi ăn uống ==========
     private Integer mealsPerDay; // Số bữa ăn/ngày
     private String frequentFoods; // Món ăn thường xuyên
@@ -249,7 +250,15 @@ public class HealthProfileRequest {
     public void setAvailableEquipment(String availableEquipment) {
         this.availableEquipment = availableEquipment;
     }
-    
+
+    public Integer getPreferredWorkoutDurationMinutes() {
+        return preferredWorkoutDurationMinutes;
+    }
+
+    public void setPreferredWorkoutDurationMinutes(Integer preferredWorkoutDurationMinutes) {
+        this.preferredWorkoutDurationMinutes = preferredWorkoutDurationMinutes;
+    }
+
     public Integer getMealsPerDay() {
         return mealsPerDay;
     }

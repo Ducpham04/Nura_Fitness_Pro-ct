@@ -1,0 +1,33 @@
+{
+  "family": "nura-ai-service",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "512",
+  "memory": "1024",
+  "runtimePlatform": { "cpuArchitecture": "ARM64", "operatingSystemFamily": "LINUX" },
+  "executionRoleArn": "arn:aws:iam::952669801986:role/nura-prod-ecs-execution-role",
+  "containerDefinitions": [
+    {
+      "name": "ai-service",
+      "image": "952669801986.dkr.ecr.ap-southeast-1.amazonaws.com/nura-prod/nura-ai-service:latest",
+      "essential": true,
+      "portMappings": [{ "containerPort": 8001, "protocol": "tcp" }],
+      "environment": [
+        { "name": "HOST", "value": "0.0.0.0" },
+        { "name": "PORT", "value": "8001" },
+        { "name": "BE_API_URL", "value": "http://backend.nura.local:8080" }
+      ],
+      "secrets": [
+        { "name": "GROQ_API_KEY", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/groq-0OCDZM" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/nura/prod/ai-service",
+          "awslogs-region": "ap-southeast-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

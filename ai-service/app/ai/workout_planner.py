@@ -79,22 +79,8 @@ class WorkoutPlanner:
     }
 
     def __init__(self):
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise ValueError("GROQ_API_KEY environment variable not set")
-
-        import httpx
-        from openai import OpenAI
-
-        os.environ.pop("HTTP_PROXY", None)
-        os.environ.pop("HTTPS_PROXY", None)
-        os.environ.pop("ALL_PROXY", None)
-
-        self.client = OpenAI(
-            base_url="https://api.groq.com/openai/v1",
-            api_key=api_key,
-            http_client=httpx.Client(),
-        )
+        from ..core.llm import make_client
+        self.client = make_client(timeout=90.0)
         # ── Fallback chain — tất cả text-gen models free của Groq ──────────────
         # Thứ tự: mới/mạnh nhất trước, nhỏ/cũ nhất sau.
         # Khi một model bị 429 rate-limit, tự động chuyển sang model tiếp theo.

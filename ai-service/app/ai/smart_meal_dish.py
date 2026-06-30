@@ -9,9 +9,7 @@ import os
 import uuid
 from typing import Dict, List, Set
 
-import httpx
-from openai import OpenAI
-
+from app.core.llm import make_client
 from app.schemas.smart_meal_dish import (
     DishCatalogItem,
     SelectedDay,
@@ -36,14 +34,14 @@ STRICT OUTPUT RULES:
    - SNACK: optional; if present choose 1 suitable light dish.
 5) Prefer dishes whose dish_name matches inventory phrases, but do not create new dishes.
 6) Spread variety across days and avoid repeating the same dish too often.
-7) Budget and user goal affect choice only. Java will calculate all grams and cost."""
+7) Budget and user goal affect choice only. Java will calculate all grams and cost.
+
+MEDICAL SAFETY (hard rules, never violate):
+8) NEVER select a dish whose name contains any phrase in avoid_keywords (user allergies). The catalog is pre-filtered, but if any slips through, skip it.
+9) Respect every constraint in diet_rules (medical conditions). When several dishes fit, choose the one safest for the listed conditions."""
 
 
 def generate_smart_dish_plan(req: SmartDishPlanRequest) -> SmartDishPlanResponse:
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        raise ValueError("GROQ_API_KEY is not set")
-
     allowed_ids: Set[int] = {
         dish.dish_id
         for dishes in req.dish_catalog_by_role.values()
@@ -52,21 +50,17 @@ def generate_smart_dish_plan(req: SmartDishPlanRequest) -> SmartDishPlanResponse
     if not allowed_ids:
         raise ValueError("dish_catalog_by_role is empty")
 
-    # Use the OpenAI-compatible Groq endpoint to avoid requiring the separate
-    # `groq` package in local environments.
-    os.environ.pop("HTTP_PROXY", None)
-    os.environ.pop("HTTPS_PROXY", None)
-    os.environ.pop("ALL_PROXY", None)
-    client = OpenAI(
-        base_url="https://api.groq.com/openai/v1",
-        api_key=api_key,
-        http_client=httpx.Client(),
-    )
+    # Provider-agnostic client (env-driven, auto fail-over). Vẫn dùng giao thức
+    # OpenAI-compatible để không cần package `groq` riêng.
+    client = make_client(timeout=90.0)
     context = {
         "days": req.days,
         "inventory": req.inventory,
         "user_goal": req.user_goal,
         "budget_per_day": req.budget_per_day,
+        "avoid_keywords": req.avoid_keywords,
+        "diet_rules": req.diet_rules,
+        "medical_conditions": req.medical_conditions,
         "dish_catalog_by_role": {
             role: [dish.model_dump() for dish in dishes]
             for role, dishes in req.dish_catalog_by_role.items()

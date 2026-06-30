@@ -20,4 +20,7 @@ public class RegisterRequestCustomer {
     @NotBlank(message = "Password is required")
     @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
     private String password;
+
+    /** Mã giới thiệu của người mời (tuỳ chọn). */
+    private String referralCode;
 }

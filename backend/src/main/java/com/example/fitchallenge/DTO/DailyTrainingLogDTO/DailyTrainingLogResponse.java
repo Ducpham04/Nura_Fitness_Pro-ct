@@ -55,6 +55,12 @@ public class DailyTrainingLogResponse {
     private Integer fatigueLevel;
     private Double sleepHours;
     
+    // AI adaptation note (populated when fatigued → next workout adjusted)
+    private String adaptationNote;
+
+    public String getAdaptationNote() { return adaptationNote; }
+    public void setAdaptationNote(String adaptationNote) { this.adaptationNote = adaptationNote; }
+
     // Timestamps
     private ZonedDateTime startedAt;
     private ZonedDateTime completedAt;

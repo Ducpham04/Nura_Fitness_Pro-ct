@@ -62,7 +62,7 @@
 cd backend && ./mvnw spring-boot:run
 
 # 2. Start FE  
-cd frontEnd-Lastversion && npm run dev
+cd frontend && npm run dev
 
 # 3. Test login
 # Email: user1@example.com

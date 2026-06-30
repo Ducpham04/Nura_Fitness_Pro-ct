@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Viway — AI lập kế hoạch ăn & tập theo ngân sách của bạn</title>
+    <meta name="description" content="Viway: AI tạo giáo án tập luyện và thực đơn món Việt cá nhân hoá theo ngân sách. Theo dõi calo, macro, tiến độ sức khoẻ mỗi ngày. Bắt đầu miễn phí." />
+    <meta name="keywords" content="app tập gym việt nam, kế hoạch tập luyện AI, thực đơn Việt theo ngân sách, theo dõi calo, giảm cân hiệu quả, tăng cơ, ăn lành mạnh, fitness app, AI coach" />
+    <meta name="author" content="Viway" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://app.viway.id.vn/" />
+    <meta property="og:title" content="Viway — AI lập kế hoạch ăn & tập theo ngân sách" />
+    <meta property="og:description" content="Giáo án cá nhân hoá theo thể trạng. Thực đơn Việt theo ngân sách. Theo dõi tiến độ mỗi ngày — tất cả nhờ AI. Dùng miễn phí." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://app.viway.id.vn/" />
+    <meta property="og:locale" content="vi_VN" />
+    <meta property="og:site_name" content="Viway" />
+    <meta property="og:image" content="https://app.viway.id.vn/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Viway — AI lập kế hoạch ăn & tập theo ngân sách" />
+    <meta name="twitter:description" content="Giáo án cá nhân hoá theo thể trạng. Thực đơn Việt theo ngân sách. Bắt đầu miễn phí." />
+    <meta name="twitter:image" content="https://app.viway.id.vn/og-image.png" />
+    <!-- Preload hero image → cải thiện LCP (Core Web Vital) -->
+    <link rel="preload" as="image" href="/images/viway-hero-training.jpg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- JSON-LD structured data — giúp Google hiểu đây là app sức khoẻ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Viway",
+      "applicationCategory": "HealthApplication",
+      "operatingSystem": "Web",
+      "url": "https://app.viway.id.vn",
+      "description": "AI tạo giáo án tập luyện và thực đơn món Việt cá nhân hoá theo ngân sách. Bắt đầu miễn phí.",
+      "inLanguage": "vi-VN",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "VND",
+        "description": "Gói miễn phí — 25 credit AI mỗi tháng"
+      },
+      "featureList": [
+        "Kế hoạch tập luyện AI cá nhân hoá",
+        "Thực đơn Việt theo ngân sách",
+        "Theo dõi tư thế bằng AI camera",
+        "Theo dõi calo và macro hằng ngày",
+        "Thử thách fitness cộng đồng"
+      ],
+      "audience": {
+        "@type": "Audience",
+        "geographicArea": {
+          "@type": "Country",
+          "name": "Vietnam"
+        }
+      },
+      "provider": {
+        "@type": "Organization",
+        "name": "Viway",
+        "url": "https://app.viway.id.vn"
+      }
+    }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <!-- PWA / Thêm vào màn hình chính -->
+    <meta name="theme-color" content="#050505" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Viway" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Microsoft Clarity — session replay & heatmaps. Disable = leave VITE_CLARITY_ID empty. -->
+    <script>
+      (function(){
+        var id='%VITE_CLARITY_ID%';
+        if(!id||id.indexOf('%')==0||id.length<5)return;
+        (function(c,l,a,r,i,t,y){
+          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+          t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window,document,"clarity","script",id);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

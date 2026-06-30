@@ -1,10 +1,14 @@
 package com.example.fitchallenge.controller.User;
 
 import com.example.fitchallenge.config.NotificationResponse;
+import com.example.fitchallenge.exception.QuotaExceededException;
+import com.example.fitchallenge.repository.UserTrainingRepository;
 import com.example.fitchallenge.service.PersonalizationService;
+import com.example.fitchallenge.service.SwapLimitService;
 import com.example.fitchallenge.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,6 +24,8 @@ public class PersonalizedTrainingController {
 
     private final PersonalizationService personalizationService;
     private final UserService userService;
+    private final UserTrainingRepository userTrainingRepository;
+    private final SwapLimitService swapLimitService;
 
     /**
      * GET /api/user/training/{utId}/day/{dayNumber}
@@ -31,14 +37,16 @@ public class PersonalizedTrainingController {
             @PathVariable Long utId,
             @PathVariable Integer dayNumber) {
         try {
-            // Verify user owns this training plan
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth == null || auth.getName() == null) {
-                return ResponseEntity.ok(new NotificationResponse(false, "Unauthorized: No authentication found"));
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new NotificationResponse(false, "Unauthorized"));
             }
-            // Long currentUserId = userService.getUserByEmail(auth.getName()).getId();
-            // TODO: Add verification that utId belongs to currentUserId
-            
+            Long currentUserId = userService.getUserByEmail(auth.getName()).getId();
+            if (!userTrainingRepository.existsByUtIdAndUser_Id(utId, currentUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new NotificationResponse(false, "Bạn không có quyền truy cập training plan này"));
+            }
             return ResponseEntity.ok(personalizationService.getPersonalizedDayDetails(utId, dayNumber));
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -54,21 +62,14 @@ public class PersonalizedTrainingController {
     @GetMapping("/personalized/today")
     public ResponseEntity<NotificationResponse> getTodayPersonalizedWorkout(
             @RequestParam(required = false) Integer dayNumber,
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestHeader(value = "userId", required = false) Long headerUserId) {
+            @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long userId = null;
-            if (userDetails != null) {
-                userId = userService.getUserByEmail(userDetails.getUsername()).getId();
-            } else if (headerUserId != null) {
-                userId = headerUserId;
-            }
-
-            if (userId == null) {
+            if (userDetails == null) {
                 return ResponseEntity.status(401).body(
                     new NotificationResponse(false, "Unauthorized")
                 );
             }
+            Long userId = userService.getUserByEmail(userDetails.getUsername()).getId();
             
             // Nếu không có dayNumber, mặc định là day 1
             if (dayNumber == null) {
@@ -92,21 +93,14 @@ public class PersonalizedTrainingController {
      */
     @GetMapping("/personalized/schedule")
     public ResponseEntity<NotificationResponse> getPersonalizedWorkoutSchedule(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestHeader(value = "userId", required = false) Long headerUserId) {
+            @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            Long userId = null;
-            if (userDetails != null) {
-                userId = userService.getUserByEmail(userDetails.getUsername()).getId();
-            } else if (headerUserId != null) {
-                userId = headerUserId;
-            }
-
-            if (userId == null) {
+            if (userDetails == null) {
                 return ResponseEntity.status(401).body(
                     new NotificationResponse(false, "Unauthorized")
                 );
             }
+            Long userId = userService.getUserByEmail(userDetails.getUsername()).getId();
 
             return ResponseEntity.ok(
                 personalizationService.getAllPersonalizedPlanDetails(userId)
@@ -143,9 +137,16 @@ public class PersonalizedTrainingController {
     @PutMapping("/personalized/{ppdId}/swap/{newExerciseId}")
     public ResponseEntity<NotificationResponse> swapExercise(
             @PathVariable Long ppdId,
-            @PathVariable Long newExerciseId) {
+            @PathVariable Long newExerciseId,
+            @AuthenticationPrincipal UserDetails userDetails) {
         try {
+            if (userDetails != null) {
+                Long userId = userService.getUserByEmail(userDetails.getUsername()).getId();
+                swapLimitService.ensureAndConsume(userId, SwapLimitService.SwapType.EXERCISE);
+            }
             return ResponseEntity.ok(personalizationService.swapExercise(ppdId, newExerciseId));
+        } catch (QuotaExceededException e) {
+            return ResponseEntity.status(429).body(new NotificationResponse(false, e.getMessage()));
         } catch (Exception e) {
             log.error("Error swapping exercise", e);
             return ResponseEntity.ok(new NotificationResponse(false, "Error: " + e.getMessage()));
@@ -161,18 +162,17 @@ public class PersonalizedTrainingController {
     public ResponseEntity<NotificationResponse> regeneratePersonalizedPlanDetails(
             @PathVariable Long utId) {
         try {
-            // Verify user owns this training plan
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth == null || auth.getName() == null) {
-                return ResponseEntity.ok(new NotificationResponse(false, "Unauthorized: No authentication found"));
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new NotificationResponse(false, "Unauthorized"));
             }
-            // Long currentUserId = userService.getUserByEmail(auth.getName()).getId();
-            // TODO: Add verification that utId belongs to currentUserId
-            
-            // Delete existing personalized details first (if any)
-            // Then create new ones
+            Long currentUserId = userService.getUserByEmail(auth.getName()).getId();
+            if (!userTrainingRepository.existsByUtIdAndUser_Id(utId, currentUserId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new NotificationResponse(false, "Bạn không có quyền truy cập training plan này"));
+            }
             NotificationResponse response = personalizationService.createPersonalizedPlanDetails(utId);
-            
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Unexpected error", e);

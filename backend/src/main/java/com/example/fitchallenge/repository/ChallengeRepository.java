@@ -9,4 +9,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ChallengeRepository extends JpaRepository<Challenges, Long> {
     boolean existsByTitle(String title);
+
+    // Dashboard: đếm challenge theo status
+    long countByStatus(Challenges.Status status);
 }

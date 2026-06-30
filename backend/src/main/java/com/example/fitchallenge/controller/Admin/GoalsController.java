@@ -48,10 +48,6 @@ public class GoalsController {
     @GetMapping
     public ResponseEntity<NotificationResponse> getAllGoals() {
         List<goalsDTOpayload> goals = goalService.getGoals();
-        if (goals.isEmpty()) {
-            return ResponseEntity.badRequest()
-                    .body(new NotificationResponse(false, "No goals found"));
-        }
         return ResponseEntity.ok(
                 new NotificationResponse(true, "Goals retrieved successfully", goals)
         );

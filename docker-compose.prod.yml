@@ -10,12 +10,24 @@
 # nội bộ trong mạng docker (không expose ra host).
 # =====================================================================
 
+# Log rotation cho mọi service — không có sẽ đầy disk sau vài tuần chạy
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # ── PostgreSQL ──────────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
     container_name: fit-prod-db
     restart: always
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 384m
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-fit_challenge}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -39,10 +51,17 @@ services:
       target: production
     container_name: fit-prod-backend
     restart: always
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 900m
     depends_on:
       db:
         condition: service_healthy
     environment:
+      # Heap JVM = 60% của trần 900m -> ~540m, chừa chỗ cho metaspace/threads
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=60"
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-fit_challenge}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
@@ -53,9 +72,27 @@ services:
       POSE_SIGNING_SECRET: ${POSE_SIGNING_SECRET:?POSE_SIGNING_SECRET là bắt buộc (chống gian lận điểm thi)}
       # Same-origin qua nginx nên CORS không bị kích hoạt, nhưng prod profile
       # vẫn yêu cầu giá trị này -> đặt = domain public.
-      CORS_ALLOWED_ORIGINS: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN là bắt buộc (vd https://fitnit.com)}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-${PUBLIC_ORIGIN:?PUBLIC_ORIGIN là bắt buộc (vd https://fitnit.com)}}
       APP_PUBLIC_BASE_URL: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN là bắt buộc}
       UPLOAD_PATH: /app/uploads/
+      # Email (forgot password) — để trống MAIL_USERNAME nếu chưa setup,
+      # endpoint vẫn hoạt động (token log ra console thay vì gửi mail)
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-noreply@fitnit.vn}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Fitnit Challenge}
+      # Link reset-password trong email trỏ về frontend public
+      FRONTEND_URL: ${PUBLIC_ORIGIN}
+      # VNPay — sandbox mặc định; đổi VNPAY_URL sang production khi có merchant
+      VNPAY_TMN_CODE: ${VNPAY_TMN_CODE:-}
+      VNPAY_HASH_SECRET: ${VNPAY_HASH_SECRET:-}
+      VNPAY_URL: ${VNPAY_URL:-https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+      VNPAY_RETURN_URL: ${PUBLIC_ORIGIN}/payment/result
+      VNPAY_IPN_URL: ${PUBLIC_ORIGIN}/api/ai-packages/payment/ipn
+      # Sentry BE — trống = tắt; set SENTRY_DSN để bật giám sát lỗi
+      SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:
       - backend_uploads:/app/uploads
       - backend_logs:/app/logs
@@ -75,6 +112,11 @@ services:
       dockerfile: Dockerfile
     container_name: fit-prod-ai
     restart: always
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 256m
     env_file:
       - ./ai-service/.env        # GROQ_API_KEY, ...
     environment:
@@ -95,11 +137,17 @@ services:
       dockerfile: Dockerfile
     container_name: fit-prod-pose-ai
     restart: always
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     environment:
       HOST: 0.0.0.0
       PORT: 5001
-      # complexity=2: landmark chính xác hơn (chậm hơn ~2x; cần CPU khá)
-      MEDIAPIPE_MODEL_COMPLEXITY: 2
+      # complexity=1: cân bằng độ chính xác / CPU (dùng trên VM ≤4 vCPU)
+      # Đổi thành 2 nếu server có ≥4 vCPU riêng cho service này
+      MEDIAPIPE_MODEL_COMPLEXITY: ${MEDIAPIPE_MODEL_COMPLEXITY:-1}
       # Bí mật ký kết quả — PHẢI trùng POSE_SIGNING_SECRET của backend
       POSE_SIGNING_SECRET: ${POSE_SIGNING_SECRET:?POSE_SIGNING_SECRET là bắt buộc}
     healthcheck:
@@ -114,19 +162,66 @@ services:
   # ── Frontend (nginx: SPA + reverse proxy) — điểm vào public ─────────
   frontend:
     build:
-      context: ./frontEnd-Lastversion
+      context: ./frontend
       dockerfile: Dockerfile
       args:
         # Trống = gọi /api tương đối (same-origin). Đổi nếu tách subdomain API.
         VITE_API_URL: "${VITE_API_URL-}"
+        # Sentry FE — trống = tắt; dán DSN để bật (phải rebuild frontend khi đổi)
+        VITE_SENTRY_DSN: "${VITE_SENTRY_DSN-}"
+        # Plausible analytics — trống = tắt; điền domain để bật
+        VITE_PLAUSIBLE_DOMAIN: "${VITE_PLAUSIBLE_DOMAIN-}"
+        # Google login — trống = ẩn nút Google; dán client-id để bật (phải rebuild frontend khi đổi)
+        VITE_GOOGLE_CLIENT_ID: "${VITE_GOOGLE_CLIENT_ID-}"
     container_name: fit-prod-frontend
     restart: always
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 128m
     depends_on:
       - backend
       - fitness-ai
     ports:
       - "80:80"
       # - "443:443"   # bật khi đã gắn TLS (xem DEPLOY.md)
+    networks:
+      - fit-network
+
+  # ── DB backup → S3 (tự lên lịch hằng đêm, verify + xoá bản cũ) ──────
+  # BẮT BUỘC trước khi nhận tiền: dữ liệu sức khoẻ + giao dịch không được
+  # mất khi hỏng volume. Để trống BACKUP_S3_BUCKET sẽ tắt service này.
+  db-backup:
+    image: postgres:16-alpine
+    container_name: fit-prod-db-backup
+    restart: always
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD là bắt buộc}
+      PGDATABASE: ${POSTGRES_DB:-fit_challenge}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:?BACKUP_S3_BUCKET là bắt buộc (vd fitnit-db-backups)}
+      BACKUP_PREFIX: ${BACKUP_PREFIX:-daily}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-19}   # 19h UTC = 2h sáng VN
+      AWS_REGION: ${AWS_REGION:-ap-southeast-1}
+      AWS_DEFAULT_REGION: ${AWS_REGION:-ap-southeast-1}
+      # Để trống nếu chạy trên EC2 có IAM role; điền nếu VPS thường:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+    volumes:
+      - ./scripts/backup-entrypoint.sh:/backup.sh:ro
+    # aws-cli cài lúc start (sidecar long-running nên 1 lần là đủ)
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache aws-cli >/dev/null 2>&1 && exec /backup.sh loop"]
     networks:
       - fit-network
 

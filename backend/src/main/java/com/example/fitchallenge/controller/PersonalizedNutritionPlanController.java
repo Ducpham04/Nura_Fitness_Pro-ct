@@ -67,6 +67,12 @@ public class PersonalizedNutritionPlanController {
     @Autowired
     private com.example.fitchallenge.service.SmartMealPlanService smartMealPlanService;
 
+    @Autowired
+    private com.example.fitchallenge.Security.AuthenticatedUserIdResolver authUser;
+
+    @Autowired
+    private com.example.fitchallenge.service.SwapLimitService swapLimitService;
+
     /**
      * 📋 GET /api/personalized-plans/{userId} - Lấy tất cả plans của user
      */
@@ -162,6 +168,7 @@ public class PersonalizedNutritionPlanController {
      */
     @PostMapping("/{userId}/create")
     public ResponseEntity<?> createPlan(@PathVariable Long userId, @Valid @RequestBody CreatePlanRequest request) {
+        userId = authUser.resolve(userId); // chống tạo plan dưới tài khoản người khác
         try {
             PersonalizedNutritionPlan plan = planService.createPlan(
                 userId,
@@ -189,8 +196,10 @@ public class PersonalizedNutritionPlanController {
             @PathVariable Long planId,
             @Valid @RequestBody List<PersonalizedNutritionPlanService.MealDetailRequest> meals) {
         try {
-            planService.addMealDetails(planId, meals);
+            planService.addMealDetails(planId, authUser.resolve(null), meals);
             return ResponseEntity.ok(createSuccessResponse("Meals added successfully"));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         }
@@ -234,9 +243,12 @@ public class PersonalizedNutritionPlanController {
                 return ResponseEntity.status(401).body(new NotificationResponse(false, "Unauthorized"));
             }
             Long authenticatedUserId = userService.getUserByEmail(userDetails.getUsername()).getId();
+            swapLimitService.ensureAndConsume(authenticatedUserId, com.example.fitchallenge.service.SwapLimitService.SwapType.MEAL);
             com.example.fitchallenge.Entity.PersonalizedMealDetail updated =
                     smartMealPlanService.swapMealDish(mealDetailId, authenticatedUserId);
             return ResponseEntity.ok(new NotificationResponse(true, "Dish swapped successfully", toMealDetailResponse(updated)));
+        } catch (com.example.fitchallenge.exception.QuotaExceededException e) {
+            return ResponseEntity.status(429).body(new NotificationResponse(false, e.getMessage()));
         } catch (SecurityException e) {
             return ResponseEntity.status(403).body(new NotificationResponse(false, e.getMessage()));
         } catch (IllegalArgumentException | IllegalStateException e) {
@@ -276,8 +288,10 @@ public class PersonalizedNutritionPlanController {
             @PathVariable Long planId,
             @Valid @RequestBody ActualCostRequest request) {
         try {
-            planService.updateActualCost(planId, request.actualCost);
+            planService.updateActualCost(planId, authUser.resolve(null), request.actualCost);
             return ResponseEntity.ok(createSuccessResponse("Actual cost updated successfully"));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         }
@@ -289,8 +303,10 @@ public class PersonalizedNutritionPlanController {
     @PostMapping("/{planId}/complete")
     public ResponseEntity<?> completePlan(@PathVariable Long planId) {
         try {
-            planService.completePlan(planId);
+            planService.completePlan(planId, authUser.resolve(null));
             return ResponseEntity.ok(createSuccessResponse("Plan marked as completed"));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         }
@@ -304,6 +320,7 @@ public class PersonalizedNutritionPlanController {
             @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        userId = authUser.resolve(userId); // chống đọc báo cáo ngân sách người khác
         try {
             PersonalizedNutritionPlanService.BudgetReport report = planService.getBudgetReport(userId, startDate, endDate);
             return ResponseEntity.ok(report);
@@ -317,6 +334,7 @@ public class PersonalizedNutritionPlanController {
      */
     @DeleteMapping("/{userId}/{planId}")
     public ResponseEntity<?> deletePlan(@PathVariable Long userId, @PathVariable Long planId) {
+        userId = authUser.resolve(userId); // chống xoá plan người khác (service scope theo userId)
         try {
             planService.deletePlan(planId, userId);
             return ResponseEntity.ok(createSuccessResponse("Plan deleted successfully"));
@@ -331,8 +349,10 @@ public class PersonalizedNutritionPlanController {
     @PostMapping("/{planId}/restore")
     public ResponseEntity<?> restorePlan(@PathVariable Long planId) {
         try {
-            planService.restorePlan(planId);
+            planService.restorePlan(planId, authUser.resolve(null));
             return ResponseEntity.ok(createSuccessResponse("Plan restored successfully"));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         }
@@ -402,6 +422,21 @@ public class PersonalizedNutritionPlanController {
                 .build();
     }
 
+    /** Ảnh đại diện bữa ăn: ưu tiên ảnh món (dish), fallback ảnh nguyên liệu (food). */
+    private String pickMealImage(PersonalizedMealDetail meal) {
+        if (meal == null || meal.getMealItems() == null) return null;
+        String foodImg = null;
+        for (PersonalizedMealItem mi : meal.getMealItems()) {
+            if (mi.getDish() != null && mi.getDish().getImageUrl() != null && !mi.getDish().getImageUrl().isBlank()) {
+                return mi.getDish().getImageUrl();
+            }
+            if (foodImg == null && mi.getFood() != null && mi.getFood().getImageUrl() != null && !mi.getFood().getImageUrl().isBlank()) {
+                foodImg = mi.getFood().getImageUrl();
+            }
+        }
+        return foodImg;
+    }
+
     private PersonalizedMealDetailResponse toMealDetailResponse(PersonalizedMealDetail meal) {
         if (meal == null) {
             return null;
@@ -416,6 +451,7 @@ public class PersonalizedNutritionPlanController {
                 .dayNumber(meal.getDayNumber())
                 .mealType(meal.getMealType() != null ? meal.getMealType().name() : null)
                 .mealName(suggestMealName(meal, mealItems))
+                .imageUrl(pickMealImage(meal))
                 .mealItemsJson(meal.getMealItemsJson())
                 .mealItems(mealItems)
                 .totalCalories(meal.getTotalCalories())

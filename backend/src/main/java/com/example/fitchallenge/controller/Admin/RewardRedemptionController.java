@@ -1,6 +1,7 @@
 package com.example.fitchallenge.controller.Admin;
 
 import com.example.fitchallenge.DTO.RewardRedemptionDTO.RewardRedemptionRequest;
+import com.example.fitchallenge.Security.AuthenticatedUserIdResolver;
 import com.example.fitchallenge.config.NotificationResponse;
 import com.example.fitchallenge.service.RewardRedemptionService;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +15,12 @@ import org.springframework.web.bind.annotation.*;
 public class RewardRedemptionController {
 
     private final RewardRedemptionService rewardRedemptionService;
+    private final AuthenticatedUserIdResolver authUser;
 
-    // ➕ Tạo yêu cầu đổi quà
+    // ➕ Tạo yêu cầu đổi quà — userId lấy từ JWT, không tin body (chống tiêu điểm hộ người khác)
     @PostMapping
     public ResponseEntity<NotificationResponse> redeemReward(@Valid @RequestBody RewardRedemptionRequest request) {
+        request.setUserId(authUser.resolve(request.getUserId()));
         NotificationResponse response = rewardRedemptionService.redeemReward(request);
         return ResponseEntity.status(response.isSuccess() ? 200 : 400).body(response);
     }

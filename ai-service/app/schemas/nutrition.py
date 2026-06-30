@@ -181,7 +181,11 @@ class UserProfile(BaseModel):
     budget_per_day: int = Field(default=80000, ge=50000, le=500000, description="Daily budget in VND (min 50,000 VND)")
     fitness_level: FitnessLevel = Field(default=FitnessLevel.BEGINNER)
     dietary_restrictions: List[str] = Field(default_factory=list)
-    
+
+    # Medical safety context (resolved upstream by Java from HealthProfile)
+    medical_conditions: List[str] = Field(default_factory=list, description="Detected conditions, e.g. ['tiểu đường']")
+    diet_rules: List[str] = Field(default_factory=list, description="Prompt-ready medical diet constraints (Vietnamese)")
+
     # Lifestyle context
     meal_prep_time: Optional[int] = Field(None, ge=5, le=120, description="Max meal prep time in minutes")
     cooking_equipment: List[str] = Field(default_factory=list, description="Available equipment: ['nồi', 'chảo', 'nồi chiên không dính', 'lò nướng', 'nồi áp suất']")

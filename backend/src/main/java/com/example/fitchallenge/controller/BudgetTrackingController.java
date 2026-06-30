@@ -26,6 +26,9 @@ public class BudgetTrackingController {
     @Autowired
     private BudgetTrackingService budgetService;
 
+    @Autowired
+    private com.example.fitchallenge.Security.AuthenticatedUserIdResolver authUser;
+
     /**
      * 📝 POST /api/budget/{userId}/track - Ghi nhận chi tiêu
      */
@@ -33,6 +36,7 @@ public class BudgetTrackingController {
     public ResponseEntity<?> trackSpending(
             @PathVariable Long userId,
             @Valid @RequestBody TrackSpendingRequest request) {
+        userId = authUser.resolve(userId);
         try {
             BudgetTracking tracking = budgetService.trackDailySpending(
                 userId,
@@ -55,6 +59,7 @@ public class BudgetTrackingController {
     public ResponseEntity<?> getWeeklyReport(
             @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStartDate) {
+        userId = authUser.resolve(userId);
         try {
             BudgetTrackingService.WeeklyBudgetReport report = budgetService.getWeeklyReport(userId, weekStartDate);
             return ResponseEntity.ok(report);
@@ -71,6 +76,7 @@ public class BudgetTrackingController {
             @PathVariable Long userId,
             @RequestParam int year,
             @RequestParam int month) {
+        userId = authUser.resolve(userId);
         try {
             BudgetTrackingService.MonthlyBudgetReport report = budgetService.getMonthlyReport(userId, year, month);
             return ResponseEntity.ok(report);
@@ -87,6 +93,7 @@ public class BudgetTrackingController {
             @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        userId = authUser.resolve(userId);
         try {
             BudgetTrackingService.AiAccuracyReport report = budgetService.evaluateAiAccuracy(userId, startDate, endDate);
             return ResponseEntity.ok(report);
@@ -103,6 +110,7 @@ public class BudgetTrackingController {
             @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        userId = authUser.resolve(userId);
         try {
             List<BudgetTracking> history = budgetService.getSpendingHistory(userId, startDate, endDate);
             return ResponseEntity.ok(history);

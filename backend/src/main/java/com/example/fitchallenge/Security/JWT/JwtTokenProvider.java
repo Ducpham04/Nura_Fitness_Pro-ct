@@ -3,6 +3,7 @@ package com.example.fitchallenge.Security.JWT;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,22 @@ public class JwtTokenProvider {
     
     @Value("${jwt.refreshExpiration:604800000}") // Default 7 days
     private long refreshExpiration;
+
+    // ✅ Kiểm tra JWT secret khi khởi động — từ chối start nếu secret rỗng hoặc quá ngắn
+    @PostConstruct
+    public void validateJwtSecret() {
+        if (jwtSecret == null || jwtSecret.isBlank()) {
+            throw new IllegalStateException(
+                "[SECURITY] JWT_SECRET chưa được cấu hình. " +
+                "Set biến môi trường JWT_SECRET trước khi khởi động ứng dụng.");
+        }
+        if (jwtSecret.getBytes().length < 32) {
+            throw new IllegalStateException(
+                "[SECURITY] JWT_SECRET quá ngắn (< 32 ký tự). " +
+                "HS256 yêu cầu tối thiểu 32 bytes. Vui lòng dùng secret đủ mạnh.");
+        }
+        log.info("[Security] JWT secret validated OK ({} bytes)", jwtSecret.getBytes().length);
+    }
 
     // ✅ Tạo token
     public String generateToken(String email, String role) {

@@ -1,0 +1,25 @@
+{
+  "family": "nura-frontend",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "memory": "512",
+  "runtimePlatform": { "cpuArchitecture": "ARM64", "operatingSystemFamily": "LINUX" },
+  "executionRoleArn": "arn:aws:iam::952669801986:role/nura-prod-ecs-execution-role",
+  "containerDefinitions": [
+    {
+      "name": "frontend",
+      "image": "952669801986.dkr.ecr.ap-southeast-1.amazonaws.com/nura-prod/nura-frontend:latest",
+      "essential": true,
+      "portMappings": [{ "containerPort": 80, "protocol": "tcp" }],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/nura/prod/frontend",
+          "awslogs-region": "ap-southeast-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

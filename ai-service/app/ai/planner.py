@@ -18,7 +18,13 @@ from ..core.quality_scorer import QualityScorer
 # System Prompt for Groq - Master Chef & Nutrition Expert
 BASE_SYSTEM_PROMPT = """Bạn là Chuyên gia Dinh dưỡng & Đầu bếp am hiểu ẩm thực Việt Nam.
 BẮT BUỘC: Tên món ăn phải bằng tiếng Việt (ví dụ: Cơm tấm sườn nướng, Phở bò, Ức gà áp chảo, Rau muống xào tỏi).
-Quy tắc: Ngon miệng, Không lãng phí, Dinh dưỡng chính xác."""
+Quy tắc: Ngon miệng, Không lãng phí, Dinh dưỡng chính xác.
+
+AN TOÀN Y TẾ (quy tắc cứng, KHÔNG ĐƯỢC vi phạm):
+1. TUYỆT ĐỐI không dùng thực phẩm nằm trong dietary_restrictions (dị ứng/kiêng) — kể cả làm nguyên liệu phụ.
+2. Tuân thủ mọi quy tắc trong diet_rules (ràng buộc bệnh nền do hệ thống cung cấp).
+3. Không bao giờ đề xuất nhịn ăn, detox, hay cắt giảm dưới 1200 kcal/ngày.
+4. Nếu user có medical_conditions, ưu tiên lựa chọn an toàn nhất cho các bệnh đó."""
 
 # Goal-specific prompts
 GOAL_PROMPTS = {
@@ -148,28 +154,14 @@ class AIPlanner:
     """
     
     def __init__(self):
-        """Initialize Groq client"""
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise ValueError("GROQ_API_KEY environment variable not set")
-        
+        """Initialize LLM client (provider-agnostic, env-driven, auto fail-over)"""
         try:
-            import httpx
-            from openai import OpenAI
-            # Ensure no proxy environment variables interfere with OpenAI client
-            os.environ.pop("HTTP_PROXY", None)
-            os.environ.pop("HTTPS_PROXY", None)
-            os.environ.pop("ALL_PROXY", None)
-            
-            self.client_type = "groq"
-            self.client = OpenAI(
-                base_url="https://api.groq.com/openai/v1",
-                api_key=api_key,
-                http_client=httpx.Client()
-            )
-            self.model_name = "llama-3.1-8b-instant"
+            from ..core.llm import make_client
+            self.client_type = "llm"
+            self.client = make_client(timeout=90.0)
+            self.model_name = os.getenv("LLM_MEAL_MODEL", "llama-3.1-8b-instant")
         except Exception as e:
-            print(f"❌ Could not initialize Groq client: {e}")
+            print(f"❌ Could not initialize LLM client: {e}")
             raise e
     
     def _parse_json_response(self, response_text: str) -> dict:
@@ -206,7 +198,9 @@ class AIPlanner:
                 "goal": request.user_profile.goal.value,
                 "budget_per_day": request.user_profile.budget_per_day,
                 "fitness_level": request.user_profile.fitness_level.value,
-                "dietary_restrictions": request.user_profile.dietary_restrictions
+                "dietary_restrictions": request.user_profile.dietary_restrictions,
+                "medical_conditions": request.user_profile.medical_conditions,
+                "diet_rules": request.user_profile.diet_rules
             },
             "target_calories": analysis["user_summary"]["target_calories"],
             "macro_targets": analysis["macro_targets"],
@@ -362,13 +356,21 @@ class AIPlanner:
         # Build compact inventory list
         inventory_str = ", ".join(request.preferences) if request.preferences else "None"
         
+        restrictions = request.user_profile.dietary_restrictions
+        diet_rules = request.user_profile.diet_rules
+        safety_lines = ""
+        if restrictions:
+            safety_lines += f"\n6. TUYỆT ĐỐI KHÔNG dùng (dị ứng/kiêng): {', '.join(restrictions)}."
+        if diet_rules:
+            safety_lines += "\n7. Ràng buộc bệnh nền: " + " | ".join(diet_rules)
+
         prompt = f"""Lập kế hoạch ăn uống trong {request.days} ngày.
 BẮT BUỘC:
 1. Đủ {request.days} ngày. Đánh số Day 1, Day 2, ...
 2. KHÔNG LẶP LẠI món ăn giữa các ngày.
 3. ƯU TIÊN DÙNG đồ có sẵn: {inventory_str}. Nếu dùng, estimated_cost = 0.
 4. Ngân sách: {daily_budget} VND/ngày.
-5. Mục tiêu: {target_calories} kcal, {target_protein}g protein mỗi ngày.
+5. Mục tiêu: {target_calories} kcal, {target_protein}g protein mỗi ngày.{safety_lines}
 
 User Profile: {json.dumps(context['user_profile'], ensure_ascii=False)}
 

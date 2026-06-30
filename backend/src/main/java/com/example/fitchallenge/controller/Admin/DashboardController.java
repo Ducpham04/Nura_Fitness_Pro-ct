@@ -5,6 +5,7 @@ import com.example.fitchallenge.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/dashboard")
@@ -61,6 +62,24 @@ public class DashboardController {
     public ResponseEntity<DashboardDTO.RewardStatsResponse> getRewardStats(
             @RequestParam(required = false, defaultValue = "all") String period) {
         return ResponseEntity.ok(dashboardService.getRewardStats(period));
+    }
+
+    /**
+     * GET /api/admin/dashboard/ai-stats
+     * Thống kê lượt gọi AI & ước tính token sử dụng (Groq)
+     */
+    @GetMapping("/ai-stats")
+    public ResponseEntity<DashboardDTO.AiStatsResponse> getAiStats() {
+        return ResponseEntity.ok(dashboardService.getAiStats());
+    }
+
+    /**
+     * GET /api/admin/dashboard/user-activity
+     * Bảng hoạt động người dùng: last login, AI calls, token tháng này — sort theo lastLoginAt mới nhất
+     */
+    @GetMapping("/user-activity")
+    public ResponseEntity<List<DashboardDTO.UserActivityRow>> getUserActivity() {
+        return ResponseEntity.ok(dashboardService.getUserActivity());
     }
 
 }

@@ -20,12 +20,14 @@ import java.util.Locale;
 @Component
 public class PersonalizationResolver {
 
-    /** Chuẩn hóa: lowercase + bỏ dấu tiếng Việt để so khớp từ khóa. */
+    /** Chuẩn hóa: lowercase + bỏ dấu tiếng Việt để so khớp từ khóa.
+     * NFD không tách 'đ'/'Đ' (chữ cái riêng) nên thay tay → 'd', nếu không
+     * các từ như "đột quỵ", "đái tháo đường" sẽ không khớp được keyword. */
     private static String norm(String s) {
         if (s == null) return "";
         String n = Normalizer.normalize(s, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "");
-        return n.toLowerCase(Locale.ROOT).trim();
+        return n.toLowerCase(Locale.ROOT).replace('đ', 'd').trim();
     }
 
     private static boolean containsAny(String hay, String... needles) {

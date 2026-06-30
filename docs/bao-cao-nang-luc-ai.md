@@ -6,9 +6,9 @@
 |---|---|
 | Sản phẩm | Fitnit Challenge — Fitness AI Platform |
 | Phạm vi báo cáo | Năng lực AI hiện tại + Roadmap nâng cấp |
-| Kiến trúc AI | Hybrid: AI (phán đoán) + Java (thực thi/an toàn) |
-| Nhà cung cấp model | Groq API (Llama 4 / Llama 3.3 / Llama 3.2 Vision) |
-| Phiên bản tài liệu | v1.1 |
+| Kiến trúc AI | Hybrid: AI (phán đoán) + Java (thực thi/an toàn) + Pose service (MediaPipe on-device) |
+| Nhà cung cấp model | Groq API (Llama 4 Scout / Llama 3.3 / GPT-OSS / Qwen / Vision) + MediaPipe Pose |
+| Phiên bản tài liệu | v1.2 — cập nhật 06/2026 (pose real-time MediaPipe + HMAC) |
 
 ---
 
@@ -38,13 +38,18 @@ Một giáo án tập hay thực đơn **không có "đáp án đúng duy nhất
 
 | Model | Dùng cho | Ghi chú |
 |---|---|---|
-| `meta-llama/llama-4-scout-17b` | Sinh workout / meal plan (chính) | Model mặc định, nhanh |
-| `llama-3.3-70b-versatile` | Fallback chất lượng cao | Khi model chính bị rate-limit |
+| `meta-llama/llama-4-scout-17b-16e-instruct` | Sinh workout / meal plan (chính) | Model mặc định, nhanh |
+| `llama-3.3-70b-versatile` | Fallback chất lượng cao | Khi model chính bị rate-limit (429) |
 | `openai/gpt-oss-120b` / `20b` | Fallback dự phòng | Chuỗi dự phòng tự động chuyển |
+| `qwen/qwen3-32b` | Fallback dự phòng | Alibaba Qwen 32B |
+| `groq/compound` / `compound-mini` | Fallback dự phòng | Groq compound |
+| `llama-3.1-8b-instant` | Backup nhỏ nhất | ~2.2K tokens/request, luôn sẵn |
 | `llama-3.2-11b-vision` | Phân tích ảnh món ăn | Vision model — nhận diện món Việt |
-| `groq/compound` | Fallback cuối | Đảm bảo luôn có model trả lời |
+| **MediaPipe Pose** | Chấm tư thế real-time | Chạy on-device/server, KHÔNG qua Groq |
 
-> Hệ thống có **chuỗi fallback tự động**: khi một model bị giới hạn tần suất (429), tự chuyển sang model kế tiếp → đảm bảo tính sẵn sàng cao.
+> Hệ thống có **chuỗi fallback tự động 7 model text** (`workout_planner.fallback_models`):
+> khi một model bị giới hạn tần suất (429), tự chuyển sang model kế tiếp theo thứ tự
+> mạnh→nhỏ → đảm bảo tính sẵn sàng cao.
 
 ---
 
@@ -74,11 +79,12 @@ Hệ thống hiện cung cấp **9 năng lực AI** qua API Gateway:
 - Context hiện đã bổ sung preferences, training summary và retrieval metadata để chuẩn bị cho RAG.
 - Endpoint: `POST /ai-coach/chat`
 
-### 3.5 Phân tích tư thế (Pose Analysis)
-- Giai đoạn hiện tại dùng **Groq Vision snapshot**: người dùng chụp/tải ảnh trong phiên tập, AI trả `overall_score`, `risk_level`, `corrections`, `confidence`.
-- Backend proxy qua API Gateway, AI service xử lý ảnh tại `POST /analyze-pose`.
-- Real-time MediaPipe/video vẫn là bước nâng cấp tiếp theo khi cần chấm form liên tục.
-- Endpoint: `POST /ai-analysis/pose`
+### 3.5 Phân tích tư thế real-time (Pose Analysis — MediaPipe) ✅ ĐÃ NÂNG CẤP
+- **Đã chuyển sang chấm form real-time** bằng service riêng `fitness-ai-service` (MediaPipe Pose, 33 landmark) — không còn dừng ở snapshot.
+- Mỗi bài có **analyzer riêng** (squat, push-up, pull-up, sit-up, plank): tính góc khớp, **đếm rep bằng máy trạng thái hysteresis + làm mượt**, chấm `quality_score` 0–100 và trả `form_errors` (lỗi + mức độ) bằng tiếng Việt theo thời gian thực.
+- **Bảo mật server-authoritative:** pose service **ký kết quả bằng HMAC-SHA256** (`POSE_SIGNING_SECRET`); client chỉ chuyển tiếp `{token, sig}`; backend verify chữ ký + hạn 5 phút → **không thể bịa reps/điểm**.
+- Là model **on-device/server nhỏ**, chạy độc lập với Groq → không tốn token LLM, độ trễ thấp.
+- Chi tiết công thức: xem *Báo cáo kỹ thuật §5.9–5.10*.
 
 ### 3.6 Ghi log dinh dưỡng bằng ngôn ngữ tự nhiên
 - Người dùng nhập câu tự nhiên như *"Sáng ăn 2 trứng luộc và 1 chuối"*.
@@ -102,9 +108,9 @@ Hệ thống hiện cung cấp **9 năng lực AI** qua API Gateway:
 | AI Coach chat | Groq Llama | ✅ Hoạt động |
 | Ghi log food bằng câu tự nhiên | Groq Llama + Java persistence | ✅ Đã nối FE/BE/AI |
 | Auto-regulation workout | Groq Llama + Java weekly engine | ✅ Đã có luồng v2.2 |
-| Phân tích tư thế snapshot | Groq Vision | ✅ Đã có endpoint + UI |
-| Pose real-time/video | MediaPipe/on-device | ⏳ Bước tiếp theo |
-| Tính dinh dưỡng tổng hợp | Java + AI | ✅ Hoạt động |
+| Phân tích tư thế real-time | MediaPipe (analyzer/bài) + HMAC | ✅ **Đã nâng cấp** — chấm rep + form liên tục |
+| Bảo mật điểm tư thế | HMAC-SHA256 server-authoritative | ✅ Chống gian lận điểm |
+| Tính dinh dưỡng tổng hợp (macro g/kg) | Java + AI | ✅ Hoạt động |
 
 ---
 
@@ -125,7 +131,7 @@ Hệ thống hiện cung cấp **9 năng lực AI** qua API Gateway:
 | Chưa dùng log user làm ngữ cảnh | Coach tư vấn chung chung | RAG trên dữ liệu user |
 | Đầu vào chủ yếu là form/dropdown | Bỏ lỡ sắc thái ngôn ngữ tự nhiên | Ô nhập text tự do + trích xuất AI |
 | Chất lượng phụ thuộc metadata bài tập | Thiếu trường → AI quyết định kém | Hoàn thiện thư viện Bài tập |
-| Pose mới dừng ở snapshot | Chưa chấm liên tục toàn set/video | Bổ sung MediaPipe real-time và lưu frame/feedback |
+| Pose mới hỗ trợ 5 bài (squat/push-up/pull-up/sit-up/plank) | Bài khác chưa chấm form | Thêm analyzer mới (đã có `TEMPLATE_NEW_EXERCISE.py`) |
 
 ---
 
@@ -156,10 +162,10 @@ Hệ thống hiện cung cấp **9 năng lực AI** qua API Gateway:
 - Kỹ thuật: **embeddings + RAG** — KHÔNG cần train model.
 
 ### 🔹 Phiên bản 2.4 — Thị giác máy tính nâng cao
-- Đã có chấm form qua ảnh snapshot trong phiên tập bằng Groq Vision.
-- Bước tiếp theo: chấm form qua video bài tập, kết hợp MediaPipe + AI nhận xét.
+- ✅ **Đã có chấm form real-time bằng MediaPipe** (5 bài: squat/push-up/pull-up/sit-up/plank) với đếm rep + điểm form + HMAC bảo mật điểm.
+- Bước tiếp theo: mở rộng số bài có analyzer; lưu frame/feedback để review sau buổi; kết hợp LLM nhận xét tổng kết buổi.
 - Nâng cấp food-scan: độ chính xác macro, khẩu phần.
-- Lộ trình: dùng Vision API trước; chỉ train model riêng **SAU** khi gom đủ data độc quyền.
+- Lộ trình: model nhỏ on-device (MediaPipe) cho real-time + Vision API cho phân tích ảnh tĩnh.
 
 ---
 
@@ -205,7 +211,7 @@ Hệ thống AI hiện tại đã **vững về kiến trúc** (hybrid an toàn)
 | **1** | Hoàn thiện thư viện Bài tập (metadata) | ✅ Có audit admin, readiness gate, backfill metadata, catalog payload giàu trường |
 | **2** | RAG cho Coach + Auto-regulation | 🟡 Auto-regulation đã chạy; RAG embeddings/vector store là bước kế tiếp |
 | **3** | Nhập liệu ngôn ngữ tự nhiên | ✅ Đã có natural food log FE/BE/AI |
-| **4** | Vision nâng cao (form check) | 🟡 Đã có snapshot form check; realtime/video MediaPipe là bước tiếp theo |
+| **4** | Vision nâng cao (form check) | ✅ **Đã có pose real-time MediaPipe + HMAC**; mở rộng số bài là bước tiếp theo |
 
 ### Checklist kỹ thuật đã cập nhật
 
@@ -215,7 +221,8 @@ Hệ thống AI hiện tại đã **vững về kiến trúc** (hybrid an toàn)
 | Workout AI | AI chỉ sinh `ProgramTemplate`; Backend validate/expand/generate next week bằng Java |
 | Auto-regulation | AI nhận `week_summary`, `last_week_log`, `preferences`; Backend lưu template mới và sinh tuần kế tiếp |
 | Natural input | FE panel **Ghi bữa nhanh** gọi `/ai-plans/log-food-natural`, BE lưu `DailyNutritionLog` |
-| Vision form check | FE trong phiên tập gọi `/ai-analysis/pose`, AI service có `/analyze-pose` trả score/correction JSON |
+| Pose real-time | `fitness-ai-service` (MediaPipe) chấm rep + form từng frame; ký HMAC; backend `PoseResultVerifier` xác minh trước khi cộng điểm challenge |
+| Macro dinh dưỡng | Protein theo g/kg (2.0 tăng cơ / 1.6 còn lại), fat 25% calo, carbs phần còn lại — Java tính, AI chỉ chọn món |
 
 ---
 

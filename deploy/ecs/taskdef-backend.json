@@ -1,0 +1,53 @@
+{
+  "family": "nura-backend",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "1024",
+  "memory": "2048",
+  "runtimePlatform": { "cpuArchitecture": "ARM64", "operatingSystemFamily": "LINUX" },
+  "executionRoleArn": "arn:aws:iam::952669801986:role/nura-prod-ecs-execution-role",
+  "taskRoleArn": "arn:aws:iam::952669801986:role/nura-prod-backend-task-role",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "952669801986.dkr.ecr.ap-southeast-1.amazonaws.com/nura-prod/nura-backend:latest",
+      "essential": true,
+      "portMappings": [{ "containerPort": 8080, "protocol": "tcp" }],
+      "environment": [
+        { "name": "SPRING_PROFILES_ACTIVE", "value": "prod" },
+        { "name": "SPRING_DATASOURCE_URL", "value": "jdbc:postgresql://nura-challenge.cf80e8w8gc6g.ap-southeast-1.rds.amazonaws.com:5432/postgres" },
+        { "name": "SPRING_DATASOURCE_USERNAME", "value": "nura_app" },
+        { "name": "AI_SERVICE_URL", "value": "http://ai-service.nura.local:8001" },
+        { "name": "CORS_ALLOWED_ORIGINS", "value": "https://app.viway.id.vn" },
+        { "name": "APP_PUBLIC_BASE_URL", "value": "https://app.viway.id.vn" },
+        { "name": "FRONTEND_URL", "value": "https://app.viway.id.vn" },
+        { "name": "STORAGE_PROVIDER", "value": "s3" },
+        { "name": "S3_UPLOAD_BUCKET", "value": "nura-prod-uploads-952669801986-ap-southeast-1-an" },
+        { "name": "AWS_REGION", "value": "ap-southeast-1" },
+        { "name": "GOOGLE_CLIENT_ID", "value": "611661427454-r9rij66nd082fg92orfgks94vv64e6ti.apps.googleusercontent.com" },
+        { "name": "MAIL_HOST", "value": "smtp.gmail.com" },
+        { "name": "MAIL_PORT", "value": "587" },
+        { "name": "MAIL_FROM_NAME", "value": "Fitnit Challenge" },
+        { "name": "VNPAY_URL", "value": "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html" }
+      ],
+      "secrets": [
+        { "name": "SPRING_DATASOURCE_PASSWORD", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/db-3xUpKh" },
+        { "name": "JWT_SECRET", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/jwt-MWzah0" },
+        { "name": "POSE_SIGNING_SECRET", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/pose-UU9FQX" },
+        { "name": "MAIL_USERNAME", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/mail-XSEcCG:username::" },
+        { "name": "MAIL_PASSWORD", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/mail-XSEcCG:password::" },
+        { "name": "VNPAY_TMN_CODE", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/vnpay-riMM2H:tmnCode::" },
+        { "name": "VNPAY_HASH_SECRET", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/vnpay-riMM2H:hashSecret::" },
+        { "name": "SEPAY_API_KEY", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:952669801986:secret:nura/prod/sepay-b31sB8" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/nura/prod/backend",
+          "awslogs-region": "ap-southeast-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
