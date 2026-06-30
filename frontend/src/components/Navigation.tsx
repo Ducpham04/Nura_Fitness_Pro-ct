@@ -1,24 +1,25 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Dumbbell, Utensils, User, LogOut, Brain } from 'lucide-react';
+import { Home, Dumbbell, Utensils, User, Route, LogOut, Bell } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuthContext } from '../context/AuthContext';
-import LanguageSelector from './LanguageSelector';
 import Logo from './Logo';
 
+const NAV_ITEMS = (t: (k: string) => string) => [
+  { id: 'home',    icon: Home,     label: t('nav.home'),    path: '/dashboard' },
+  { id: 'journey', icon: Route,    label: t('nav.journey'), path: '/dashboard/journey' },
+  { id: 'workout', icon: Dumbbell, label: t('nav.workout'), path: '/dashboard/workout' },
+  { id: 'diet',    icon: Utensils, label: t('nav.diet'),    path: '/dashboard/diet' },
+  { id: 'profile', icon: User,     label: t('nav.profile'), path: '/dashboard/profile' },
+];
+
 export default function Navigation() {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const location  = useLocation();
+  const navigate  = useNavigate();
   const { user, logout } = useAuthContext();
-  const { t } = useTranslation();
-  const userName = user?.fullName || 'User';
-  
-  const navItems = [
-    { id: 'home', icon: Home, label: t('nav.home'), path: '/dashboard' },
-    { id: 'workout', icon: Dumbbell, label: t('nav.workout'), path: '/dashboard/workout' },
-    { id: 'diet', icon: Utensils, label: t('nav.diet'), path: '/dashboard/diet' },
-    { id: 'coach', icon: Brain, label: t('nav.coach'), path: '/dashboard/coach' },
-    { id: 'profile', icon: User, label: t('nav.profile'), path: '/dashboard/profile' },
-  ];
+  const { t }     = useTranslation();
+
+  const navItems  = NAV_ITEMS(t);
+  const userName  = user?.fullName || 'U';
 
   const isActive = (path: string) => {
     if (path === '/dashboard') return location.pathname === '/dashboard';
@@ -32,71 +33,69 @@ export default function Navigation() {
 
   return (
     <>
-      {/* Desktop Top Navigation */}
-      <nav className="hidden md:flex border-b border-white/[0.06] bg-[#0a0a0c]/92 px-8 py-3.5 sticky top-0 z-50 backdrop-blur-xl">
-        <div className="flex items-center gap-8 flex-1">
-          <Link to="/dashboard" className="flex items-center gap-3 group">
-            <Logo size={52} wordmarkClass="text-2xl" className="group-hover:scale-105 transition-transform" />
+      {/* ── Desktop top bar ── */}
+      <header className="hidden md:flex items-center justify-between px-6 py-3 bg-[#070b16]/80 backdrop-blur-xl border-b border-white/8 sticky top-0 z-50 shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+        {/* Logo */}
+        <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
+          <Logo size={44} wordmarkClass="text-xl" dark />
+        </Link>
+
+        {/* Nav tabs */}
+        <nav className="flex items-center gap-1 bg-white/5 border border-white/8 rounded-2xl p-1">
+          {navItems.map(({ id, icon: Icon, label, path }) => (
+            <Link
+              key={id}
+              to={path}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold font-grotesk uppercase tracking-widest transition-all ${
+                isActive(path)
+                  ? 'bg-[#CCFF00] text-[#0a0f1c] shadow-[0_0_18px_rgba(204,255,0,0.35)]'
+                  : 'text-[#94a3b8] hover:text-white hover:bg-white/8'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5 shrink-0" />
+              <span>{label}</span>
+            </Link>
+          ))}
+        </nav>
+
+        {/* Right: notification + avatar + logout */}
+        <div className="flex items-center gap-3">
+          <button className="w-9 h-9 rounded-xl bg-white/5 border border-white/8 flex items-center justify-center text-[#94a3b8] hover:bg-white/10 hover:text-white transition-colors">
+            <Bell className="w-4 h-4" />
+          </button>
+
+          <Link to="/dashboard/profile" className="flex items-center gap-2 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#22c55e] to-[#3b82f6] flex items-center justify-center shadow-[0_4px_14px_rgba(59,130,246,0.4)]">
+              <span className="text-white font-grotesk font-bold text-sm">
+                {userName[0]?.toUpperCase()}
+              </span>
+            </div>
+            <div className="hidden lg:block text-right">
+              <div className="text-xs font-bold text-white truncate max-w-[120px]">{userName}</div>
+              <div className="text-[10px] text-[#64748b]">Cấp {user?.id ? 1 : '—'}</div>
+            </div>
           </Link>
 
-          <div className="flex items-center gap-1.5 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-1">
-            {navItems.map(({ id, icon: Icon, label, path }) => (
-              <Link
-                key={id}
-                to={path}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
-                  isActive(path) 
-                    ? 'bg-lime text-obsidian shadow-[0_8px_24px_rgba(204,255,0,0.14)]' 
-                    : 'text-neutral-500 hover:text-white hover:bg-white/[0.06]'
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${id === 'coach' && !isActive(path) ? 'text-electric' : ''}`} />
-                <span className="font-grotesk font-bold text-[10px] uppercase tracking-widest">{label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <LanguageSelector />
-          <Link to="/dashboard/profile" className="flex items-center gap-3 group">
-            <div className="text-right hidden lg:block">
-              <div className="text-white text-xs font-bold font-grotesk uppercase tracking-wider">{userName}</div>
-              <div className="text-neutral-500 text-[10px] font-medium uppercase tracking-[0.2em]">
-                {t('nav.operatorId', { id: user?.id.toString().slice(0, 4) })}
-              </div>
-            </div>
-            <div className="w-9 h-9 rounded-xl bg-lime flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform border border-white/10">
-              <span className="font-grotesk font-bold text-obsidian text-sm">{userName[0]?.toUpperCase()}</span>
-            </div>
-          </Link>
           <button
             onClick={handleLogout}
-            aria-label={t('nav.logout')}
             title={t('nav.logout')}
-            className="w-10 h-10 rounded-xl glass border border-white/5 text-neutral-500 hover:text-red-400 hover:border-red-400/20 transition-all flex items-center justify-center group"
+            className="w-9 h-9 rounded-xl bg-white/5 border border-white/8 flex items-center justify-center text-[#94a3b8] hover:bg-red-500/15 hover:text-red-400 transition-colors"
           >
-            <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
-      </nav>
+      </header>
 
-      <div className="md:hidden fixed top-4 right-4 z-50">
-        <LanguageSelector />
-      </div>
-
-      {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-white/5 flex items-stretch justify-around pt-2 px-1 z-50 backdrop-blur-2xl bottom-nav-safe">
+      {/* ── Mobile bottom nav ── */}
+      <nav className="vw-bottom-nav md:hidden">
         {navItems.map(({ id, icon: Icon, label, path }) => (
           <Link
             key={id}
             to={path}
-            className={`flex-1 min-w-0 py-1.5 rounded-xl transition-all flex flex-col items-center gap-1 ${
-              isActive(path) ? 'text-lime' : 'text-neutral-500'
-            }`}
+            className={`vw-nav-item ${isActive(path) ? 'active' : ''}`}
           >
-            <Icon className={`w-5 h-5 shrink-0 ${id === 'coach' ? 'text-electric' : ''}`} />
-            <span className="w-full text-center text-[9px] leading-none font-bold font-grotesk uppercase tracking-tight truncate">{label}</span>
+            <Icon className="vw-nav-icon" />
+            <span className="truncate w-full text-center">{label}</span>
           </Link>
         ))}
       </nav>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Brain, Send, Zap, Sparkles, ChevronRight, Dumbbell, Flame, Star, Trash2 } from 'lucide-react';
+import { Send, Zap, Sparkles, ChevronRight, Dumbbell, Flame, Star, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
 import { useDashboard } from '../hooks/useDashboard';
@@ -8,6 +8,7 @@ import { aiService } from '../services/aiService';
 import { useAiUsage } from '../hooks/useAiUsage';
 import { AiUsageBadge } from '../components/AiUsageBadge';
 import { AiUpgradeModal } from '../components/AiUpgradeModal';
+import { Vico } from '../components/ViwayIcons';
 
 interface Message {
   id: number;
@@ -27,9 +28,9 @@ const GOAL_LABELS: Record<string, string> = {
 
 function recoveryLabel(rec?: string) {
   const r = (rec || '').toLowerCase();
-  if (r === 'rest') return { label: 'Nên nghỉ', color: 'text-orange-400' };
-  if (r === 'light') return { label: 'Tập nhẹ', color: 'text-blue-400' };
-  return { label: 'Sẵn sàng', color: 'text-lime' };
+  if (r === 'rest') return { label: 'Nên nghỉ', color: 'text-orange-500' };
+  if (r === 'light') return { label: 'Tập nhẹ', color: 'text-blue-500' };
+  return { label: 'Sẵn sàng', color: 'text-[#16a34a]' };
 }
 
 export default function AICoachPage() {
@@ -54,7 +55,6 @@ export default function AICoachPage() {
   const nextWorkout = todayWorkouts.find((w: any) => !w.completed) || todayWorkouts[0];
   const rec = recoveryLabel(recovery?.recommendation);
 
-  // Lấy mục tiêu thật của user
   useEffect(() => {
     let mounted = true;
     userService.getBodyProfile().then((b: any) => {
@@ -64,7 +64,6 @@ export default function AICoachPage() {
     return () => { mounted = false; };
   }, [user?.id]);
 
-  // Khôi phục lịch sử chat đã lưu
   useEffect(() => {
     if (!user?.id) return;
     try {
@@ -80,21 +79,19 @@ export default function AICoachPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // Lời chào cá nhân hóa (chỉ khi chưa có lịch sử)
   useEffect(() => {
     if (greetedRef.current || messages.length > 0) return;
     if (!summary && !goalText) return;
     greetedRef.current = true;
 
-    const parts: string[] = [`Chào ${userName}, mình là huấn luyện viên AI của bạn.`];
-    if (goalText) parts.push(`Mục tiêu hiện tại của bạn là ${goalText}.`);
-    if (summary?.streakDays && summary.streakDays > 0) parts.push(`Bạn đang giữ chuỗi ${summary.streakDays} ngày — tuyệt vời!`);
-    parts.push('Bạn muốn mình tư vấn gì hôm nay — bài tập, dinh dưỡng hay điều chỉnh kế hoạch?');
+    const parts: string[] = [`Chào ${userName}, mình là Vico — huấn luyện viên AI của bạn! 💪`];
+    if (goalText) parts.push(`Mục tiêu hiện tại: ${goalText}.`);
+    if (summary?.streakDays && summary.streakDays > 0) parts.push(`Chuỗi ${summary.streakDays} ngày của bạn thật tuyệt!`);
+    parts.push('Hôm nay mình có thể giúp gì cho bạn — bài tập, dinh dưỡng hay điều chỉnh kế hoạch?');
 
     setMessages([{ id: 1, role: 'ai', content: parts.join(' '), timestamp: new Date(), type: 'text' }]);
   }, [summary, goalText, userName, messages.length]);
 
-  // Lưu lịch sử + auto scroll
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     if (user?.id && messages.length > 0) {
@@ -124,20 +121,18 @@ export default function AICoachPage() {
           timestamp: new Date(),
           type: 'analysis',
         }]);
-        refreshUsage(); // cập nhật credit sau mỗi tin nhắn
+        refreshUsage();
       } else if (response.error?.code === 'QUOTA_EXCEEDED') {
-        // Hết credit → mở modal nâng cấp
         setUpgradeModalOpen(true);
       } else {
         setMessages(prev => [...prev, {
           id: Date.now() + 1,
           role: 'ai',
-          content: 'Kết nối tới Coach bị gián đoạn. ' + (response.error?.message || 'Bạn thử lại sau giây lát nhé.'),
+          content: 'Kết nối tới Vico bị gián đoạn. ' + (response.error?.message || 'Bạn thử lại sau giây lát nhé.'),
           timestamp: new Date(),
         }]);
       }
-    } catch (error) {
-      console.error('Chat error:', error);
+    } catch {
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         role: 'ai',
@@ -155,7 +150,6 @@ export default function AICoachPage() {
     setMessages([]);
   };
 
-  // Gợi ý câu hỏi theo mục tiêu
   const suggestions = [
     goalText ? `Gợi ý bài tập cho mục tiêu ${goalText}` : 'Hôm nay nên tập gì?',
     'Điều chỉnh thực đơn hôm nay',
@@ -164,158 +158,195 @@ export default function AICoachPage() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto flex flex-col gap-5 animate-fade-in lg:h-[calc(100vh-9rem)]">
+    <div className="mx-auto flex max-w-5xl flex-col gap-4 pb-28 lg:h-[calc(100vh-7rem)] lg:pb-4">
+
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-400/10 flex items-center justify-center shadow-[0_0_20px_rgba(0,122,255,0.2)]">
-            <Brain className="w-6 h-6 text-blue-400" />
+        <div className="flex items-center gap-3">
+          <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50">
+            <Vico size={40} mood="wave" />
+            <span className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full bg-[#16a34a] border-2 border-white" />
           </div>
           <div>
-            <h1 className="font-grotesk font-bold italic uppercase text-2xl text-white tracking-tight leading-none">AI Coach</h1>
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse" />
-              <span className="text-lime text-[10px] font-bold uppercase tracking-widest">Trực tuyến • Trợ lý cá nhân</span>
+            <h1 className="flex items-center gap-2 font-grotesk text-2xl font-bold leading-none tracking-tight text-[#111827]">
+              Vico AI Coach
+              <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-violet-600">Beta</span>
+            </h1>
+            <div className="mt-1 flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#16a34a]" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#16a34a]">Trực tuyến • Trợ lý cá nhân</span>
             </div>
           </div>
         </div>
         {messages.length > 1 && (
           <button onClick={clearChat}
-            className="glass rounded-2xl px-4 py-2 border border-white/5 text-neutral-400 hover:text-red-400 transition-all flex items-center gap-2 text-sm font-grotesk font-bold">
-            <Trash2 className="w-4 h-4" /> Xóa hội thoại
+            className="flex items-center gap-2 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-bold text-[#6b7280] transition hover:border-red-200 hover:text-red-500">
+            <Trash2 className="h-4 w-4" /> Xóa hội thoại
           </button>
         )}
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-5 min-h-0 lg:overflow-hidden">
-        {/* Khu chat */}
-        <div className="glass rounded-[2rem] border border-white/5 flex flex-col overflow-hidden flex-1 min-h-0 h-[60vh] lg:h-auto">
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-hide min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row lg:overflow-hidden">
+
+        {/* Chat area */}
+        <div className="flex h-[60vh] min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-[#eaecef] bg-white shadow-[0_2px_10px_rgba(17,24,39,0.05)] lg:h-auto">
+          <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5 scrollbar-hide">
+
+            {messages.length === 0 && (
+              <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+                <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-violet-50">
+                  <Vico size={60} mood="wave" />
+                </div>
+                <div>
+                  <p className="font-grotesk text-lg font-bold text-[#111827]">Xin chào! Mình là Vico 👋</p>
+                  <p className="mt-1 text-sm text-[#9ca3af]">Hỏi mình bất cứ điều gì về tập luyện & dinh dưỡng</p>
+                </div>
+              </div>
+            )}
+
             {messages.map((msg) => (
-              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[82%] rounded-2xl px-5 py-4 ${
+              <div key={msg.id} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+
+                {msg.role === 'ai' && (
+                  <div className="mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-violet-50">
+                    <Vico size={26} />
+                  </div>
+                )}
+
+                <div className={`max-w-[78%] rounded-2xl px-4 py-3 ${
                   msg.role === 'user'
-                    ? 'bg-lime text-obsidian font-medium'
-                    : 'bg-white/[0.06] border border-white/10 text-neutral-200'
+                    ? 'rounded-br-sm bg-[#16a34a] font-medium text-white'
+                    : 'rounded-bl-sm border border-[#eef0f2] bg-[#f9fafb] text-[#374151]'
                 }`}>
                   {msg.type === 'analysis' && (
-                    <div className="flex items-center gap-2 mb-2 text-blue-400">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">Phân tích từ Coach</span>
+                    <div className="mb-2 flex items-center gap-1.5 text-[#16a34a]">
+                      <Sparkles className="h-3 w-3" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Vico phân tích</span>
                     </div>
                   )}
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                  <div className={`text-[11px] mt-2 uppercase font-bold tracking-widest opacity-40 ${msg.role === 'user' ? 'text-obsidian' : 'text-neutral-500'}`}>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                  <p className={`mt-1.5 text-[10px] font-bold uppercase tracking-widest opacity-50 ${msg.role === 'user' ? 'text-right text-white' : 'text-[#9ca3af]'}`}>
                     {msg.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                  </div>
+                  </p>
                 </div>
               </div>
             ))}
+
+            {/* Typing indicator */}
             {isTyping && (
-              <div className="flex justify-start">
-                <div className="bg-white/[0.06] border border-white/10 rounded-2xl p-4 flex gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="flex justify-start gap-2.5">
+                <div className="mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-violet-50"><Vico size={26} /></div>
+                <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-sm border border-[#eef0f2] bg-[#f9fafb] px-4 py-3.5">
+                  {[0, 150, 300].map(d => (
+                    <div key={d} className="h-2 w-2 animate-bounce rounded-full bg-[#16a34a]" style={{ animationDelay: `${d}ms` }} />
+                  ))}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Input */}
-          <div className="p-5 bg-white/[0.04] border-t border-white/5">
-            <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-2 scrollbar-hide">
+          {/* Input area */}
+          <div className="border-t border-[#eef0f2] bg-[#f9fafb] p-4">
+            {/* Quick suggestions */}
+            <div className="mb-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               {suggestions.map(s => (
                 <button key={s} onClick={() => send(s)}
-                  className="whitespace-nowrap glass rounded-xl px-3.5 py-2 border border-white/5 text-[11px] font-semibold text-neutral-400 hover:text-white hover:border-lime/30 transition-all">
+                  className="flex-shrink-0 whitespace-nowrap rounded-full border border-[#e5e7eb] bg-white px-3.5 py-1.5 text-[11px] font-semibold text-[#6b7280] transition hover:border-[#16a34a]/40 hover:text-[#111827]">
                   {s}
                 </button>
               ))}
             </div>
-            <div className="relative">
+
+            {/* Text input */}
+            <div className="flex items-center gap-2">
               <input
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && send()}
-                placeholder="Hỏi Coach bất cứ điều gì..."
-                className="w-full bg-obsidian border border-white/10 rounded-[1.5rem] pl-5 pr-16 py-4 text-white placeholder-neutral-600 focus:outline-none focus:border-lime/30 transition-all"
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
+                placeholder="Nhắn tin cho Vico..."
+                className="flex-1 rounded-full border border-[#e5e7eb] bg-white pl-5 pr-4 py-3 text-sm text-[#111827] placeholder-[#9ca3af] transition focus:border-[#16a34a] focus:outline-none"
               />
-              <button onClick={() => send()} disabled={!input.trim() || isTyping}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 bg-lime p-2.5 rounded-xl shadow-[0_0_20px_rgba(204,255,0,0.3)] hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:hover:scale-100">
-                <Send className="w-5 h-5 text-obsidian" />
+              <button
+                onClick={() => send()}
+                disabled={!input.trim() || isTyping}
+                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#16a34a] transition hover:bg-[#15803d] active:scale-95 disabled:opacity-30"
+              >
+                <Send className="h-4 w-4 text-white" />
               </button>
             </div>
           </div>
         </div>
 
-        {/* Sidebar — DỮ LIỆU THẬT */}
-        <div className="w-full lg:w-72 flex flex-col gap-5">
-          <div className="glass rounded-[2rem] p-6 border border-white/5">
-            <h3 className="font-grotesk font-bold text-white text-base mb-3 flex items-center gap-2.5">
-              <Zap className="w-4 h-4 text-lime" /> Chỉ số của bạn
+        {/* Sidebar */}
+        <div className="flex w-full flex-col gap-4 lg:w-64">
+
+          {/* Stats card */}
+          <div className="rounded-3xl border border-[#eaecef] bg-white p-5 shadow-[0_2px_10px_rgba(17,24,39,0.05)]">
+            <h3 className="mb-4 flex items-center gap-2 font-grotesk text-sm font-bold text-[#111827]">
+              <Zap className="h-4 w-4 text-[#16a34a]" /> Chỉ số của bạn
             </h3>
-            {/* AI credit badge */}
+
             {usage && (
               <div className="mb-4">
-                <AiUsageBadge
-                  usage={usage}
-                  actionCost={1}
-                  onUpgradeClick={() => setUpgradeModalOpen(true)}
-                />
+                <AiUsageBadge usage={usage} actionCost={1} onUpgradeClick={() => setUpgradeModalOpen(true)} />
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-neutral-500 text-[10px] uppercase font-bold tracking-widest mb-1">Cấp độ</div>
-                <div className="font-grotesk font-bold text-xl text-lime flex items-center gap-1">
-                  <Star className="w-4 h-4" fill="currentColor" /> {summary?.level ?? 1}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-[#eef0f2] bg-[#f9fafb] p-3">
+                <div className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-[#9ca3af]">Cấp độ</div>
+                <div className="flex items-center gap-1 font-grotesk text-xl font-bold text-[#16a34a]">
+                  <Star className="h-4 w-4" fill="currentColor" /> {summary?.level ?? 1}
                 </div>
               </div>
-              <div>
-                <div className="text-neutral-500 text-[10px] uppercase font-bold tracking-widest mb-1">Chuỗi ngày</div>
-                <div className="font-grotesk font-bold text-xl text-orange-400 flex items-center gap-1">
-                  <Flame className="w-4 h-4" fill="currentColor" /> {summary?.streakDays ?? 0}
+              <div className="rounded-2xl border border-[#eef0f2] bg-[#f9fafb] p-3">
+                <div className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-[#9ca3af]">Streak</div>
+                <div className="flex items-center gap-1 font-grotesk text-xl font-bold text-orange-500">
+                  <Flame className="h-4 w-4" fill="currentColor" /> {summary?.streakDays ?? 0}
                 </div>
               </div>
-              <div>
-                <div className="text-neutral-500 text-[10px] uppercase font-bold tracking-widest mb-1">Kcal đốt</div>
-                <div className="font-grotesk font-bold text-xl text-white">{stats?.caloriesBurned ?? 0}</div>
+              <div className="rounded-2xl border border-[#eef0f2] bg-[#f9fafb] p-3">
+                <div className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-[#9ca3af]">Kcal đốt</div>
+                <div className="font-grotesk text-xl font-bold text-[#111827]">{stats?.caloriesBurned ?? 0}</div>
               </div>
-              <div>
-                <div className="text-neutral-500 text-[10px] uppercase font-bold tracking-widest mb-1">Phục hồi</div>
-                <div className={`font-grotesk font-bold text-xl ${rec.color}`}>{rec.label}</div>
+              <div className="rounded-2xl border border-[#eef0f2] bg-[#f9fafb] p-3">
+                <div className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-[#9ca3af]">Phục hồi</div>
+                <div className={`font-grotesk text-xl font-bold ${rec.color}`}>{rec.label}</div>
               </div>
             </div>
+
             {goalText && (
-              <div className="mt-5 pt-4 border-t border-white/5">
-                <div className="text-neutral-500 text-[10px] uppercase font-bold tracking-widest mb-1">Mục tiêu</div>
-                <div className="font-grotesk font-bold text-base text-white">{goalText}</div>
+              <div className="mt-4 border-t border-[#eef0f2] pt-3">
+                <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-[#9ca3af]">Mục tiêu</div>
+                <div className="font-grotesk text-sm font-bold text-[#111827]">{goalText}</div>
               </div>
             )}
           </div>
 
-          {/* Mục tiêu kế tiếp — buổi tập thật hôm nay */}
-          <div className="glass rounded-[2rem] p-6 border border-white/5 flex-1">
-            <h3 className="font-grotesk font-bold text-white text-base mb-3 flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4 text-blue-400" /> Việc cần làm
+          {/* Next workout card */}
+          <div className="flex-1 rounded-3xl border border-[#eaecef] bg-white p-5 shadow-[0_2px_10px_rgba(17,24,39,0.05)]">
+            <h3 className="mb-3 flex items-center gap-2 font-grotesk text-sm font-bold text-[#111827]">
+              <Sparkles className="h-4 w-4 text-[#16a34a]" /> Việc cần làm
             </h3>
             {nextWorkout ? (
               <>
-                <p className="text-neutral-400 text-sm leading-relaxed mb-5">
-                  Buổi tập hôm nay: <span className="text-white font-semibold">{nextWorkout.name || (nextWorkout as { title?: string }).title || 'Buổi tập của bạn'}</span>
+                <p className="mb-4 text-sm leading-relaxed text-[#6b7280]">
+                  Buổi tập hôm nay:{' '}
+                  <span className="font-semibold text-[#111827]">{nextWorkout.name || (nextWorkout as { title?: string }).title || 'Buổi tập của bạn'}</span>
                 </p>
-                <Link to="/dashboard/workout" className="w-full btn-lime py-2.5 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
-                  <Dumbbell className="w-4 h-4" /> Vào tập ngay
+                <Link to="/dashboard/workout"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#16a34a] py-2.5 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-[#15803d]">
+                  <Dumbbell className="h-4 w-4" /> Vào tập ngay
                 </Link>
               </>
             ) : (
               <>
-                <p className="text-neutral-400 text-sm leading-relaxed mb-5">
-                  Chưa có buổi tập cho hôm nay. Tạo kế hoạch để bắt đầu hành trình của bạn.
+                <p className="mb-4 text-sm leading-relaxed text-[#6b7280]">
+                  Chưa có buổi tập hôm nay. Tạo kế hoạch để bắt đầu hành trình!
                 </p>
-                <Link to="/dashboard/workout" className="w-full btn-lime py-2.5 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
-                  Tạo kế hoạch <ChevronRight className="w-4 h-4" />
+                <Link to="/dashboard/workout"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#16a34a] py-2.5 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-[#15803d]">
+                  Tạo kế hoạch <ChevronRight className="h-4 w-4" />
                 </Link>
               </>
             )}
@@ -323,7 +354,6 @@ export default function AICoachPage() {
         </div>
       </div>
 
-      {/* Upgrade modal */}
       <AiUpgradeModal
         isOpen={upgradeModalOpen}
         userId={user?.id ?? 0}

@@ -4,6 +4,7 @@
  * Colors: Blue #1E7BFF, Lime #CCFF00, Navy #0B1020
  * Drop actual PNG/SVG files into public/icons/ and public/mascot/ to replace these SVG fallbacks.
  */
+import type { ReactNode, FC } from 'react';
 
 type IProps = { size?: number; className?: string };
 
@@ -14,7 +15,7 @@ const BD = '#0B4FC8';   // Blue dark
 const N  = '#0B1020';   // Deep Navy
 
 /** Rounded square container with blue gradient */
-function Box({ id, size, children, lime }: { id: string; size: number; children: React.ReactNode; lime?: boolean }) {
+function Box({ id, size, children, lime }: { id: string; size: number; children: ReactNode; lime?: boolean }) {
   const [c1, c2] = lime ? ['#CCFF00', '#88CC00'] : ['#2B8CFF', '#1050D0'];
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -539,7 +540,7 @@ export function Vico({ size = 80, mood = 'default', src, className }: IProps & {
 }
 
 /* ─── Map: goalName → ViwayIcon component ───────────────────────────── */
-export const GOAL_ICONS: Record<string, React.FC<IProps>> = {
+export const GOAL_ICONS: Record<string, FC<IProps>> = {
   'weight loss': IconGiamCan,
   'giảm cân':   IconGiamCan,
   'giảm mỡ':   IconGiamCan,
@@ -559,7 +560,7 @@ export const GOAL_ICONS: Record<string, React.FC<IProps>> = {
   'sức mạnh':   IconTapLuyen,
 };
 
-export function getGoalIcon(goalName: string): React.FC<IProps> {
+export function getGoalIcon(goalName: string): FC<IProps> {
   const key = (goalName || '').toLowerCase();
   for (const [k, Icon] of Object.entries(GOAL_ICONS)) {
     if (key.includes(k)) return Icon;

@@ -1,8 +1,8 @@
 import { useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  ArrowRight, Activity, Flame, Target, HeartPulse,
-  Droplets, Beef, Wheat, Clock,
+  ArrowRight, Flame, Target, HeartPulse,
+  Droplets, Beef, Wheat,
 } from 'lucide-react';
 import Logo from '../components/Logo';
 
@@ -168,11 +168,11 @@ function BodyCompBar({ weight, fatPct }: { weight: number; fatPct: number }) {
       <div className="flex justify-between">
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
-          <span className="text-[10px] text-neutral-500">Khối cơ <span className="text-white font-semibold">{leanKg} kg</span></span>
+          <span className="text-[10px] text-neutral-300 font-medium">Khối cơ <span className="text-white font-semibold">{leanKg} kg</span></span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0" />
-          <span className="text-[10px] text-neutral-500">Mỡ <span className="text-white font-semibold">{fatKg} kg</span></span>
+          <span className="text-[10px] text-neutral-300 font-medium">Mỡ <span className="text-white font-semibold">{fatKg} kg</span></span>
         </div>
       </div>
     </div>
@@ -251,7 +251,7 @@ export default function BodyAssessment() {
       <div className="w-full max-w-xl relative z-10 space-y-4 animate-fade-in">
 
         <div className="flex justify-center mb-1">
-          <Logo size={34} wordmarkClass="text-base" />
+          <Logo size={34} wordmarkClass="text-base" dark />
         </div>
 
         {/* Header */}
@@ -261,14 +261,14 @@ export default function BodyAssessment() {
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-lime">Đánh giá thể trạng</span>
           </div>
           <h1 className="font-grotesk font-bold text-2xl text-white mb-1">Kết quả phân tích</h1>
-          <p className="text-neutral-500 text-xs">AI dùng các chỉ số này để cá nhân hóa kế hoạch ăn & tập của bạn.</p>
+
         </div>
 
         {/* ── BMI GAUGE ── */}
         <div className="glass rounded-3xl px-6 pt-5 pb-4 border border-white/5">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-neutral-500 text-[10px] font-semibold uppercase tracking-wider">BMI — Chuẩn WHO Á Đông</span>
-            <span className="text-[10px] text-neutral-600">Lý tưởng: {m.idealMin}–{m.idealMax} kg</span>
+            <span className="text-neutral-300 text-[10px] font-semibold uppercase tracking-wider">BMI — Chuẩn WHO Á Đông</span>
+            <span className="text-[10px] text-neutral-200 font-medium">Lý tưởng: {m.idealMin}–{m.idealMax} kg</span>
           </div>
 
           <BmiGauge bmi={m.bmi} />
@@ -278,7 +278,7 @@ export default function BodyAssessment() {
             {BMI_ZONES.filter(z => z.max < 99).map(z => (
               <div key={z.label} className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: z.hex }} />
-                <span className="text-[9px] text-neutral-600">{z.label}</span>
+                <span className="text-[9px] text-neutral-300 font-medium">{z.label}</span>
               </div>
             ))}
           </div>
@@ -288,24 +288,37 @@ export default function BodyAssessment() {
           </p>
         </div>
 
-        {/* ── ENERGY STATS ── */}
-        <div className="grid grid-cols-3 gap-2.5">
-          {[
-            { label: 'BMR',      value: m.bmr,    sub: 'nghỉ ngơi',    icon: Activity, colorCls: 'text-blue-400',   bgCls: 'bg-blue-400/10' },
-            { label: 'TDEE',     value: m.tdee,   sub: 'tiêu hao/ngày', icon: Flame,   colorCls: 'text-orange-400', bgCls: 'bg-orange-400/10' },
-            { label: 'Mục tiêu', value: m.target, sub: 'ăn/ngày',      icon: Target,  colorCls: 'text-lime',       bgCls: 'bg-lime/10' },
-          ].map(({ label, value, sub, icon: Icon, colorCls, bgCls }) => (
-            <div key={label} className="glass rounded-2xl p-4 border border-white/5 text-center">
-              <div className={`w-8 h-8 ${bgCls} rounded-xl flex items-center justify-center mx-auto mb-2`}>
-                <Icon className={`w-4 h-4 ${colorCls}`} />
+        {/* ── TARGET CALORIES ── */}
+        <div className="glass rounded-2xl p-5 border border-white/5">
+          <p className="text-xs font-bold text-white mb-4">Mục tiêu calo hàng ngày</p>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Calo cần đốt */}
+            <div>
+              <div className="text-[10px] text-neutral-400 font-medium mb-2 uppercase tracking-wider">Cần đốt cháy</div>
+              <div className="flex items-end gap-1">
+                <span className="font-grotesk font-bold text-3xl text-orange-400 leading-none">
+                  {Math.abs(m.tdee - m.target).toLocaleString('vi-VN')}
+                </span>
+                <span className="text-neutral-300 text-sm font-medium mb-0.5">kcal</span>
               </div>
-              <div className={`font-grotesk font-bold text-xl leading-none ${colorCls}`}>
-                {value.toLocaleString('vi-VN')}
-              </div>
-              <div className="text-neutral-600 text-[10px] mt-1">{sub}</div>
-              <div className="text-neutral-500 text-[9px] uppercase tracking-wider mt-0.5 font-semibold">{label}</div>
             </div>
-          ))}
+
+            {/* Calo được ăn */}
+            <div>
+              <div className="text-[10px] text-neutral-400 font-medium mb-2 uppercase tracking-wider">Được tiêu thụ</div>
+              <div className="flex items-end gap-1">
+                <span className="font-grotesk font-bold text-3xl text-lime leading-none">
+                  {m.target.toLocaleString('vi-VN')}
+                </span>
+                <span className="text-neutral-300 text-sm font-medium mb-0.5">kcal</span>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-[10px] text-neutral-400 font-medium mt-3 pt-3 border-t border-white/10">
+            {m.dirLabel}
+          </p>
         </div>
 
         {/* ── MACRO BREAKDOWN ── */}
@@ -313,7 +326,7 @@ export default function BodyAssessment() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="text-sm font-bold text-white">Phân bổ dinh dưỡng</p>
-              <p className="text-[10px] text-neutral-600 mt-0.5">{m.dirLabel}</p>
+              <p className="text-[10px] text-neutral-300 font-medium mt-0.5">{m.dirLabel}</p>
             </div>
           </div>
           <div className="flex gap-5 items-center">
@@ -332,14 +345,14 @@ export default function BodyAssessment() {
                 return (
                   <div key={label}>
                     <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                         <Icon className={`w-3 h-3 ${tw} flex-shrink-0`} />
-                        <span className="text-xs text-white font-semibold truncate">{label}</span>
-                        <span className="text-[9px] text-neutral-600 hidden sm:inline truncate">{note}</span>
+                        <span className="text-xs text-white font-semibold">{label}</span>
+                        <span className="text-[9px] text-neutral-300 font-medium">{note}</span>
                       </div>
                       <div className="flex items-baseline gap-1 flex-shrink-0 ml-2">
                         <span className={`text-sm font-bold ${tw}`}>{g}g</span>
-                        <span className="text-[9px] text-neutral-600">{pct}%</span>
+                        <span className="text-[9px] text-neutral-300 font-medium">{pct}%</span>
                       </div>
                     </div>
                     <div className="h-1 bg-white/[0.05] rounded-full overflow-hidden">
@@ -355,10 +368,10 @@ export default function BodyAssessment() {
         {/* ── BODY COMPOSITION + WATER ── */}
         <div className="grid grid-cols-2 gap-3">
           <div className="glass rounded-2xl p-4 border border-white/5">
-            <div className="text-[10px] text-neutral-500 uppercase tracking-wider mb-2 font-semibold">Thành phần cơ thể</div>
+            <div className="text-[10px] text-neutral-300 uppercase tracking-wider mb-2 font-semibold">Thành phần cơ thể</div>
             <div className="flex items-end gap-1 mb-3">
               <span className="font-grotesk font-bold text-3xl text-orange-400 leading-none">{m.bodyFat}</span>
-              <span className="text-neutral-500 text-sm mb-0.5">% mỡ</span>
+              <span className="text-neutral-300 text-sm font-medium mb-0.5">% mỡ</span>
             </div>
             <BodyCompBar weight={m.weight} fatPct={m.bodyFat} />
           </div>
@@ -369,11 +382,11 @@ export default function BodyAssessment() {
                 <div className="w-7 h-7 rounded-xl bg-blue-400/10 flex items-center justify-center">
                   <Droplets className="w-3.5 h-3.5 text-blue-400" />
                 </div>
-                <span className="text-[10px] text-neutral-500 uppercase tracking-wider font-semibold">Nước / ngày</span>
+                <span className="text-[10px] text-neutral-300 uppercase tracking-wider font-semibold">Nước / ngày</span>
               </div>
               <div className="flex items-end gap-1">
                 <span className="font-grotesk font-bold text-3xl text-blue-400 leading-none">{m.waterL}</span>
-                <span className="text-neutral-500 text-sm mb-0.5">L</span>
+                <span className="text-neutral-300 text-sm font-medium mb-0.5">L</span>
               </div>
             </div>
             {/* Water bar visual */}
@@ -385,42 +398,19 @@ export default function BodyAssessment() {
                 );
               })}
             </div>
-            <div className="text-[10px] text-neutral-600 mt-1.5">
+            <div className="text-[10px] text-neutral-300 font-medium mt-1.5">
               ≈ {Math.round(Number(m.waterL) / 0.25)} ly 250ml
             </div>
           </div>
         </div>
 
-        {/* ── TIMELINE ── */}
-        <div className="glass rounded-2xl p-4 border border-white/5 flex items-start gap-3">
-          <div className="w-9 h-9 rounded-xl bg-lime/10 flex items-center justify-center flex-shrink-0">
-            <Clock className="w-4 h-4 text-lime" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-bold text-white mb-0.5">Lộ trình ước tính</div>
-            <p className="text-xs text-neutral-400 leading-relaxed">{m.timelineText}</p>
-            <p className="text-[10px] text-neutral-600 mt-1">
-              {m.dirLabel} · Kết quả phụ thuộc vào sự đều đặn và giấc ngủ.
-            </p>
-          </div>
-        </div>
-
-        {/* ── DISCLAIMER ── */}
-        <div className="rounded-xl p-3 border border-white/[0.04] bg-white/[0.02]">
-          <p className="text-neutral-600 text-[10px] leading-relaxed">
-            <span className="text-white/40 font-semibold">BMR</span> — năng lượng khi nghỉ hoàn toàn ·{' '}
-            <span className="text-white/40 font-semibold">TDEE</span> — tổng tiêu hao theo mức vận động ·{' '}
-            <span className="text-white/40 font-semibold">% Mỡ</span> — ước tính theo Deurenberg (BMI+tuổi) ·{' '}
-            Thang BMI theo chuẩn WHO châu Á 2004.
-          </p>
-        </div>
 
         <button onClick={() => navigate('/welcome', { state: { goal: state.goal } })}
           className="w-full btn-lime py-4 text-sm font-grotesk font-bold flex items-center justify-center gap-2">
           Bắt đầu sử dụng <ArrowRight className="w-4 h-4" />
         </button>
 
-        <p className="text-center text-neutral-600 text-[11px] pb-4">
+        <p className="text-center text-neutral-300 text-[11px] font-medium pb-4">
           Tiếp theo: thiết lập ngân sách & kho thực phẩm để AI lên thực đơn cá nhân hóa.
         </p>
       </div>

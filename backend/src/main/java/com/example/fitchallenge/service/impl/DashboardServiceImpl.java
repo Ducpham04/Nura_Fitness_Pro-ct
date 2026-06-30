@@ -493,6 +493,7 @@ public class DashboardServiceImpl implements DashboardService {
         // Fallback: đọc từ daily_nutrition_logs nếu có (log thủ công)
         List<DailyNutritionLog> todayNutritionLogs = dailyNutritionLogRepository
                 .findByUserAndTrackingDate(user, today);
+        BigDecimal waterConsumedToday = sum(todayNutritionLogs, DailyNutritionLog::getWaterLiters);
         if (caloriesConsumed.compareTo(BigDecimal.ZERO) == 0 && !todayNutritionLogs.isEmpty()) {
             caloriesConsumed = sum(todayNutritionLogs, DailyNutritionLog::getCalories);
             proteinConsumed  = sum(todayNutritionLogs, DailyNutritionLog::getProtein);
@@ -621,7 +622,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .fatConsumed(fatConsumed)
                 .fatGoal(caloriesGoal.multiply(new BigDecimal("0.25"))
                         .divide(new BigDecimal("9"), RoundingMode.HALF_UP))
-                .waterConsumed(BigDecimal.valueOf(1.2))
+                .waterConsumed(waterConsumedToday)
                 .waterGoal(waterGoal)
                 .budgetRemaining(budgetLimit.subtract(budgetSpent))
                 .budgetLimit(budgetLimit)

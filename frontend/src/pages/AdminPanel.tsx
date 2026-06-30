@@ -1359,7 +1359,7 @@ export default function AdminPanel() {
       <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col border-r border-white/5 bg-[#0f1117] lg:flex">
         {/* Logo */}
         <div className="flex items-center gap-3 border-b border-white/5 px-5 py-5">
-          <Logo size={34} showWordmark={false} />
+          <Logo size={34} showWordmark={false} dark />
           <div>
             <p className="text-sm font-bold text-white">Viway</p>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Quản trị hệ thống</p>

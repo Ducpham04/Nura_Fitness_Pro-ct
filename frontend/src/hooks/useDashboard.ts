@@ -37,7 +37,14 @@ export function useDashboard(): UseDashboardReturn {
       const response = await userService.getDashboardData(user.id);
 
       if (response.success && response.data) {
-        const todayWorkouts = await userService.getTodayWorkouts(user.id);
+        // Ưu tiên dùng todayWorkouts từ main dashboard (backend tính đúng theo currentDay
+        // + DailyTrainingLog). Chỉ gọi getTodayWorkouts() làm fallback khi main trả rỗng
+        // để tránh lẫn bài của các ngày khác (NOT_STARTED từ ngày tương lai).
+        const mainWorkouts = response.data.todayWorkouts || [];
+        let todayWorkouts = mainWorkouts;
+        if (mainWorkouts.length === 0) {
+          todayWorkouts = await userService.getTodayWorkouts(user.id);
+        }
         lastFetchRef.current = Date.now();
         setData({
           ...response.data,

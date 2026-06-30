@@ -13,6 +13,7 @@ import { userService } from '../services/userService';
 import { useDashboard } from '../hooks/useDashboard';
 import { useAiUsage } from '../hooks/useAiUsage';
 import { AiUpgradeModal } from '../components/AiUpgradeModal';
+import { Vico, IconTapLuyen, IconCalo, IconThuThach, IconAICoach } from '../components/ViwayIcons';
 
 const GOAL_LABELS: Record<string, string> = {
   weight_loss: 'Giảm mỡ',
@@ -33,22 +34,22 @@ function StatCard({ label, value, sub, icon: Icon, color }: {
   icon: any; color: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 flex flex-col items-center gap-1 text-center">
+    <div className="rounded-2xl border border-[#eaecef] bg-[#f9fafb] p-4 flex flex-col items-center gap-1 text-center">
       <Icon className={`w-4 h-4 ${color} mb-1`} />
-      <div className="font-grotesk font-bold text-lg text-white leading-none">{value}</div>
-      {sub && <div className="text-neutral-600 text-[11px]">{sub}</div>}
-      <div className="text-neutral-500 text-[10px] uppercase tracking-wider mt-0.5">{label}</div>
+      <div className="font-grotesk font-bold text-lg text-[#111827] leading-none">{value}</div>
+      {sub && <div className="text-[#9ca3af] text-[11px]">{sub}</div>}
+      <div className="text-[#9ca3af] text-[10px] uppercase tracking-wider mt-0.5">{label}</div>
     </div>
   );
 }
 
 function InfoRow({ label, value, editable = false }: { label: string; value: string | number; editable?: boolean }) {
   return (
-    <div className="flex items-center justify-between py-3 border-b border-white/[0.04] last:border-0">
-      <span className="text-neutral-500 text-sm">{label}</span>
+    <div className="flex items-center justify-between py-3 border-b border-[#eef0f2] last:border-0">
+      <span className="text-[#9ca3af] text-sm">{label}</span>
       <div className="flex items-center gap-2">
-        <span className="text-white text-sm font-semibold">{value || '—'}</span>
-        {editable && <Edit3 className="w-3 h-3 text-neutral-700" />}
+        <span className="text-[#111827] text-sm font-semibold">{value || '—'}</span>
+        {editable && <Edit3 className="w-3 h-3 text-[#9ca3af]" />}
       </div>
     </div>
   );
@@ -182,7 +183,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="h-64 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-lime animate-spin" />
+        <Loader2 className="w-8 h-8 text-[#16a34a] animate-spin" />
       </div>
     );
   }
@@ -203,18 +204,18 @@ export default function ProfilePage() {
     <div className="max-w-2xl mx-auto space-y-4 py-4 animate-fade-in">
 
       {/* ── Hero card ── */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-6">
+      <div className="rounded-2xl border border-[#eaecef] bg-[#f9fafb] p-6">
         <div className="flex items-center gap-4">
           {/* Avatar — clickable upload */}
           <div className="relative shrink-0 group cursor-pointer"
             onMouseEnter={() => setAvatarHover(true)}
             onMouseLeave={() => setAvatarHover(false)}>
             <label htmlFor="avatar-upload" className="cursor-pointer block">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shadow-lg">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden border border-[#e5e7eb] shadow-lg">
                 {avatarUrl
                   ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-                  : <div className="w-full h-full bg-gradient-to-br from-lime to-emerald-500 flex items-center justify-center">
-                      <span className="font-grotesk font-bold text-obsidian text-2xl">{initial}</span>
+                  : <div className="w-full h-full bg-gradient-to-br from-[#16a34a] to-emerald-500 flex items-center justify-center">
+                      <span className="font-grotesk font-bold text-white text-2xl">{initial}</span>
                     </div>
                 }
               </div>
@@ -224,17 +225,17 @@ export default function ProfilePage() {
               </div>
             </label>
             <input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg bg-lime flex items-center justify-center border-2 border-[#0f1014]">
-              <Zap className="w-2.5 h-2.5 text-black" fill="currentColor" />
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg bg-[#16a34a] flex items-center justify-center border-2 border-white">
+              <Zap className="w-2.5 h-2.5 text-white" fill="currentColor" />
             </div>
           </div>
 
           {/* Name + level */}
           <div className="flex-1 min-w-0">
-            <h2 className="font-grotesk font-bold italic uppercase text-xl text-white truncate leading-none tracking-tight">{userName}</h2>
-            <p className="text-neutral-500 text-xs truncate mt-0.5">{user?.email}</p>
+            <h2 className="font-grotesk font-bold italic uppercase text-xl text-[#111827] truncate leading-none tracking-tight">{userName}</h2>
+            <p className="text-[#9ca3af] text-xs truncate mt-0.5">{user?.email}</p>
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-lime/15 text-lime border border-lime/25">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#16a34a]/15 text-[#16a34a] border border-[#16a34a]/25">
                 Lv.{level} · {levelLabel}
               </span>
               {streak > 0 && (
@@ -249,7 +250,7 @@ export default function ProfilePage() {
           {referralInfo && (
             <button
               onClick={handleCopyReferralLink}
-              className="shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl bg-lime/10 border border-lime/25 text-lime hover:bg-lime/20 transition-colors"
+              className="shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl bg-[#16a34a]/10 border border-[#16a34a]/25 text-[#16a34a] hover:bg-[#16a34a]/20 transition-colors"
               title="Sao chép link mời bạn"
             >
               {refCopied
@@ -262,13 +263,13 @@ export default function ProfilePage() {
 
         {/* XP bar */}
         <div className="mt-4">
-          <div className="flex items-center justify-between text-[10px] text-neutral-600 mb-1">
+          <div className="flex items-center justify-between text-[10px] text-[#9ca3af] mb-1">
             <span>EXP</span>
             <span>{exp} / {nextExp}</span>
           </div>
-          <div className="h-1.5 bg-white/[0.07] rounded-full overflow-hidden">
+          <div className="h-1.5 bg-[#f3f4f6] rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-lime to-emerald-400 rounded-full transition-all duration-700"
+              className="h-full bg-gradient-to-r from-[#16a34a] to-emerald-400 rounded-full transition-all duration-700"
               style={{ width: `${nextExp ? Math.min(100, (exp / nextExp) * 100) : 0}%` }}
             />
           </div>
@@ -277,16 +278,16 @@ export default function ProfilePage() {
 
       {/* ── Referral banner (compact) — mời bạn nhận thưởng ── */}
       {referralInfo && (
-        <div className="rounded-2xl border border-lime/20 bg-gradient-to-r from-lime/[0.06] to-emerald-500/[0.04] p-4">
+        <div className="rounded-2xl border border-[#16a34a]/20 bg-gradient-to-r from-[#f0fdf4] to-emerald-500/[0.04] p-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-lime/15 flex items-center justify-center shrink-0">
-              <Gift className="w-4 h-4 text-lime" />
+            <div className="w-9 h-9 rounded-xl bg-[#16a34a]/15 flex items-center justify-center shrink-0">
+              <Gift className="w-4 h-4 text-[#16a34a]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white leading-snug">
+              <p className="text-sm font-bold text-[#111827] leading-snug">
                 Mời bạn • nhận thưởng lớn
               </p>
-              <p className="text-[11px] text-neutral-500 mt-0.5">
+              <p className="text-[11px] text-[#9ca3af] mt-0.5">
                 {referralInfo.plusUnlocked
                   ? 'Mời 20 bạn → PRO không giới hạn'
                   : referralInfo.referralCount > 0
@@ -296,7 +297,7 @@ export default function ProfilePage() {
             </div>
             <button
               onClick={handleCopyReferralLink}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-lime text-black text-[11px] font-bold hover:bg-lime/90 transition-colors"
+              className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#16a34a] text-white text-[11px] font-bold hover:bg-[#16a34a]/90 transition-colors"
             >
               {refCopied ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
               {refCopied ? 'Đã copy' : 'Copy link'}
@@ -307,7 +308,7 @@ export default function ProfilePage() {
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-4 gap-2">
-        <StatCard label="Tuần này" value={workoutsWeek} sub="buổi" icon={TrendingUp} color="text-lime" />
+        <StatCard label="Tuần này" value={workoutsWeek} sub="buổi" icon={TrendingUp} color="text-[#16a34a]" />
         <StatCard label="Hôm nay" value={completedToday} sub="hoàn thành" icon={Check} color="text-blue-400" />
         <StatCard label="Kcal đốt" value={caloriesBurned} sub="kcal" icon={Flame} color="text-orange-400" />
         <StatCard label="Mục tiêu" value={goalLabel} icon={Target} color="text-purple-400" />
@@ -315,15 +316,15 @@ export default function ProfilePage() {
 
       {/* ── Body info ── */}
       {bodyProfile && (
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
+        <div className="rounded-2xl border border-[#eaecef] bg-[#f9fafb] p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <User className="w-4 h-4 text-neutral-500" />
+            <h3 className="text-sm font-bold text-[#111827] flex items-center gap-2">
+              <User className="w-4 h-4 text-[#9ca3af]" />
               Thông số cơ thể
             </h3>
             <Link
               to="/dashboard/profile/edit"
-              className="text-[10px] text-neutral-500 hover:text-lime transition-colors flex items-center gap-1"
+              className="text-[10px] text-[#9ca3af] hover:text-[#16a34a] transition-colors flex items-center gap-1"
             >
               <Edit3 className="w-3 h-3" /> Chỉnh sửa
             </Link>
@@ -334,10 +335,10 @@ export default function ProfilePage() {
               { label: 'Chiều cao', value: bodyProfile.height ? `${bodyProfile.height} cm` : '—', icon: Activity },
               { label: 'BMI', value: bodyProfile.bmi ? bodyProfile.bmi.toFixed(1) : '—', icon: TrendingUp },
             ].map(({ label, value, icon: Icon }) => (
-              <div key={label} className="rounded-xl bg-white/[0.04] border border-white/[0.06] p-3 text-center">
-                <Icon className="w-3.5 h-3.5 text-neutral-600 mx-auto mb-1.5" />
-                <div className="font-grotesk font-bold text-sm text-white">{value}</div>
-                <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">{label}</div>
+              <div key={label} className="rounded-xl bg-[#f9fafb] border border-[#eaecef] p-3 text-center">
+                <Icon className="w-3.5 h-3.5 text-[#9ca3af] mx-auto mb-1.5" />
+                <div className="font-grotesk font-bold text-sm text-[#111827]">{value}</div>
+                <div className="text-[#9ca3af] text-[11px] uppercase tracking-wider mt-0.5">{label}</div>
               </div>
             ))}
           </div>
@@ -354,16 +355,16 @@ export default function ProfilePage() {
       )}
 
       {/* ── AI Package ── */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
+      <div className="rounded-2xl border border-[#eaecef] bg-[#f9fafb] p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-lime" />
+          <h3 className="text-sm font-bold text-[#111827] flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[#16a34a]" />
             Gói AI
           </h3>
           {usage && usage.packageCode !== 'PRO' && (
             <button
               onClick={() => setUpgradeModalOpen(true)}
-              className="flex items-center gap-1 text-[10px] text-lime hover:text-lime/80 transition-colors font-semibold"
+              className="flex items-center gap-1 text-[10px] text-[#16a34a] hover:text-[#16a34a]/80 transition-colors font-semibold"
             >
               <ArrowUpRight className="w-3 h-3" /> Nâng cấp
             </button>
@@ -372,7 +373,7 @@ export default function ProfilePage() {
 
         {usageLoading ? (
           <div className="flex items-center justify-center py-4">
-            <Loader2 className="w-5 h-5 text-neutral-600 animate-spin" />
+            <Loader2 className="w-5 h-5 text-[#9ca3af] animate-spin" />
           </div>
         ) : usage ? (
           <div className="space-y-3">
@@ -388,7 +389,7 @@ export default function ProfilePage() {
                 {usage.packageCode === 'PRO' ? '⚡ PRO' : usage.packageCode === 'PLUS' ? '✦ PLUS' : '○ FREE'}
               </div>
               {usage.packageExpiresAt && (
-                <span className="text-[11px] text-neutral-600">
+                <span className="text-[11px] text-[#9ca3af]">
                   Hết hạn {new Date(usage.packageExpiresAt).toLocaleDateString('vi-VN')}
                 </span>
               )}
@@ -396,33 +397,33 @@ export default function ProfilePage() {
 
             {/* Credits bar */}
             <div>
-              <div className="flex items-center justify-between text-[11px] text-neutral-500 mb-1.5">
+              <div className="flex items-center justify-between text-[11px] text-[#9ca3af] mb-1.5">
                 <span>Lượt AI đã dùng</span>
-                <span className="font-semibold text-white">
+                <span className="font-semibold text-[#111827]">
                   {usage.used} / {usage.isUnlimited ? '∞' : usage.quota}
                 </span>
               </div>
               {!usage.isUnlimited && (
-                <div className="h-1.5 bg-white/[0.07] rounded-full overflow-hidden">
+                <div className="h-1.5 bg-[#f3f4f6] rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-700 ${
                       usage.used / usage.quota > 0.8
                         ? 'bg-red-400'
                         : usage.used / usage.quota > 0.5
                         ? 'bg-yellow-400'
-                        : 'bg-lime'
+                        : 'bg-[#16a34a]'
                     }`}
                     style={{ width: `${Math.min(100, (usage.used / usage.quota) * 100)}%` }}
                   />
                 </div>
               )}
               {usage.isUnlimited && (
-                <div className="h-1.5 bg-lime/20 rounded-full overflow-hidden">
-                  <div className="h-full w-full bg-lime rounded-full" />
+                <div className="h-1.5 bg-[#16a34a]/20 rounded-full overflow-hidden">
+                  <div className="h-full w-full bg-[#16a34a] rounded-full" />
                 </div>
               )}
               {usage.resetAt && (
-                <p className="text-[10px] text-neutral-700 mt-1">
+                <p className="text-[10px] text-[#9ca3af] mt-1">
                   Reset vào {new Date(usage.resetAt).toLocaleDateString('vi-VN')}
                 </p>
               )}
@@ -439,18 +440,18 @@ export default function ProfilePage() {
                   const pct = isUnlim ? 100 : limit > 0 ? Math.min(100, (su / limit) * 100) : 0;
                   const remaining = isUnlim ? -1 : Math.max(0, limit - su);
                   return (
-                    <div key={label} className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3">
+                    <div key={label} className="rounded-xl bg-[#f9fafb] border border-[#eaecef] p-3">
                       <div className="flex items-center gap-1.5 mb-1.5">
                         <Icon className={`w-3 h-3 ${color}`} />
-                        <span className="text-[10px] text-neutral-500 font-semibold">{label}</span>
+                        <span className="text-[10px] text-[#9ca3af] font-semibold">{label}</span>
                       </div>
-                      <div className={`font-grotesk font-bold text-base ${remaining === 0 && !isUnlim ? 'text-red-400' : 'text-white'}`}>
+                      <div className={`font-grotesk font-bold text-base ${remaining === 0 && !isUnlim ? 'text-red-400' : 'text-[#111827]'}`}>
                         {isUnlim ? '∞' : remaining}
-                        <span className="text-neutral-600 text-[10px] font-normal ml-1">
+                        <span className="text-[#9ca3af] text-[10px] font-normal ml-1">
                           {isUnlim ? 'lượt' : `/ ${limit} lượt`}
                         </span>
                       </div>
-                      <div className="h-1 mt-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                      <div className="h-1 mt-1.5 bg-[#f3f4f6] rounded-full overflow-hidden">
                         <div className={`h-full rounded-full transition-all ${pct > 80 ? 'bg-red-400' : color.replace('text-', 'bg-')}`}
                           style={{ width: `${pct}%` }} />
                       </div>
@@ -465,14 +466,14 @@ export default function ProfilePage() {
               <div className="flex gap-2 mt-1">
                 <button
                   onClick={() => setUpgradeModalOpen(true)}
-                  className="flex-1 py-2.5 rounded-xl border border-white/10 bg-white/[0.04] text-white text-xs font-bold hover:bg-white/[0.07] transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] text-[#111827] text-xs font-bold hover:bg-[#f3f4f6] transition-colors flex items-center justify-center gap-2"
                 >
-                  <Zap className="w-3.5 h-3.5 text-lime" fill="currentColor" />
+                  <Zap className="w-3.5 h-3.5 text-[#16a34a]" fill="currentColor" />
                   Mua gói PLUS / PRO
                 </button>
                 <button
                   onClick={handleCopyReferralLink}
-                  className="flex-1 py-2.5 rounded-xl border border-lime/25 bg-lime/5 text-lime text-xs font-bold hover:bg-lime/10 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 rounded-xl border border-[#16a34a]/25 bg-[#16a34a]/5 text-[#16a34a] text-xs font-bold hover:bg-[#16a34a]/10 transition-colors flex items-center justify-center gap-2"
                 >
                   {refCopied ? <CheckCheck className="w-3.5 h-3.5" /> : <Gift className="w-3.5 h-3.5" />}
                   {refCopied ? 'Đã copy link' : 'Mời bạn → nhận PLUS'}
@@ -482,10 +483,10 @@ export default function ProfilePage() {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3 py-3">
-            <p className="text-neutral-400 text-sm text-center">Không thể tải thông tin gói AI.</p>
+            <p className="text-[#6b7280] text-sm text-center">Không thể tải thông tin gói AI.</p>
             <button
               onClick={refreshUsage}
-              className="text-xs text-lime hover:text-lime/80 font-semibold flex items-center gap-1 transition-colors"
+              className="text-xs text-[#16a34a] hover:text-[#16a34a]/80 font-semibold flex items-center gap-1 transition-colors"
             >
               <RefreshCw className="w-3 h-3" /> Thử lại
             </button>
@@ -495,24 +496,24 @@ export default function ProfilePage() {
 
       {/* ── Referral / Mời bạn ── */}
       {referralInfo && (
-        <div className="rounded-2xl border border-lime/20 bg-lime/[0.03] p-5 space-y-4">
+        <div className="rounded-2xl border border-[#16a34a]/20 bg-[#16a34a]/[0.03] p-5 space-y-4">
           <div className="flex items-center gap-2">
-            <Gift className="w-4 h-4 text-lime" />
-            <h3 className="text-sm font-bold text-white">Mời bạn bè — nhận gói miễn phí</h3>
+            <Gift className="w-4 h-4 text-[#16a34a]" />
+            <h3 className="text-sm font-bold text-[#111827]">Mời bạn bè — nhận gói miễn phí</h3>
           </div>
 
           {/* Referral link */}
           <div>
-            <p className="text-[11px] text-neutral-500 mb-2">
-              Bạn bè đăng ký qua link → họ nhận <strong className="text-neutral-300">+25 credit</strong>. Bạn tích lũy lượt mời và nhận gói khi đạt mốc.
+            <p className="text-[11px] text-[#9ca3af] mb-2">
+              Bạn bè đăng ký qua link → họ nhận <strong className="text-[#6b7280]">+25 credit</strong>. Bạn tích lũy lượt mời và nhận gói khi đạt mốc.
             </p>
             <div className="flex gap-2 items-center">
-              <div className="flex-1 px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-neutral-300 truncate font-mono">
+              <div className="flex-1 px-3 py-2 rounded-xl bg-[#f9fafb] border border-[#e5e7eb] text-xs text-[#6b7280] truncate font-mono">
                 {window.location.origin}/register?ref={referralInfo.referralCode}
               </div>
               <button
                 onClick={handleCopyReferralLink}
-                className="p-2 rounded-xl bg-lime/10 border border-lime/25 text-lime hover:bg-lime/20 transition-colors flex-shrink-0"
+                className="p-2 rounded-xl bg-[#16a34a]/10 border border-[#16a34a]/25 text-[#16a34a] hover:bg-[#16a34a]/20 transition-colors flex-shrink-0"
                 title="Sao chép link"
               >
                 {refCopied ? <CheckCheck className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -522,63 +523,63 @@ export default function ProfilePage() {
 
           {/* Stats row */}
           <div className="flex gap-3">
-            <div className="flex-1 text-center py-2 rounded-xl bg-white/[0.04] border border-white/[0.07]">
-              <div className="text-xl font-black text-lime">{referralInfo.referralCount}</div>
-              <div className="text-[10px] text-neutral-500 mt-0.5">Đã mời</div>
+            <div className="flex-1 text-center py-2 rounded-xl bg-[#f9fafb] border border-[#eaecef]">
+              <div className="text-xl font-black text-[#16a34a]">{referralInfo.referralCount}</div>
+              <div className="text-[10px] text-[#9ca3af] mt-0.5">Đã mời</div>
             </div>
-            <div className="flex-1 text-center py-2 rounded-xl bg-white/[0.04] border border-white/[0.07]">
-              <div className="text-xl font-black text-lime">{referralInfo.referralsUntilPlus > 0 ? referralInfo.referralsUntilPlus : referralInfo.referralsUntilPro}</div>
-              <div className="text-[10px] text-neutral-500 mt-0.5">{referralInfo.referralsUntilPlus > 0 ? 'Còn đến PLUS' : 'Còn đến PRO'}</div>
+            <div className="flex-1 text-center py-2 rounded-xl bg-[#f9fafb] border border-[#eaecef]">
+              <div className="text-xl font-black text-[#16a34a]">{referralInfo.referralsUntilPlus > 0 ? referralInfo.referralsUntilPlus : referralInfo.referralsUntilPro}</div>
+              <div className="text-[10px] text-[#9ca3af] mt-0.5">{referralInfo.referralsUntilPlus > 0 ? 'Còn đến PLUS' : 'Còn đến PRO'}</div>
             </div>
           </div>
 
           {/* Milestone progress */}
           <div className="space-y-2.5">
             {/* PLUS milestone */}
-            <div className={`rounded-xl p-3 border ${referralInfo.plusUnlocked ? 'border-lime/40 bg-lime/10' : 'border-white/[0.07] bg-white/[0.03]'}`}>
+            <div className={`rounded-xl p-3 border ${referralInfo.plusUnlocked ? 'border-[#16a34a]/40 bg-[#16a34a]/10' : 'border-[#eaecef] bg-[#f9fafb]'}`}>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-1.5">
                   {referralInfo.plusUnlocked
-                    ? <CheckCheck className="w-3.5 h-3.5 text-lime" />
+                    ? <CheckCheck className="w-3.5 h-3.5 text-[#16a34a]" />
                     : <Zap className="w-3.5 h-3.5 text-blue-400" />}
-                  <span className="text-xs font-bold text-white">✦ PLUS — 200 credit/tháng</span>
+                  <span className="text-xs font-bold text-[#111827]">✦ PLUS — 200 credit/tháng</span>
                 </div>
-                <span className={`text-[10px] font-semibold ${referralInfo.plusUnlocked ? 'text-lime' : 'text-neutral-500'}`}>
+                <span className={`text-[10px] font-semibold ${referralInfo.plusUnlocked ? 'text-[#16a34a]' : 'text-[#9ca3af]'}`}>
                   {referralInfo.plusUnlocked ? 'Đã đạt!' : `${referralInfo.referralCount}/5`}
                 </span>
               </div>
-              <div className="h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+              <div className="h-1.5 rounded-full bg-[#f3f4f6] overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-700 ${referralInfo.plusUnlocked ? 'bg-lime' : 'bg-blue-400/70'}`}
+                  className={`h-full rounded-full transition-all duration-700 ${referralInfo.plusUnlocked ? 'bg-[#16a34a]' : 'bg-blue-400/70'}`}
                   style={{ width: `${Math.min(100, (referralInfo.referralCount / 5) * 100)}%` }}
                 />
               </div>
               {!referralInfo.plusUnlocked && (
-                <p className="text-[10px] text-neutral-600 mt-1">Còn {referralInfo.referralsUntilPlus} người nữa</p>
+                <p className="text-[10px] text-[#9ca3af] mt-1">Còn {referralInfo.referralsUntilPlus} người nữa</p>
               )}
             </div>
 
             {/* PRO milestone */}
-            <div className={`rounded-xl p-3 border ${referralInfo.proUnlocked ? 'border-violet-500/40 bg-violet-500/10' : 'border-white/[0.07] bg-white/[0.03]'}`}>
+            <div className={`rounded-xl p-3 border ${referralInfo.proUnlocked ? 'border-violet-500/40 bg-violet-500/10' : 'border-[#eaecef] bg-[#f9fafb]'}`}>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-1.5">
                   {referralInfo.proUnlocked
                     ? <CheckCheck className="w-3.5 h-3.5 text-violet-400" />
                     : <Zap className="w-3.5 h-3.5 text-violet-400" />}
-                  <span className="text-xs font-bold text-white">⚡ PRO — Không giới hạn</span>
+                  <span className="text-xs font-bold text-[#111827]">⚡ PRO — Không giới hạn</span>
                 </div>
-                <span className={`text-[10px] font-semibold ${referralInfo.proUnlocked ? 'text-violet-400' : 'text-neutral-500'}`}>
+                <span className={`text-[10px] font-semibold ${referralInfo.proUnlocked ? 'text-violet-400' : 'text-[#9ca3af]'}`}>
                   {referralInfo.proUnlocked ? 'Đã đạt!' : `${referralInfo.referralCount}/20`}
                 </span>
               </div>
-              <div className="h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+              <div className="h-1.5 rounded-full bg-[#f3f4f6] overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${referralInfo.proUnlocked ? 'bg-violet-400' : 'bg-violet-500/50'}`}
                   style={{ width: `${Math.min(100, (referralInfo.referralCount / 20) * 100)}%` }}
                 />
               </div>
               {!referralInfo.proUnlocked && (
-                <p className="text-[10px] text-neutral-600 mt-1">Còn {referralInfo.referralsUntilPro} người nữa</p>
+                <p className="text-[10px] text-[#9ca3af] mt-1">Còn {referralInfo.referralsUntilPro} người nữa</p>
               )}
             </div>
           </div>
@@ -586,85 +587,85 @@ export default function ProfilePage() {
       )}
 
       {/* ── Quick actions ── */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-white/[0.04]">
-          <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Điều hướng nhanh</h3>
+      <div className="rounded-2xl border border-[#eaecef] bg-[#f9fafb] overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-[#eef0f2]">
+          <h3 className="text-xs font-bold text-[#9ca3af] uppercase tracking-wider">Điều hướng nhanh</h3>
         </div>
         {[
-          { label: 'Lịch sử tập luyện', sub: 'Xem nhật ký', icon: Dumbbell, to: '/dashboard/logbook', color: 'text-lime' },
-          { label: 'Kế hoạch dinh dưỡng', sub: 'Thực đơn & calories', icon: Flame, to: '/dashboard/diet', color: 'text-orange-400' },
-          { label: 'Thử thách', sub: 'Huy hiệu & phần thưởng', icon: Award, to: '/dashboard/challenges', color: 'text-yellow-400' },
-          { label: 'AI Coach', sub: 'Gợi ý cá nhân', icon: Star, to: '/dashboard/coach', color: 'text-blue-400' },
-        ].map(({ label, sub, icon: Icon, to, color }) => (
+          { label: 'Lịch sử tập luyện', sub: 'Xem nhật ký', VIcon: IconTapLuyen, to: '/dashboard/logbook' },
+          { label: 'Kế hoạch dinh dưỡng', sub: 'Thực đơn & calories', VIcon: IconCalo, to: '/dashboard/diet' },
+          { label: 'Thử thách', sub: 'Huy hiệu & phần thưởng', VIcon: IconThuThach, to: '/dashboard/challenges' },
+          { label: 'AI Coach', sub: 'Gợi ý cá nhân', VIcon: IconAICoach, to: '/dashboard/coach' },
+        ].map(({ label, sub, VIcon, to }) => (
           <Link
             key={label}
             to={to}
-            className="flex items-center gap-3 px-5 py-3.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.04] transition-colors group"
+            className="flex items-center gap-3 px-5 py-3.5 border-b border-[#eef0f2] last:border-0 hover:bg-[#f9fafb] transition-colors group"
           >
-            <div className={`w-8 h-8 rounded-xl bg-white/[0.05] flex items-center justify-center shrink-0`}>
-              <Icon className={`w-4 h-4 ${color}`} />
+            <div className="w-8 h-8 shrink-0">
+              <VIcon size={32} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-semibold">{label}</p>
-              <p className="text-neutral-600 text-xs">{sub}</p>
+              <p className="text-[#111827] text-sm font-semibold">{label}</p>
+              <p className="text-[#9ca3af] text-xs">{sub}</p>
             </div>
-            <ChevronRight className="w-4 h-4 text-neutral-700 group-hover:text-white transition-colors shrink-0" />
+            <ChevronRight className="w-4 h-4 text-[#9ca3af] group-hover:text-[#111827] transition-colors shrink-0" />
           </Link>
         ))}
       </div>
 
       {/* ── Cài đặt tài khoản ── */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] overflow-hidden">
+      <div className="rounded-2xl border border-[#eaecef] bg-[#f9fafb] overflow-hidden">
         <button
           onClick={() => setShowAccount(v => !v)}
-          className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/[0.04] transition-colors"
+          className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-[#f9fafb] transition-colors"
         >
-          <div className="w-8 h-8 rounded-xl bg-white/[0.05] flex items-center justify-center shrink-0">
-            <Settings className="w-4 h-4 text-neutral-400" />
+          <div className="w-8 h-8 rounded-xl bg-[#f9fafb] flex items-center justify-center shrink-0">
+            <Settings className="w-4 h-4 text-[#6b7280]" />
           </div>
           <div className="flex-1 min-w-0 text-left">
-            <p className="text-white text-sm font-semibold">Cài đặt tài khoản</p>
-            <p className="text-neutral-600 text-xs">Đổi thông tin, mật khẩu, vô hiệu hoá tài khoản</p>
+            <p className="text-[#111827] text-sm font-semibold">Cài đặt tài khoản</p>
+            <p className="text-[#9ca3af] text-xs">Đổi thông tin, mật khẩu, vô hiệu hoá tài khoản</p>
           </div>
-          <ChevronRight className={`w-4 h-4 text-neutral-700 transition-transform ${showAccount ? 'rotate-90' : ''}`} />
+          <ChevronRight className={`w-4 h-4 text-[#9ca3af] transition-transform ${showAccount ? 'rotate-90' : ''}`} />
         </button>
 
         {showAccount && (
-          <div className="px-5 pb-5 pt-1 space-y-6 border-t border-white/[0.04]">
+          <div className="px-5 pb-5 pt-1 space-y-6 border-t border-[#eef0f2]">
             {/* Thông tin cơ bản */}
             <div className="space-y-3 pt-4">
-              <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+              <h4 className="text-xs font-bold text-[#6b7280] uppercase tracking-wider flex items-center gap-2">
                 <User className="w-3.5 h-3.5" /> Thông tin cơ bản
               </h4>
               <div>
-                <label className="text-[11px] text-neutral-500 mb-1 block">Tên hiển thị</label>
+                <label className="text-[11px] text-[#9ca3af] mb-1 block">Tên hiển thị</label>
                 <input
                   value={pName}
                   onChange={e => setPName(e.target.value)}
-                  className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                  className="w-full rounded-xl bg-[#f9fafb] border border-[#eaecef] px-3 py-2.5 text-sm text-[#111827] outline-none focus:border-[#16a34a]/40"
                   placeholder="Tên của bạn"
                 />
               </div>
               <div>
-                <label className="text-[11px] text-neutral-500 mb-1 block flex items-center gap-1">
+                <label className="text-[11px] text-[#9ca3af] mb-1 block flex items-center gap-1">
                   <Mail className="w-3 h-3" /> Email
                 </label>
                 <input
                   value={pEmail}
                   onChange={e => setPEmail(e.target.value)}
                   type="email"
-                  className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                  className="w-full rounded-xl bg-[#f9fafb] border border-[#eaecef] px-3 py-2.5 text-sm text-[#111827] outline-none focus:border-[#16a34a]/40"
                   placeholder="email@example.com"
                 />
-                <p className="text-[10px] text-neutral-600 mt-1">Đổi email sẽ yêu cầu đăng nhập lại.</p>
+                <p className="text-[10px] text-[#9ca3af] mt-1">Đổi email sẽ yêu cầu đăng nhập lại.</p>
               </div>
               {profileMsg && (
-                <p className={`text-xs ${profileMsg.ok ? 'text-lime' : 'text-red-400'}`}>{profileMsg.text}</p>
+                <p className={`text-xs ${profileMsg.ok ? 'text-[#16a34a]' : 'text-red-400'}`}>{profileMsg.text}</p>
               )}
               <button
                 onClick={handleSaveProfile}
                 disabled={profileBusy}
-                className="w-full py-2.5 rounded-xl bg-lime/10 border border-lime/25 text-lime text-xs font-bold hover:bg-lime/15 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-2.5 rounded-xl bg-[#16a34a]/10 border border-[#16a34a]/25 text-[#16a34a] text-xs font-bold hover:bg-[#16a34a]/15 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {profileBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 Lưu thông tin
@@ -673,7 +674,7 @@ export default function ProfilePage() {
 
             {/* Đổi mật khẩu */}
             <div className="space-y-3">
-              <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+              <h4 className="text-xs font-bold text-[#6b7280] uppercase tracking-wider flex items-center gap-2">
                 <Lock className="w-3.5 h-3.5" /> Đổi mật khẩu
               </h4>
               <input
@@ -681,7 +682,7 @@ export default function ProfilePage() {
                 onChange={e => setCurPw(e.target.value)}
                 type="password"
                 autoComplete="current-password"
-                className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                className="w-full rounded-xl bg-[#f9fafb] border border-[#eaecef] px-3 py-2.5 text-sm text-[#111827] outline-none focus:border-[#16a34a]/40"
                 placeholder="Mật khẩu hiện tại"
               />
               <input
@@ -689,7 +690,7 @@ export default function ProfilePage() {
                 onChange={e => setNewPw(e.target.value)}
                 type="password"
                 autoComplete="new-password"
-                className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                className="w-full rounded-xl bg-[#f9fafb] border border-[#eaecef] px-3 py-2.5 text-sm text-[#111827] outline-none focus:border-[#16a34a]/40"
                 placeholder="Mật khẩu mới (tối thiểu 6 ký tự)"
               />
               <input
@@ -697,16 +698,16 @@ export default function ProfilePage() {
                 onChange={e => setConfirmPw(e.target.value)}
                 type="password"
                 autoComplete="new-password"
-                className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                className="w-full rounded-xl bg-[#f9fafb] border border-[#eaecef] px-3 py-2.5 text-sm text-[#111827] outline-none focus:border-[#16a34a]/40"
                 placeholder="Xác nhận mật khẩu mới"
               />
               {pwMsg && (
-                <p className={`text-xs ${pwMsg.ok ? 'text-lime' : 'text-red-400'}`}>{pwMsg.text}</p>
+                <p className={`text-xs ${pwMsg.ok ? 'text-[#16a34a]' : 'text-red-400'}`}>{pwMsg.text}</p>
               )}
               <button
                 onClick={handleChangePassword}
                 disabled={pwBusy || !curPw || !newPw}
-                className="w-full py-2.5 rounded-xl bg-white/[0.05] border border-white/10 text-white text-xs font-bold hover:bg-white/[0.08] transition-colors flex items-center justify-center gap-2 disabled:opacity-40"
+                className="w-full py-2.5 rounded-xl bg-[#f9fafb] border border-[#e5e7eb] text-[#111827] text-xs font-bold hover:bg-[#f3f4f6] transition-colors flex items-center justify-center gap-2 disabled:opacity-40"
               >
                 {pwBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
                 Cập nhật mật khẩu
@@ -734,14 +735,14 @@ export default function ProfilePage() {
                     <button
                       onClick={handleDeactivate}
                       disabled={deactivateBusy}
-                      className="flex-1 py-2 rounded-lg bg-red-500/80 text-white text-xs font-bold hover:bg-red-500 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      className="flex-1 py-2 rounded-lg bg-red-500/80 text-[#111827] text-xs font-bold hover:bg-red-500 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                     >
                       {deactivateBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                       Xác nhận
                     </button>
                     <button
                       onClick={() => setDeactivateConfirm(false)}
-                      className="flex-1 py-2 rounded-lg bg-white/[0.05] border border-white/10 text-neutral-300 text-xs font-bold hover:bg-white/[0.08] transition-colors flex items-center justify-center gap-1.5"
+                      className="flex-1 py-2 rounded-lg bg-[#f9fafb] border border-[#e5e7eb] text-[#6b7280] text-xs font-bold hover:bg-[#f3f4f6] transition-colors flex items-center justify-center gap-1.5"
                     >
                       <X className="w-3.5 h-3.5" /> Huỷ
                     </button>

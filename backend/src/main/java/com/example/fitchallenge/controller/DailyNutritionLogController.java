@@ -58,4 +58,30 @@ public class DailyNutritionLogController {
 
         return ResponseEntity.ok(new NotificationResponse(true, "Meal logged successfully"));
     }
+
+    @PostMapping("/log-water")
+    public ResponseEntity<NotificationResponse> logWater(
+            @RequestHeader(value = "userId", required = false) Long headerUserId,
+            @RequestBody Map<String, Object> request) {
+        Long userId = authUser.resolve(headerUserId);
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+
+        BigDecimal liters = new BigDecimal(request.getOrDefault("liters", "0.25").toString());
+
+        DailyNutritionLog log = DailyNutritionLog.builder()
+                .user(user)
+                .trackingDate(LocalDate.now())
+                .mealName("Uống nước")
+                .mealType("WATER")
+                .calories(BigDecimal.ZERO)
+                .protein(BigDecimal.ZERO)
+                .carbs(BigDecimal.ZERO)
+                .fat(BigDecimal.ZERO)
+                .cost(0)
+                .waterLiters(liters)
+                .build();
+
+        logRepository.save(log);
+        return ResponseEntity.ok(new NotificationResponse(true, "Đã ghi " + liters + "L nước"));
+    }
 }

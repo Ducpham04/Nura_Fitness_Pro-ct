@@ -1093,3 +1093,47 @@ html.lenis, html.lenis body { height: auto; }
     transform: none;
   }
 }
+
+/* ── HealthTree animations ── */
+@keyframes treeSway {
+  0%, 100% { transform: rotate(-1.5deg); }
+  50%       { transform: rotate(1.5deg);  }
+}
+@keyframes leafPulse {
+  0%, 100% { opacity: 0.9; }
+  50%       { opacity: 0.5; }
+}
+@keyframes leafDim {
+  0%, 100% { opacity: 0.35; }
+  50%       { opacity: 0.2;  }
+}
+@keyframes dropFloat {
+  0%, 100% { transform: translateY(0);   }
+  50%       { transform: translateY(-5px); }
+}
+@keyframes dropDim {
+  0%, 100% { transform: translateY(0); opacity: 0.3; }
+  50%       { transform: translateY(-3px); opacity: 0.18; }
+}
+@keyframes flowerGlow {
+  0%, 100% { opacity: 0.95; }
+  50%       { opacity: 0.55; }
+}
+@keyframes flowerDim {
+  0%, 100% { opacity: 0.28; }
+  50%       { opacity: 0.14; }
+}
+/* ── Mascot animations ── */
+@keyframes mascotBob {
+  0%, 100% { transform: translateY(0);    }
+  50%       { transform: translateY(-4px); }
+}
+@keyframes mascotWave {
+  0%, 100% { transform: rotate(0deg);   }
+  25%       { transform: rotate(-35deg); }
+  75%       { transform: rotate(-12deg); }
+}
+@keyframes mascotBlink {
+  0%, 88%, 100% { transform: scaleY(1);    }
+  94%            { transform: scaleY(0.08); }
+}
