@@ -347,9 +347,19 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="mt-3 grid grid-cols-7 gap-1">
-                {Array.from({ length: 7 }, (_, i) => (
-                  <span key={i} className={`h-1.5 rounded-full ${i < Math.min(6, stats.workoutsThisWeek) ? 'bg-teal-400' : 'bg-white/25'}`} />
-                ))}
+                {Array.from({ length: 7 }, (_, i) => {
+                  const filled = i < Math.min(7, stats.workoutsThisWeek);
+                  return (
+                    <motion.span
+                      key={i}
+                      initial={{ scaleX: 0, opacity: 0.3 }}
+                      animate={{ scaleX: 1, opacity: 1 }}
+                      transition={{ delay: i * 0.09, duration: 0.4, ease: 'easeOut' }}
+                      style={{ transformOrigin: 'left' }}
+                      className={`h-1.5 rounded-full ${filled ? 'bg-teal-400' : 'bg-white/25'}`}
+                    />
+                  );
+                })}
               </div>
             </div>
           </div>

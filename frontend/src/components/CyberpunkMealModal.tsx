@@ -70,7 +70,7 @@ export default function CyberpunkMealModal({ onClose, onSuccess, defaultBudget, 
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center overflow-y-auto p-4 animate-fade-in">
       <div className="relative w-full max-w-2xl max-h-[90vh] bg-white rounded-[2.5rem] border border-slate-200 overflow-y-auto shadow-2xl animate-slide-up">
 
         <div className="p-8 border-b border-slate-100 flex items-center justify-between">
@@ -88,7 +88,7 @@ export default function CyberpunkMealModal({ onClose, onSuccess, defaultBudget, 
           </button>
         </div>
 
-        <div className="p-8 space-y-8">
+        <div className="p-8 pb-28 space-y-8">
           {loading ? (
             <div className="py-16 flex flex-col items-center justify-center gap-8">
               <div className="relative w-20 h-20">
