@@ -621,7 +621,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .fatConsumed(fatConsumed)
                 .fatGoal(caloriesGoal.multiply(new BigDecimal("0.25"))
                         .divide(new BigDecimal("9"), RoundingMode.HALF_UP))
-                .waterConsumed(BigDecimal.valueOf(1.2))
+                .waterConsumed(null)   // chưa có tính năng ghi nước → không bịa số
                 .waterGoal(waterGoal)
                 .budgetRemaining(budgetLimit.subtract(budgetSpent))
                 .budgetLimit(budgetLimit)
