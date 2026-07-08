@@ -27,9 +27,9 @@ const GOAL_LABELS: Record<string, string> = {
 
 function recoveryLabel(rec?: string) {
   const r = (rec || '').toLowerCase();
-  if (r === 'rest') return { label: 'Nên nghỉ', color: 'text-orange-400' };
-  if (r === 'light') return { label: 'Tập nhẹ', color: 'text-blue-400' };
-  return { label: 'Sẵn sàng', color: 'text-lime' };
+  if (r === 'rest') return { label: 'Nên nghỉ', color: 'text-orange-600' };
+  if (r === 'light') return { label: 'Tập nhẹ', color: 'text-blue-600' };
+  return { label: 'Sẵn sàng', color: 'text-teal-700' };
 }
 
 export default function AICoachPage() {
@@ -164,24 +164,25 @@ export default function AICoachPage() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto flex flex-col gap-5 animate-fade-in lg:h-[calc(100vh-9rem)]">
+    <div className="max-w-5xl mx-auto flex flex-col gap-5 animate-fade-in text-slate-900 lg:h-[calc(100vh-9rem)]">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-400/10 flex items-center justify-center shadow-[0_0_20px_rgba(0,122,255,0.2)]">
-            <Brain className="w-6 h-6 text-blue-400" />
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center">
+            <Brain className="w-6 h-6 text-teal-700" />
           </div>
           <div>
-            <h1 className="font-grotesk font-bold italic uppercase text-2xl text-white tracking-tight leading-none">AI Coach</h1>
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse" />
-              <span className="text-lime text-[10px] font-bold uppercase tracking-widest">Trực tuyến • Trợ lý cá nhân</span>
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-teal-700">Trợ lý cá nhân</p>
+            <h1 className="font-grotesk font-bold text-2xl text-slate-950 tracking-tight leading-none">AI Coach</h1>
+            <div className="flex items-center gap-1.5 mt-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
+              <span className="text-teal-700 text-[10px] font-bold uppercase tracking-widest">Trực tuyến</span>
             </div>
           </div>
         </div>
         {messages.length > 1 && (
           <button onClick={clearChat}
-            className="glass rounded-2xl px-4 py-2 border border-white/5 text-neutral-400 hover:text-red-400 transition-all flex items-center gap-2 text-sm font-grotesk font-bold">
+            className="rounded-xl px-4 py-2 border border-slate-200 bg-white text-slate-500 hover:text-red-500 hover:border-red-200 transition-all flex items-center gap-2 text-sm font-grotesk font-bold">
             <Trash2 className="w-4 h-4" /> Xóa hội thoại
           </button>
         )}
@@ -189,23 +190,23 @@ export default function AICoachPage() {
 
       <div className="flex-1 flex flex-col lg:flex-row gap-5 min-h-0 lg:overflow-hidden">
         {/* Khu chat */}
-        <div className="glass rounded-[2rem] border border-white/5 flex flex-col overflow-hidden flex-1 min-h-0 h-[60vh] lg:h-auto">
+        <div className="rounded-[18px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)] flex flex-col overflow-hidden flex-1 min-h-0 h-[60vh] lg:h-auto">
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-hide min-h-0">
             {messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[82%] rounded-2xl px-5 py-4 ${
                   msg.role === 'user'
-                    ? 'bg-lime text-obsidian font-medium'
-                    : 'bg-white/[0.06] border border-white/10 text-neutral-200'
+                    ? 'bg-teal-700 text-white font-medium'
+                    : 'bg-slate-50 border border-slate-200 text-slate-700'
                 }`}>
                   {msg.type === 'analysis' && (
-                    <div className="flex items-center gap-2 mb-2 text-blue-400">
+                    <div className="flex items-center gap-2 mb-2 text-blue-600">
                       <Sparkles className="w-3.5 h-3.5" />
                       <span className="text-[10px] font-bold uppercase tracking-widest">Phân tích từ Coach</span>
                     </div>
                   )}
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                  <div className={`text-[11px] mt-2 uppercase font-bold tracking-widest opacity-40 ${msg.role === 'user' ? 'text-obsidian' : 'text-neutral-500'}`}>
+                  <div className={`text-[11px] mt-2 uppercase font-bold tracking-widest ${msg.role === 'user' ? 'text-teal-100/80' : 'text-slate-400'}`}>
                     {msg.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
@@ -213,21 +214,21 @@ export default function AICoachPage() {
             ))}
             {isTyping && (
               <div className="flex justify-start">
-                <div className="bg-white/[0.06] border border-white/10 rounded-2xl p-4 flex gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
               </div>
             )}
           </div>
 
           {/* Input */}
-          <div className="p-5 bg-white/[0.04] border-t border-white/5">
+          <div className="p-5 bg-slate-50 border-t border-slate-200">
             <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-2 scrollbar-hide">
               {suggestions.map(s => (
                 <button key={s} onClick={() => send(s)}
-                  className="whitespace-nowrap glass rounded-xl px-3.5 py-2 border border-white/5 text-[11px] font-semibold text-neutral-400 hover:text-white hover:border-lime/30 transition-all">
+                  className="whitespace-nowrap rounded-xl px-3.5 py-2 border border-slate-200 bg-white text-[11px] font-semibold text-slate-600 hover:text-teal-800 hover:border-teal-200 transition-all">
                   {s}
                 </button>
               ))}
@@ -238,11 +239,11 @@ export default function AICoachPage() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && send()}
                 placeholder="Hỏi Coach bất cứ điều gì..."
-                className="w-full bg-obsidian border border-white/10 rounded-[1.5rem] pl-5 pr-16 py-4 text-white placeholder-neutral-600 focus:outline-none focus:border-lime/30 transition-all"
+                className="w-full bg-white border border-slate-200 rounded-2xl pl-5 pr-16 py-4 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-teal-300 transition-all"
               />
               <button onClick={() => send()} disabled={!input.trim() || isTyping}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 bg-lime p-2.5 rounded-xl shadow-[0_0_20px_rgba(204,255,0,0.3)] hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:hover:scale-100">
-                <Send className="w-5 h-5 text-obsidian" />
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 bg-teal-700 p-2.5 rounded-xl hover:bg-teal-800 active:scale-95 transition-all disabled:opacity-40">
+                <Send className="w-5 h-5 text-white" />
               </button>
             </div>
           </div>
@@ -250,9 +251,9 @@ export default function AICoachPage() {
 
         {/* Sidebar — DỮ LIỆU THẬT */}
         <div className="w-full lg:w-72 flex flex-col gap-5">
-          <div className="glass rounded-[2rem] p-6 border border-white/5">
-            <h3 className="font-grotesk font-bold text-white text-base mb-3 flex items-center gap-2.5">
-              <Zap className="w-4 h-4 text-lime" /> Chỉ số của bạn
+          <div className="rounded-[18px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)] p-6">
+            <h3 className="font-grotesk font-bold text-slate-950 text-base mb-3 flex items-center gap-2.5">
+              <Zap className="w-4 h-4 text-teal-700" /> Chỉ số của bạn
             </h3>
             {/* AI credit badge */}
             {usage && (
@@ -266,55 +267,55 @@ export default function AICoachPage() {
             )}
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-neutral-500 text-[10px] uppercase font-bold tracking-widest mb-1">Cấp độ</div>
-                <div className="font-grotesk font-bold text-xl text-lime flex items-center gap-1">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-1">Cấp độ</div>
+                <div className="font-grotesk font-bold text-xl text-teal-700 flex items-center gap-1">
                   <Star className="w-4 h-4" fill="currentColor" /> {summary?.level ?? 1}
                 </div>
               </div>
-              <div>
-                <div className="text-neutral-500 text-[10px] uppercase font-bold tracking-widest mb-1">Chuỗi ngày</div>
-                <div className="font-grotesk font-bold text-xl text-orange-400 flex items-center gap-1">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-1">Chuỗi ngày</div>
+                <div className="font-grotesk font-bold text-xl text-orange-600 flex items-center gap-1">
                   <Flame className="w-4 h-4" fill="currentColor" /> {summary?.streakDays ?? 0}
                 </div>
               </div>
-              <div>
-                <div className="text-neutral-500 text-[10px] uppercase font-bold tracking-widest mb-1">Kcal đốt</div>
-                <div className="font-grotesk font-bold text-xl text-white">{stats?.caloriesBurned ?? 0}</div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-1">Kcal đốt</div>
+                <div className="font-grotesk font-bold text-xl text-slate-950">{stats?.caloriesBurned ?? 0}</div>
               </div>
-              <div>
-                <div className="text-neutral-500 text-[10px] uppercase font-bold tracking-widest mb-1">Phục hồi</div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-1">Phục hồi</div>
                 <div className={`font-grotesk font-bold text-xl ${rec.color}`}>{rec.label}</div>
               </div>
             </div>
             {goalText && (
-              <div className="mt-5 pt-4 border-t border-white/5">
-                <div className="text-neutral-500 text-[10px] uppercase font-bold tracking-widest mb-1">Mục tiêu</div>
-                <div className="font-grotesk font-bold text-base text-white">{goalText}</div>
+              <div className="mt-5 pt-4 border-t border-slate-100">
+                <div className="text-slate-500 text-[10px] uppercase font-bold tracking-widest mb-1">Mục tiêu</div>
+                <div className="font-grotesk font-bold text-base text-slate-950">{goalText}</div>
               </div>
             )}
           </div>
 
           {/* Mục tiêu kế tiếp — buổi tập thật hôm nay */}
-          <div className="glass rounded-[2rem] p-6 border border-white/5 flex-1">
-            <h3 className="font-grotesk font-bold text-white text-base mb-3 flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4 text-blue-400" /> Việc cần làm
+          <div className="rounded-[18px] border border-teal-100 bg-[linear-gradient(135deg,#f0fdfa,#ffffff_62%,#fff7ed)] p-6 flex-1">
+            <h3 className="font-grotesk font-bold text-slate-950 text-base mb-3 flex items-center gap-2.5">
+              <Sparkles className="w-4 h-4 text-blue-600" /> Việc cần làm
             </h3>
             {nextWorkout ? (
               <>
-                <p className="text-neutral-400 text-sm leading-relaxed mb-5">
-                  Buổi tập hôm nay: <span className="text-white font-semibold">{nextWorkout.name || (nextWorkout as { title?: string }).title || 'Buổi tập của bạn'}</span>
+                <p className="text-slate-600 text-sm leading-relaxed mb-5">
+                  Buổi tập hôm nay: <span className="text-slate-950 font-semibold">{nextWorkout.name || (nextWorkout as { title?: string }).title || 'Buổi tập của bạn'}</span>
                 </p>
-                <Link to="/dashboard/workout" className="w-full btn-lime py-2.5 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+                <Link to="/dashboard/workout" className="w-full rounded-xl bg-teal-700 text-white hover:bg-teal-800 transition-colors py-2.5 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
                   <Dumbbell className="w-4 h-4" /> Vào tập ngay
                 </Link>
               </>
             ) : (
               <>
-                <p className="text-neutral-400 text-sm leading-relaxed mb-5">
+                <p className="text-slate-600 text-sm leading-relaxed mb-5">
                   Chưa có buổi tập cho hôm nay. Tạo kế hoạch để bắt đầu hành trình của bạn.
                 </p>
-                <Link to="/dashboard/workout" className="w-full btn-lime py-2.5 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+                <Link to="/dashboard/workout" className="w-full rounded-xl bg-teal-700 text-white hover:bg-teal-800 transition-colors py-2.5 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
                   Tạo kế hoạch <ChevronRight className="w-4 h-4" />
                 </Link>
               </>

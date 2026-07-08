@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +34,9 @@ public class PersonalizedNutritionPlanService {
 
     @Autowired
     private PlanVersionHistoryRepository versionHistoryRepository;
+
+    @Autowired
+    private DailyNutritionLogRepository dailyNutritionLogRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -202,7 +206,30 @@ public class PersonalizedNutritionPlanService {
             throw new RuntimeException("Forbidden: Meal does not belong to user");
         }
 
+        boolean wasAlreadyEaten = Boolean.TRUE.equals(meal.getWasEaten());
         mealDetailRepository.updateUserFeedback(mealDetailId, wasEaten, rating, feedback);
+
+        // Khi bữa được đánh dấu "đã ăn" lần đầu (false->true), ghi kcal thật vào DailyNutritionLog
+        // để lịch tuân thủ dinh dưỡng có dữ liệu theo ngày. Chỉ ghi ở lần chuyển để tránh cộng trùng.
+        if (Boolean.TRUE.equals(wasEaten) && !wasAlreadyEaten) {
+            String mealName = meal.getDish() != null ? meal.getDish().getDishName() : null;
+            String mealType = meal.getMealType() != null ? meal.getMealType().name() : "OTHER";
+            DailyNutritionLog log = DailyNutritionLog.builder()
+                    .user(meal.getPersonalizedPlan().getUser())
+                    .trackingDate(LocalDate.now())
+                    .mealName(mealName)
+                    .mealType(mealType)
+                    .calories(toBigDecimal(meal.getTotalCalories()))
+                    .protein(toBigDecimal(meal.getTotalProtein()))
+                    .carbs(toBigDecimal(meal.getTotalCarbs()))
+                    .fat(toBigDecimal(meal.getTotalFat()))
+                    .build();
+            dailyNutritionLogRepository.save(log);
+        }
+    }
+
+    private BigDecimal toBigDecimal(Double d) {
+        return d == null ? BigDecimal.ZERO : BigDecimal.valueOf(d);
     }
 
     /**

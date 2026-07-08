@@ -84,6 +84,14 @@ export interface DashboardData {
     color: string;
   }[];
   aiSuggestion: string | null;
+  weeklyTrend: { label: string; date: string; calories: number }[];
+  mealsLogged: {
+    total: number;
+    goal: number;
+    byType: { type: string; done: number; goal: number }[];
+  } | null;
+  achievements: { title: string; desc: string; icon: string }[];
+  weeklyGoals: { label: string; progress: string; done: boolean }[];
 }
 
 export interface WorkoutItem {
@@ -121,6 +129,20 @@ interface FullProfileResponse {
   weeklyStats?: {
     totalCaloriesBurned?: number;
     totalMinutes?: number;
+  };
+  achievements?: {
+    name?: string;
+    icon?: string;
+    color?: string;
+  }[];
+  goals?: {
+    dailyCalories?: number;
+    protein?: number;
+    carbs?: number;
+    fat?: number;
+    weeklyWorkouts?: number;
+    water?: number;
+    [key: string]: unknown;
   };
 }
 
@@ -429,6 +451,40 @@ class UserService {
             },
             budgetBreakdown: data.budgetBreakdown || [],
             aiSuggestion: data.aiSuggestion || null,
+            weeklyTrend: Array.isArray(data.weeklyTrend)
+              ? data.weeklyTrend.map((p: any) => ({
+                  label: String(p.label ?? ''),
+                  date: String(p.date ?? ''),
+                  calories: Number(p.calories ?? 0),
+                }))
+              : [],
+            mealsLogged: data.mealsLogged
+              ? {
+                  total: Number(data.mealsLogged.total ?? 0),
+                  goal: Number(data.mealsLogged.goal ?? 0),
+                  byType: Array.isArray(data.mealsLogged.byType)
+                    ? data.mealsLogged.byType.map((m: any) => ({
+                        type: String(m.type ?? ''),
+                        done: Number(m.done ?? 0),
+                        goal: Number(m.goal ?? 0),
+                      }))
+                    : [],
+                }
+              : null,
+            achievements: Array.isArray(data.achievements)
+              ? data.achievements.map((a: any) => ({
+                  title: String(a.title ?? ''),
+                  desc: String(a.desc ?? ''),
+                  icon: String(a.icon ?? ''),
+                }))
+              : [],
+            weeklyGoals: Array.isArray(data.weeklyGoals)
+              ? data.weeklyGoals.map((g: any) => ({
+                  label: String(g.label ?? ''),
+                  progress: String(g.progress ?? ''),
+                  done: Boolean(g.done),
+                }))
+              : [],
           }
         };
       }

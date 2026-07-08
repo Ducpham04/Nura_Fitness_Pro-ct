@@ -12,7 +12,7 @@ const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const BodyAssessment = lazy(() => import('./pages/BodyAssessment'));
 const HomePage = lazy(() => import('./pages/HomePage'));
-const JourneyPage = lazy(() => import('./pages/JourneyPage'));
+// const JourneyPage = lazy(() => import('./pages/JourneyPage')); // Tạm ẩn trang Hành trình
 const WorkoutTab = lazy(() => import('./components/WorkoutTab'));
 const DietTab = lazy(() => import('./components/DietTab'));
 const ChallengesView = lazy(() => import('./components/ChallengesView'));
@@ -91,7 +91,8 @@ function AppContent() {
           <DashboardLayout />
         }>
           <Route index element={<HomePage />} />
-          <Route path="journey" element={<JourneyPage />} />
+          {/* Tạm ẩn trang Hành trình
+          <Route path="journey" element={<JourneyPage />} /> */}
           <Route path="workout" element={<WorkoutTab />} />
           <Route path="diet" element={<DietTab />} />
           <Route path="challenges" element={<ChallengesView />} />

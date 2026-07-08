@@ -36,6 +36,14 @@ export interface MealIngredient {
   fromInventory?: boolean;
 }
 
+export interface DailyNutritionPoint {
+  date: string;      // YYYY-MM-DD
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
 export interface DailyMealPlan {
   day: number;
   dayName: string;
@@ -69,7 +77,12 @@ export interface ShoppingItem {
 
 function unwrap<T>(response: ApiResponse<any>): ApiResponse<T> {
   if (response.success && response.data) {
-    return { success: true, data: (response.data as any).data ?? response.data };
+    const body = response.data as any;
+    // Nếu body là response bọc ({success, data}) thì lấy đúng data bên trong
+    // (kể cả khi data = null, vd "No active plan") — KHÔNG fallback về cả body,
+    // tránh trả object truthy khiến FE tưởng có plan.
+    const inner = body && typeof body === 'object' && 'success' in body ? body.data : body;
+    return { success: true, data: inner };
   }
   return { success: false, error: response.error };
 }
@@ -86,6 +99,14 @@ class NutritionService {
 
   async getDayMeals(planId: number, dayNumber: number): Promise<ApiResponse<any[]>> {
     return unwrap(await apiClient.get<any>(`/personalized-plans/${planId}/day/${dayNumber}`));
+  }
+
+  // Lịch tuân thủ dinh dưỡng: kcal + macro gộp theo từng ngày (from..to = YYYY-MM-DD)
+  async getDailyNutrition(userId: number, from: string, to: string): Promise<DailyNutritionPoint[]> {
+    const res = await apiClient.get<any>(`/daily-nutrition/${userId}/daily?from=${from}&to=${to}`);
+    if (!res.success || !res.data) return [];
+    const data = (res.data as any).data || res.data;
+    return Array.isArray(data) ? data : [];
   }
 
   async updateMealFeedback(

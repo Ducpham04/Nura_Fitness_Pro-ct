@@ -4,7 +4,7 @@ import TrainingView from './TrainingView';
 // + tạo kế hoạch AI đều nằm trong TrainingView (bỏ tab "Kế Hoạch Tập" trùng lặp).
 export default function WorkoutTab() {
   return (
-    <div className="w-full min-h-full text-white pt-2">
+    <div className="mx-auto w-full max-w-3xl px-0 pb-6 pt-1 text-[#111827] sm:px-2">
       <TrainingView />
     </div>
   );

@@ -197,8 +197,10 @@ class TrainingService {
 
   // Get daily logs
   async getDailyLogs(userId: number): Promise<DailyTrainingLog[]> {
-    const response = await apiClient.get<DailyTrainingLog[]>(API_ENDPOINTS.TRAINING.LOG(userId));
-    return response.success ? response.data || [] : [];
+    const response = await apiClient.get<any>(API_ENDPOINTS.TRAINING.LOG(userId));
+    if (!response.success || !response.data) return [];
+    const data = (response.data as any).data || response.data;
+    return Array.isArray(data) ? data : [];
   }
 
   async getDailyLogsByPlan(planId: number, userId?: number): Promise<DailyTrainingLog[]> {

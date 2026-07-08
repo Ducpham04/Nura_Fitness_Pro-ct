@@ -3,9 +3,10 @@ import {
   LogOut, User, Target, Award, Flame, Dumbbell,
   TrendingUp, Scale, Loader2, ChevronRight,
   Edit3, Check, Star, Zap,
-  Activity, Sparkles, ArrowUpRight,
+  Sparkles, ArrowUpRight,
   Settings, Lock, Mail, Save, ShieldAlert, Trash2, X,
   Gift, Copy, CheckCheck, Camera, Share2, RefreshCw, Repeat2,
+  Calendar, Ruler, Percent, Trophy, Crown, Apple,
 } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -28,28 +29,33 @@ const LEVEL_LABELS: Record<string, string> = {
   advanced: 'Nâng cao',
 };
 
-function StatCard({ label, value, sub, icon: Icon, color }: {
-  label: string; value: string | number; sub?: string;
-  icon: any; color: string;
+// Tile chỉ số cơ thể (mockup: Cân nặng / Chiều cao / Body fat / BMI)
+function MetricTile({ label, value, delta, icon: Icon, tint }: {
+  label: string; value: string; delta?: string; icon: any; tint: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 flex flex-col items-center gap-1 text-center">
-      <Icon className={`w-4 h-4 ${color} mb-1`} />
-      <div className="font-grotesk font-bold text-lg text-white leading-none">{value}</div>
-      {sub && <div className="text-neutral-600 text-[11px]">{sub}</div>}
-      <div className="text-neutral-500 text-[10px] uppercase tracking-wider mt-0.5">{label}</div>
+    <div className="rounded-[16px] bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.05)] border border-slate-100">
+      <span className={`grid h-8 w-8 place-items-center rounded-[10px] ${tint} mb-2`}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="font-grotesk font-bold text-lg text-slate-900 leading-none">{value}</div>
+      <div className="text-slate-500 text-[11px] mt-1">{label}</div>
+      {delta && <div className="text-teal-600 text-[10px] font-semibold mt-0.5">{delta}</div>}
     </div>
   );
 }
 
-function InfoRow({ label, value, editable = false }: { label: string; value: string | number; editable?: boolean }) {
+// Tile thành tựu (mockup: Kiên trì / Đốt cháy / Nâng level / Ăn uống tốt)
+function AchievementTile({ label, sub, icon: Icon, tint, active = true }: {
+  label: string; sub: string; icon: any; tint: string; active?: boolean;
+}) {
   return (
-    <div className="flex items-center justify-between py-3 border-b border-white/[0.04] last:border-0">
-      <span className="text-neutral-500 text-sm">{label}</span>
-      <div className="flex items-center gap-2">
-        <span className="text-white text-sm font-semibold">{value || '—'}</span>
-        {editable && <Edit3 className="w-3 h-3 text-neutral-700" />}
-      </div>
+    <div className={`rounded-[16px] p-3 text-center border ${active ? 'bg-white border-slate-100 shadow-[0_10px_24px_rgba(15,23,42,0.05)]' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
+      <span className={`mx-auto grid h-11 w-11 place-items-center rounded-full ${tint} mb-2`}>
+        <Icon className="h-5 w-5" />
+      </span>
+      <div className="text-[12px] font-bold text-slate-800 leading-tight">{label}</div>
+      <div className="text-slate-400 text-[10px] mt-0.5 leading-tight">{sub}</div>
     </div>
   );
 }
@@ -182,7 +188,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="h-64 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-lime animate-spin" />
+        <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
       </div>
     );
   }
@@ -193,68 +199,89 @@ export default function ProfilePage() {
   const streak = dashData?.userSummary?.streakDays || 0;
   const exp = dashData?.userSummary?.currentExp || 0;
   const nextExp = dashData?.userSummary?.nextLevelExp || 100;
-  const workoutsWeek = dashData?.stats?.workoutsThisWeek || 0;
   const caloriesBurned = dashData?.stats?.caloriesBurned || 0;
   const completedToday = dashData?.stats?.completedWorkoutsToday || 0;
   const goalLabel = GOAL_LABELS[bodyProfile?.goal || ''] || bodyProfile?.goal || '—';
   const levelLabel = LEVEL_LABELS[bodyProfile?.experienceLevel || ''] || bodyProfile?.experienceLevel || '—';
+  const isPro = usage?.packageCode === 'PRO' || usage?.packageCode === 'PLUS';
+  // Tổng ngày hoạt động: dùng số thật nếu BE có, không thì fallback streak
+  const totalActiveDays = (dashData?.userSummary as any)?.totalActiveDays ?? (dashData?.stats as any)?.totalActiveDays ?? streak;
+  // Thành viên từ: từ createdAt nếu có
+  const createdAt = (user as any)?.createdAt as string | undefined;
+  const memberSince = createdAt
+    ? new Date(createdAt).toLocaleDateString('vi-VN', { month: '2-digit', year: 'numeric' })
+    : null;
+  const bodyFat = bodyProfile?.bodyFat ?? bodyProfile?.bodyFatPercentage;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4 py-4 animate-fade-in">
+    <div className="mx-auto w-full max-w-[460px] space-y-4 pb-24 pt-1 sm:px-2 text-[#111827]">
 
-      {/* ── Hero card ── */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-6">
-        <div className="flex items-center gap-4">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between px-1">
+        <h1 className="font-grotesk text-[22px] font-bold tracking-tight text-slate-900">Hồ sơ</h1>
+        <button
+          onClick={() => setShowAccount(v => !v)}
+          className="grid h-9 w-9 place-items-center rounded-full bg-white text-slate-500 shadow-[0_6px_16px_rgba(15,23,42,0.06)] hover:text-teal-600 transition-colors"
+          title="Cài đặt tài khoản"
+        >
+          <Settings className="h-[18px] w-[18px]" />
+        </button>
+      </div>
+
+      {/* ── Profile card ── */}
+      <div className="rounded-[20px] bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
+        <div className="flex items-center gap-3.5">
           {/* Avatar — clickable upload */}
           <div className="relative shrink-0 group cursor-pointer"
             onMouseEnter={() => setAvatarHover(true)}
             onMouseLeave={() => setAvatarHover(false)}>
             <label htmlFor="avatar-upload" className="cursor-pointer block">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shadow-lg">
+              <div className="w-[60px] h-[60px] rounded-2xl overflow-hidden ring-1 ring-slate-200 shadow-sm">
                 {avatarUrl
                   ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-                  : <div className="w-full h-full bg-gradient-to-br from-lime to-emerald-500 flex items-center justify-center">
-                      <span className="font-grotesk font-bold text-obsidian text-2xl">{initial}</span>
+                  : <div className="w-full h-full bg-gradient-to-br from-teal-400 to-emerald-500 flex items-center justify-center">
+                      <span className="font-grotesk font-bold text-white text-2xl">{initial}</span>
                     </div>
                 }
               </div>
-              {/* Hover overlay */}
-              <div className={`absolute inset-0 rounded-2xl bg-black/50 flex items-center justify-center transition-opacity ${avatarHover ? 'opacity-100' : 'opacity-0'}`}>
+              <div className={`absolute inset-0 rounded-2xl bg-black/45 flex items-center justify-center transition-opacity ${avatarHover ? 'opacity-100' : 'opacity-0'}`}>
                 <Camera className="w-5 h-5 text-white" />
               </div>
             </label>
             <input id="avatar-upload" type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg bg-lime flex items-center justify-center border-2 border-[#0f1014]">
-              <Zap className="w-2.5 h-2.5 text-black" fill="currentColor" />
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-lg bg-teal-500 flex items-center justify-center ring-2 ring-white">
+              <Zap className="w-2.5 h-2.5 text-white" fill="currentColor" />
             </div>
           </div>
 
-          {/* Name + level */}
+          {/* Name + level + badges */}
           <div className="flex-1 min-w-0">
-            <h2 className="font-grotesk font-bold italic uppercase text-xl text-white truncate leading-none tracking-tight">{userName}</h2>
-            <p className="text-neutral-500 text-xs truncate mt-0.5">{user?.email}</p>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-lime/15 text-lime border border-lime/25">
-                Lv.{level} · {levelLabel}
+            <div className="flex items-center gap-2">
+              <h2 className="font-grotesk font-bold text-lg text-slate-900 truncate leading-tight">{userName}</h2>
+              <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
+                Lv.{level}
               </span>
-              {streak > 0 && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-400/10 text-orange-400 border border-orange-400/20">
-                  🔥 {streak} ngày streak
+              {isPro && (
+                <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+                  <Crown className="w-3 h-3" /> {usage?.packageCode}
                 </span>
               )}
             </div>
+            <p className="text-slate-500 text-[13px] mt-1 truncate">
+              Mục tiêu: <span className="font-semibold text-slate-700">{goalLabel}{levelLabel !== '—' ? ` · ${levelLabel}` : ''}</span>
+            </p>
+            {memberSince && (
+              <p className="text-slate-400 text-[11px] mt-0.5">Thành viên từ {memberSince}</p>
+            )}
           </div>
 
-          {/* Quick share button */}
           {referralInfo && (
             <button
               onClick={handleCopyReferralLink}
-              className="shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl bg-lime/10 border border-lime/25 text-lime hover:bg-lime/20 transition-colors"
+              className="shrink-0 flex flex-col items-center gap-1 px-2.5 py-2 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 hover:bg-teal-100 transition-colors"
               title="Sao chép link mời bạn"
             >
-              {refCopied
-                ? <CheckCheck className="w-4 h-4" />
-                : <Share2 className="w-4 h-4" />}
+              {refCopied ? <CheckCheck className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
               <span className="text-[9px] font-bold">{refCopied ? 'Đã copy!' : 'Mời bạn'}</span>
             </button>
           )}
@@ -262,108 +289,118 @@ export default function ProfilePage() {
 
         {/* XP bar */}
         <div className="mt-4">
-          <div className="flex items-center justify-between text-[10px] text-neutral-600 mb-1">
-            <span>EXP</span>
+          <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+            <span className="font-semibold tracking-wide">EXP</span>
             <span>{exp} / {nextExp}</span>
           </div>
-          <div className="h-1.5 bg-white/[0.07] rounded-full overflow-hidden">
+          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-lime to-emerald-400 rounded-full transition-all duration-700"
+              className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full transition-all duration-700"
               style={{ width: `${nextExp ? Math.min(100, (exp / nextExp) * 100) : 0}%` }}
             />
           </div>
         </div>
       </div>
 
-      {/* ── Referral banner (compact) — mời bạn nhận thưởng ── */}
-      {referralInfo && (
-        <div className="rounded-2xl border border-lime/20 bg-gradient-to-r from-lime/[0.06] to-emerald-500/[0.04] p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-lime/15 flex items-center justify-center shrink-0">
-              <Gift className="w-4 h-4 text-lime" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white leading-snug">
-                Mời bạn • nhận thưởng lớn
-              </p>
-              <p className="text-[11px] text-neutral-500 mt-0.5">
-                {referralInfo.plusUnlocked
-                  ? 'Mời 20 bạn → PRO không giới hạn'
-                  : referralInfo.referralCount > 0
-                  ? `Đã mời ${referralInfo.referralCount} bạn · Còn ${referralInfo.referralsUntilPlus} nữa → PLUS miễn phí`
-                  : 'Mời 5 bạn → PLUS · Mời 20 bạn → PRO miễn phí'}
-              </p>
-            </div>
-            <button
-              onClick={handleCopyReferralLink}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-lime text-black text-[11px] font-bold hover:bg-lime/90 transition-colors"
-            >
-              {refCopied ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              {refCopied ? 'Đã copy' : 'Copy link'}
-            </button>
+      {/* ── 2 stat lớn: chuỗi duy trì + tổng ngày hoạt động ── */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-[16px] bg-white p-4 shadow-[0_12px_26px_rgba(15,23,42,0.06)] flex items-center gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-[12px] bg-orange-50 text-orange-500">
+            <Flame className="h-5 w-5" />
+          </span>
+          <div>
+            <div className="font-grotesk font-bold text-xl text-slate-900 leading-none">{streak}</div>
+            <div className="text-slate-500 text-[11px] mt-1">Chuỗi duy trì · ngày</div>
           </div>
         </div>
-      )}
-
-      {/* ── Stats ── */}
-      <div className="grid grid-cols-4 gap-2">
-        <StatCard label="Tuần này" value={workoutsWeek} sub="buổi" icon={TrendingUp} color="text-lime" />
-        <StatCard label="Hôm nay" value={completedToday} sub="hoàn thành" icon={Check} color="text-blue-400" />
-        <StatCard label="Kcal đốt" value={caloriesBurned} sub="kcal" icon={Flame} color="text-orange-400" />
-        <StatCard label="Mục tiêu" value={goalLabel} icon={Target} color="text-purple-400" />
+        <div className="rounded-[16px] bg-white p-4 shadow-[0_12px_26px_rgba(15,23,42,0.06)] flex items-center gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-[12px] bg-teal-50 text-teal-600">
+            <Calendar className="h-5 w-5" />
+          </span>
+          <div>
+            <div className="font-grotesk font-bold text-xl text-slate-900 leading-none">{totalActiveDays}</div>
+            <div className="text-slate-500 text-[11px] mt-1">Tổng ngày hoạt động</div>
+          </div>
+        </div>
       </div>
 
-      {/* ── Body info ── */}
+      {/* ── Chỉ số cơ thể ── */}
       {bodyProfile && (
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <User className="w-4 h-4 text-neutral-500" />
-              Thông số cơ thể
-            </h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-sm font-bold text-slate-900">Chỉ số cơ thể</h3>
             <Link
               to="/dashboard/profile/edit"
-              className="text-[10px] text-neutral-500 hover:text-lime transition-colors flex items-center gap-1"
+              className="text-[11px] text-slate-400 hover:text-teal-600 transition-colors flex items-center gap-1"
             >
-              <Edit3 className="w-3 h-3" /> Chỉnh sửa
+              <Edit3 className="w-3 h-3" /> Cập nhật
             </Link>
           </div>
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            {[
-              { label: 'Cân nặng', value: bodyProfile.weight ? `${bodyProfile.weight} kg` : '—', icon: Scale },
-              { label: 'Chiều cao', value: bodyProfile.height ? `${bodyProfile.height} cm` : '—', icon: Activity },
-              { label: 'BMI', value: bodyProfile.bmi ? bodyProfile.bmi.toFixed(1) : '—', icon: TrendingUp },
-            ].map(({ label, value, icon: Icon }) => (
-              <div key={label} className="rounded-xl bg-white/[0.04] border border-white/[0.06] p-3 text-center">
-                <Icon className="w-3.5 h-3.5 text-neutral-600 mx-auto mb-1.5" />
-                <div className="font-grotesk font-bold text-sm text-white">{value}</div>
-                <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">{label}</div>
-              </div>
-            ))}
-          </div>
-          <div className="space-y-0 divide-y divide-white/[0.04]">
-            <InfoRow label="Tuổi" value={bodyProfile.age ? `${bodyProfile.age} tuổi` : '—'} />
-            <InfoRow label="Giới tính" value={bodyProfile.gender === 'MALE' ? 'Nam' : bodyProfile.gender === 'FEMALE' ? 'Nữ' : '—'} />
-            <InfoRow label="Mục tiêu" value={goalLabel} />
-            <InfoRow label="Trình độ" value={levelLabel} />
-            {bodyProfile.injuryNotes && (
-              <InfoRow label="Chấn thương" value={bodyProfile.injuryNotes} />
-            )}
+          <div className="grid grid-cols-4 gap-2.5">
+            <MetricTile label="Cân nặng" value={bodyProfile.weight ? `${bodyProfile.weight}` : '—'} icon={Scale} tint="bg-teal-50 text-teal-600" />
+            <MetricTile label="Chiều cao" value={bodyProfile.height ? `${bodyProfile.height}` : '—'} icon={Ruler} tint="bg-blue-50 text-blue-500" />
+            <MetricTile label="Tỷ lệ mỡ" value={bodyFat != null ? `${Math.round(bodyFat)}%` : '—'} icon={Percent} tint="bg-orange-50 text-orange-500" />
+            <MetricTile label="BMI" value={bodyProfile.bmi ? bodyProfile.bmi.toFixed(1) : '—'} icon={TrendingUp} tint="bg-indigo-50 text-indigo-500" />
           </div>
         </div>
       )}
 
+      {/* ── Mục tiêu hiện tại ── */}
+      <div className="rounded-[20px] bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-teal-50 text-teal-600">
+            <Target className="h-4 w-4" />
+          </span>
+          <h3 className="text-sm font-bold text-slate-900">Mục tiêu hiện tại</h3>
+        </div>
+        <p className="text-[15px] font-bold text-slate-800">{goalLabel}</p>
+        <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500 mb-1.5">
+          <span>Tiến độ EXP cấp độ</span>
+          <span className="font-semibold text-teal-600">Lv.{level} → {level + 1}</span>
+        </div>
+        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full transition-all duration-700"
+            style={{ width: `${nextExp ? Math.min(100, (exp / nextExp) * 100) : 0}%` }}
+          />
+        </div>
+      </div>
+
+      {/* ── Thành tựu ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h3 className="text-sm font-bold text-slate-900">Thành tựu</h3>
+          <Link to="/dashboard/challenges" className="text-[11px] text-slate-400 hover:text-teal-600 transition-colors flex items-center gap-1">
+            Xem tất cả <ChevronRight className="w-3 h-3" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-4 gap-2.5">
+          <AchievementTile label="Kiên trì" sub={`${streak} ngày`} icon={Flame} tint="bg-orange-50 text-orange-500" active={streak > 0} />
+          <AchievementTile label="Đốt cháy" sub={`${caloriesBurned} kcal`} icon={Zap} tint="bg-teal-50 text-teal-600" active={caloriesBurned > 0} />
+          <AchievementTile label="Nâng level" sub={`Lv.${level}`} icon={Trophy} tint="bg-indigo-50 text-indigo-500" active={level > 1} />
+          <AchievementTile label="Ăn uống tốt" sub="Dinh dưỡng" icon={Apple} tint="bg-emerald-50 text-emerald-500" active={completedToday > 0} />
+        </div>
+      </div>
+
+      {/* ── CTA chỉnh sửa hồ sơ ── */}
+      <Link
+        to="/dashboard/profile/edit"
+        className="flex w-full items-center justify-center gap-2 rounded-[16px] bg-teal-600 px-5 py-3.5 text-sm font-bold text-white shadow-[0_14px_30px_-10px_rgba(13,148,136,0.6)] hover:bg-teal-700 transition-colors"
+      >
+        <Edit3 className="w-4 h-4" /> Chỉnh sửa hồ sơ
+      </Link>
+
       {/* ── AI Package ── */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
+      <div className="rounded-[20px] bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-lime" />
+          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-teal-600" />
             Gói AI
           </h3>
           {usage && usage.packageCode !== 'PRO' && (
             <button
               onClick={() => setUpgradeModalOpen(true)}
-              className="flex items-center gap-1 text-[10px] text-lime hover:text-lime/80 transition-colors font-semibold"
+              className="flex items-center gap-1 text-[11px] text-teal-600 hover:text-teal-700 transition-colors font-semibold"
             >
               <ArrowUpRight className="w-3 h-3" /> Nâng cấp
             </button>
@@ -372,7 +409,7 @@ export default function ProfilePage() {
 
         {usageLoading ? (
           <div className="flex items-center justify-center py-4">
-            <Loader2 className="w-5 h-5 text-neutral-600 animate-spin" />
+            <Loader2 className="w-5 h-5 text-slate-300 animate-spin" />
           </div>
         ) : usage ? (
           <div className="space-y-3">
@@ -380,15 +417,15 @@ export default function ProfilePage() {
             <div className="flex items-center gap-3">
               <div className={`px-3 py-1 rounded-full text-xs font-bold border ${
                 usage.packageCode === 'PRO'
-                  ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                  ? 'bg-violet-50 text-violet-600 border-violet-200'
                   : usage.packageCode === 'PLUS'
-                  ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
-                  : 'bg-zinc-700/50 text-zinc-400 border-zinc-600/50'
+                  ? 'bg-blue-50 text-blue-600 border-blue-200'
+                  : 'bg-slate-100 text-slate-500 border-slate-200'
               }`}>
                 {usage.packageCode === 'PRO' ? '⚡ PRO' : usage.packageCode === 'PLUS' ? '✦ PLUS' : '○ FREE'}
               </div>
               {usage.packageExpiresAt && (
-                <span className="text-[11px] text-neutral-600">
+                <span className="text-[11px] text-slate-400">
                   Hết hạn {new Date(usage.packageExpiresAt).toLocaleDateString('vi-VN')}
                 </span>
               )}
@@ -396,33 +433,33 @@ export default function ProfilePage() {
 
             {/* Credits bar */}
             <div>
-              <div className="flex items-center justify-between text-[11px] text-neutral-500 mb-1.5">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1.5">
                 <span>Lượt AI đã dùng</span>
-                <span className="font-semibold text-white">
+                <span className="font-semibold text-slate-800">
                   {usage.used} / {usage.isUnlimited ? '∞' : usage.quota}
                 </span>
               </div>
               {!usage.isUnlimited && (
-                <div className="h-1.5 bg-white/[0.07] rounded-full overflow-hidden">
+                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-700 ${
                       usage.used / usage.quota > 0.8
                         ? 'bg-red-400'
                         : usage.used / usage.quota > 0.5
-                        ? 'bg-yellow-400'
-                        : 'bg-lime'
+                        ? 'bg-amber-400'
+                        : 'bg-teal-500'
                     }`}
                     style={{ width: `${Math.min(100, (usage.used / usage.quota) * 100)}%` }}
                   />
                 </div>
               )}
               {usage.isUnlimited && (
-                <div className="h-1.5 bg-lime/20 rounded-full overflow-hidden">
-                  <div className="h-full w-full bg-lime rounded-full" />
+                <div className="h-1.5 bg-teal-100 rounded-full overflow-hidden">
+                  <div className="h-full w-full bg-teal-500 rounded-full" />
                 </div>
               )}
               {usage.resetAt && (
-                <p className="text-[10px] text-neutral-700 mt-1">
+                <p className="text-[10px] text-slate-400 mt-1">
                   Reset vào {new Date(usage.resetAt).toLocaleDateString('vi-VN')}
                 </p>
               )}
@@ -432,25 +469,25 @@ export default function ProfilePage() {
             {(usage.exerciseSwapLimit !== undefined) && (
               <div className="grid grid-cols-2 gap-2 pt-1">
                 {[
-                  { label: 'Đổi bài tập', used: usage.exerciseSwapUsed, limit: usage.exerciseSwapLimit, icon: Repeat2, color: 'text-blue-400' },
-                  { label: 'Đổi món ăn', used: usage.mealSwapUsed, limit: usage.mealSwapLimit, icon: RefreshCw, color: 'text-orange-400' },
+                  { label: 'Đổi bài tập', used: usage.exerciseSwapUsed, limit: usage.exerciseSwapLimit, icon: Repeat2, color: 'text-blue-500' },
+                  { label: 'Đổi món ăn', used: usage.mealSwapUsed, limit: usage.mealSwapLimit, icon: RefreshCw, color: 'text-orange-500' },
                 ].map(({ label, used: su, limit, icon: Icon, color }) => {
                   const isUnlim = limit === -1;
                   const pct = isUnlim ? 100 : limit > 0 ? Math.min(100, (su / limit) * 100) : 0;
                   const remaining = isUnlim ? -1 : Math.max(0, limit - su);
                   return (
-                    <div key={label} className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3">
+                    <div key={label} className="rounded-xl bg-slate-50 border border-slate-100 p-3">
                       <div className="flex items-center gap-1.5 mb-1.5">
                         <Icon className={`w-3 h-3 ${color}`} />
-                        <span className="text-[10px] text-neutral-500 font-semibold">{label}</span>
+                        <span className="text-[10px] text-slate-500 font-semibold">{label}</span>
                       </div>
-                      <div className={`font-grotesk font-bold text-base ${remaining === 0 && !isUnlim ? 'text-red-400' : 'text-white'}`}>
+                      <div className={`font-grotesk font-bold text-base ${remaining === 0 && !isUnlim ? 'text-red-500' : 'text-slate-900'}`}>
                         {isUnlim ? '∞' : remaining}
-                        <span className="text-neutral-600 text-[10px] font-normal ml-1">
+                        <span className="text-slate-400 text-[10px] font-normal ml-1">
                           {isUnlim ? 'lượt' : `/ ${limit} lượt`}
                         </span>
                       </div>
-                      <div className="h-1 mt-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                      <div className="h-1 mt-1.5 bg-slate-200 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full transition-all ${pct > 80 ? 'bg-red-400' : color.replace('text-', 'bg-')}`}
                           style={{ width: `${pct}%` }} />
                       </div>
@@ -465,14 +502,14 @@ export default function ProfilePage() {
               <div className="flex gap-2 mt-1">
                 <button
                   onClick={() => setUpgradeModalOpen(true)}
-                  className="flex-1 py-2.5 rounded-xl border border-white/10 bg-white/[0.04] text-white text-xs font-bold hover:bg-white/[0.07] transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-bold hover:bg-teal-700 transition-colors flex items-center justify-center gap-2"
                 >
-                  <Zap className="w-3.5 h-3.5 text-lime" fill="currentColor" />
+                  <Zap className="w-3.5 h-3.5" fill="currentColor" />
                   Mua gói PLUS / PRO
                 </button>
                 <button
                   onClick={handleCopyReferralLink}
-                  className="flex-1 py-2.5 rounded-xl border border-lime/25 bg-lime/5 text-lime text-xs font-bold hover:bg-lime/10 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 rounded-xl border border-teal-200 bg-teal-50 text-teal-700 text-xs font-bold hover:bg-teal-100 transition-colors flex items-center justify-center gap-2"
                 >
                   {refCopied ? <CheckCheck className="w-3.5 h-3.5" /> : <Gift className="w-3.5 h-3.5" />}
                   {refCopied ? 'Đã copy link' : 'Mời bạn → nhận PLUS'}
@@ -482,10 +519,10 @@ export default function ProfilePage() {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3 py-3">
-            <p className="text-neutral-400 text-sm text-center">Không thể tải thông tin gói AI.</p>
+            <p className="text-slate-500 text-sm text-center">Không thể tải thông tin gói AI.</p>
             <button
               onClick={refreshUsage}
-              className="text-xs text-lime hover:text-lime/80 font-semibold flex items-center gap-1 transition-colors"
+              className="text-xs text-teal-600 hover:text-teal-700 font-semibold flex items-center gap-1 transition-colors"
             >
               <RefreshCw className="w-3 h-3" /> Thử lại
             </button>
@@ -495,24 +532,24 @@ export default function ProfilePage() {
 
       {/* ── Referral / Mời bạn ── */}
       {referralInfo && (
-        <div className="rounded-2xl border border-lime/20 bg-lime/[0.03] p-5 space-y-4">
+        <div className="rounded-[20px] bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)] border border-teal-100 space-y-4">
           <div className="flex items-center gap-2">
-            <Gift className="w-4 h-4 text-lime" />
-            <h3 className="text-sm font-bold text-white">Mời bạn bè — nhận gói miễn phí</h3>
+            <Gift className="w-4 h-4 text-teal-600" />
+            <h3 className="text-sm font-bold text-slate-900">Mời bạn bè — nhận gói miễn phí</h3>
           </div>
 
           {/* Referral link */}
           <div>
-            <p className="text-[11px] text-neutral-500 mb-2">
-              Bạn bè đăng ký qua link → họ nhận <strong className="text-neutral-300">+25 credit</strong>. Bạn tích lũy lượt mời và nhận gói khi đạt mốc.
+            <p className="text-[11px] text-slate-500 mb-2">
+              Bạn bè đăng ký qua link → họ nhận <strong className="text-slate-700">+25 credit</strong>. Bạn tích lũy lượt mời và nhận gói khi đạt mốc.
             </p>
             <div className="flex gap-2 items-center">
-              <div className="flex-1 px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-neutral-300 truncate font-mono">
+              <div className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 truncate font-mono">
                 {window.location.origin}/register?ref={referralInfo.referralCode}
               </div>
               <button
                 onClick={handleCopyReferralLink}
-                className="p-2 rounded-xl bg-lime/10 border border-lime/25 text-lime hover:bg-lime/20 transition-colors flex-shrink-0"
+                className="p-2 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 hover:bg-teal-100 transition-colors flex-shrink-0"
                 title="Sao chép link"
               >
                 {refCopied ? <CheckCheck className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -522,149 +559,149 @@ export default function ProfilePage() {
 
           {/* Stats row */}
           <div className="flex gap-3">
-            <div className="flex-1 text-center py-2 rounded-xl bg-white/[0.04] border border-white/[0.07]">
-              <div className="text-xl font-black text-lime">{referralInfo.referralCount}</div>
-              <div className="text-[10px] text-neutral-500 mt-0.5">Đã mời</div>
+            <div className="flex-1 text-center py-2 rounded-xl bg-slate-50 border border-slate-100">
+              <div className="text-xl font-black text-teal-600">{referralInfo.referralCount}</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">Đã mời</div>
             </div>
-            <div className="flex-1 text-center py-2 rounded-xl bg-white/[0.04] border border-white/[0.07]">
-              <div className="text-xl font-black text-lime">{referralInfo.referralsUntilPlus > 0 ? referralInfo.referralsUntilPlus : referralInfo.referralsUntilPro}</div>
-              <div className="text-[10px] text-neutral-500 mt-0.5">{referralInfo.referralsUntilPlus > 0 ? 'Còn đến PLUS' : 'Còn đến PRO'}</div>
+            <div className="flex-1 text-center py-2 rounded-xl bg-slate-50 border border-slate-100">
+              <div className="text-xl font-black text-teal-600">{referralInfo.referralsUntilPlus > 0 ? referralInfo.referralsUntilPlus : referralInfo.referralsUntilPro}</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">{referralInfo.referralsUntilPlus > 0 ? 'Còn đến PLUS' : 'Còn đến PRO'}</div>
             </div>
           </div>
 
           {/* Milestone progress */}
           <div className="space-y-2.5">
             {/* PLUS milestone */}
-            <div className={`rounded-xl p-3 border ${referralInfo.plusUnlocked ? 'border-lime/40 bg-lime/10' : 'border-white/[0.07] bg-white/[0.03]'}`}>
+            <div className={`rounded-xl p-3 border ${referralInfo.plusUnlocked ? 'border-teal-300 bg-teal-50' : 'border-slate-100 bg-slate-50'}`}>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-1.5">
                   {referralInfo.plusUnlocked
-                    ? <CheckCheck className="w-3.5 h-3.5 text-lime" />
-                    : <Zap className="w-3.5 h-3.5 text-blue-400" />}
-                  <span className="text-xs font-bold text-white">✦ PLUS — 200 credit/tháng</span>
+                    ? <CheckCheck className="w-3.5 h-3.5 text-teal-600" />
+                    : <Zap className="w-3.5 h-3.5 text-blue-500" />}
+                  <span className="text-xs font-bold text-slate-800">✦ PLUS — 200 credit/tháng</span>
                 </div>
-                <span className={`text-[10px] font-semibold ${referralInfo.plusUnlocked ? 'text-lime' : 'text-neutral-500'}`}>
+                <span className={`text-[10px] font-semibold ${referralInfo.plusUnlocked ? 'text-teal-600' : 'text-slate-500'}`}>
                   {referralInfo.plusUnlocked ? 'Đã đạt!' : `${referralInfo.referralCount}/5`}
                 </span>
               </div>
-              <div className="h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+              <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-700 ${referralInfo.plusUnlocked ? 'bg-lime' : 'bg-blue-400/70'}`}
+                  className={`h-full rounded-full transition-all duration-700 ${referralInfo.plusUnlocked ? 'bg-teal-500' : 'bg-blue-400'}`}
                   style={{ width: `${Math.min(100, (referralInfo.referralCount / 5) * 100)}%` }}
                 />
               </div>
               {!referralInfo.plusUnlocked && (
-                <p className="text-[10px] text-neutral-600 mt-1">Còn {referralInfo.referralsUntilPlus} người nữa</p>
+                <p className="text-[10px] text-slate-400 mt-1">Còn {referralInfo.referralsUntilPlus} người nữa</p>
               )}
             </div>
 
             {/* PRO milestone */}
-            <div className={`rounded-xl p-3 border ${referralInfo.proUnlocked ? 'border-violet-500/40 bg-violet-500/10' : 'border-white/[0.07] bg-white/[0.03]'}`}>
+            <div className={`rounded-xl p-3 border ${referralInfo.proUnlocked ? 'border-violet-300 bg-violet-50' : 'border-slate-100 bg-slate-50'}`}>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-1.5">
                   {referralInfo.proUnlocked
-                    ? <CheckCheck className="w-3.5 h-3.5 text-violet-400" />
-                    : <Zap className="w-3.5 h-3.5 text-violet-400" />}
-                  <span className="text-xs font-bold text-white">⚡ PRO — Không giới hạn</span>
+                    ? <CheckCheck className="w-3.5 h-3.5 text-violet-500" />
+                    : <Zap className="w-3.5 h-3.5 text-violet-500" />}
+                  <span className="text-xs font-bold text-slate-800">⚡ PRO — Không giới hạn</span>
                 </div>
-                <span className={`text-[10px] font-semibold ${referralInfo.proUnlocked ? 'text-violet-400' : 'text-neutral-500'}`}>
+                <span className={`text-[10px] font-semibold ${referralInfo.proUnlocked ? 'text-violet-500' : 'text-slate-500'}`}>
                   {referralInfo.proUnlocked ? 'Đã đạt!' : `${referralInfo.referralCount}/20`}
                 </span>
               </div>
-              <div className="h-1.5 rounded-full bg-white/[0.07] overflow-hidden">
+              <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-700 ${referralInfo.proUnlocked ? 'bg-violet-400' : 'bg-violet-500/50'}`}
+                  className={`h-full rounded-full transition-all duration-700 ${referralInfo.proUnlocked ? 'bg-violet-500' : 'bg-violet-400'}`}
                   style={{ width: `${Math.min(100, (referralInfo.referralCount / 20) * 100)}%` }}
                 />
               </div>
               {!referralInfo.proUnlocked && (
-                <p className="text-[10px] text-neutral-600 mt-1">Còn {referralInfo.referralsUntilPro} người nữa</p>
+                <p className="text-[10px] text-slate-400 mt-1">Còn {referralInfo.referralsUntilPro} người nữa</p>
               )}
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Quick actions ── */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-white/[0.04]">
-          <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Điều hướng nhanh</h3>
+      {/* ── Điều hướng nhanh (list links) ── */}
+      <div className="rounded-[20px] bg-white shadow-[0_14px_34px_rgba(15,23,42,0.06)] overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100">
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Điều hướng nhanh</h3>
         </div>
         {[
-          { label: 'Lịch sử tập luyện', sub: 'Xem nhật ký', icon: Dumbbell, to: '/dashboard/logbook', color: 'text-lime' },
-          { label: 'Kế hoạch dinh dưỡng', sub: 'Thực đơn & calories', icon: Flame, to: '/dashboard/diet', color: 'text-orange-400' },
-          { label: 'Thử thách', sub: 'Huy hiệu & phần thưởng', icon: Award, to: '/dashboard/challenges', color: 'text-yellow-400' },
-          { label: 'AI Coach', sub: 'Gợi ý cá nhân', icon: Star, to: '/dashboard/coach', color: 'text-blue-400' },
-        ].map(({ label, sub, icon: Icon, to, color }) => (
+          { label: 'Lịch sử tiến trình', sub: 'Nhật ký tập luyện', icon: Dumbbell, to: '/dashboard/logbook', tint: 'bg-teal-50 text-teal-600' },
+          { label: 'Kế hoạch dinh dưỡng', sub: 'Thực đơn & calories', icon: Flame, to: '/dashboard/diet', tint: 'bg-orange-50 text-orange-500' },
+          { label: 'Thử thách', sub: 'Huy hiệu & phần thưởng', icon: Award, to: '/dashboard/challenges', tint: 'bg-amber-50 text-amber-500' },
+          { label: 'AI Coach', sub: 'Gợi ý cá nhân', icon: Star, to: '/dashboard/coach', tint: 'bg-blue-50 text-blue-500' },
+        ].map(({ label, sub, icon: Icon, to, tint }) => (
           <Link
             key={label}
             to={to}
-            className="flex items-center gap-3 px-5 py-3.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.04] transition-colors group"
+            className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors group"
           >
-            <div className={`w-8 h-8 rounded-xl bg-white/[0.05] flex items-center justify-center shrink-0`}>
-              <Icon className={`w-4 h-4 ${color}`} />
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tint}`}>
+              <Icon className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-semibold">{label}</p>
-              <p className="text-neutral-600 text-xs">{sub}</p>
+              <p className="text-slate-800 text-sm font-semibold">{label}</p>
+              <p className="text-slate-400 text-xs">{sub}</p>
             </div>
-            <ChevronRight className="w-4 h-4 text-neutral-700 group-hover:text-white transition-colors shrink-0" />
+            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" />
           </Link>
         ))}
       </div>
 
       {/* ── Cài đặt tài khoản ── */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] overflow-hidden">
+      <div className="rounded-[20px] bg-white shadow-[0_14px_34px_rgba(15,23,42,0.06)] overflow-hidden">
         <button
           onClick={() => setShowAccount(v => !v)}
-          className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-white/[0.04] transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 transition-colors"
         >
-          <div className="w-8 h-8 rounded-xl bg-white/[0.05] flex items-center justify-center shrink-0">
-            <Settings className="w-4 h-4 text-neutral-400" />
+          <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+            <Settings className="w-4 h-4 text-slate-500" />
           </div>
           <div className="flex-1 min-w-0 text-left">
-            <p className="text-white text-sm font-semibold">Cài đặt tài khoản</p>
-            <p className="text-neutral-600 text-xs">Đổi thông tin, mật khẩu, vô hiệu hoá tài khoản</p>
+            <p className="text-slate-800 text-sm font-semibold">Cài đặt tài khoản</p>
+            <p className="text-slate-400 text-xs">Đổi thông tin, mật khẩu, vô hiệu hoá tài khoản</p>
           </div>
-          <ChevronRight className={`w-4 h-4 text-neutral-700 transition-transform ${showAccount ? 'rotate-90' : ''}`} />
+          <ChevronRight className={`w-4 h-4 text-slate-300 transition-transform ${showAccount ? 'rotate-90' : ''}`} />
         </button>
 
         {showAccount && (
-          <div className="px-5 pb-5 pt-1 space-y-6 border-t border-white/[0.04]">
+          <div className="px-4 pb-5 pt-1 space-y-6 border-t border-slate-100">
             {/* Thông tin cơ bản */}
             <div className="space-y-3 pt-4">
-              <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
                 <User className="w-3.5 h-3.5" /> Thông tin cơ bản
               </h4>
               <div>
-                <label className="text-[11px] text-neutral-500 mb-1 block">Tên hiển thị</label>
+                <label className="text-[11px] text-slate-500 mb-1 block">Tên hiển thị</label>
                 <input
                   value={pName}
                   onChange={e => setPName(e.target.value)}
-                  className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                  className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-teal-400"
                   placeholder="Tên của bạn"
                 />
               </div>
               <div>
-                <label className="text-[11px] text-neutral-500 mb-1 block flex items-center gap-1">
+                <label className="text-[11px] text-slate-500 mb-1 block flex items-center gap-1">
                   <Mail className="w-3 h-3" /> Email
                 </label>
                 <input
                   value={pEmail}
                   onChange={e => setPEmail(e.target.value)}
                   type="email"
-                  className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                  className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-teal-400"
                   placeholder="email@example.com"
                 />
-                <p className="text-[10px] text-neutral-600 mt-1">Đổi email sẽ yêu cầu đăng nhập lại.</p>
+                <p className="text-[10px] text-slate-400 mt-1">Đổi email sẽ yêu cầu đăng nhập lại.</p>
               </div>
               {profileMsg && (
-                <p className={`text-xs ${profileMsg.ok ? 'text-lime' : 'text-red-400'}`}>{profileMsg.text}</p>
+                <p className={`text-xs ${profileMsg.ok ? 'text-teal-600' : 'text-red-500'}`}>{profileMsg.text}</p>
               )}
               <button
                 onClick={handleSaveProfile}
                 disabled={profileBusy}
-                className="w-full py-2.5 rounded-xl bg-lime/10 border border-lime/25 text-lime text-xs font-bold hover:bg-lime/15 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-2.5 rounded-xl bg-teal-600 text-white text-xs font-bold hover:bg-teal-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {profileBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 Lưu thông tin
@@ -673,7 +710,7 @@ export default function ProfilePage() {
 
             {/* Đổi mật khẩu */}
             <div className="space-y-3">
-              <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
                 <Lock className="w-3.5 h-3.5" /> Đổi mật khẩu
               </h4>
               <input
@@ -681,7 +718,7 @@ export default function ProfilePage() {
                 onChange={e => setCurPw(e.target.value)}
                 type="password"
                 autoComplete="current-password"
-                className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-teal-400"
                 placeholder="Mật khẩu hiện tại"
               />
               <input
@@ -689,7 +726,7 @@ export default function ProfilePage() {
                 onChange={e => setNewPw(e.target.value)}
                 type="password"
                 autoComplete="new-password"
-                className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-teal-400"
                 placeholder="Mật khẩu mới (tối thiểu 6 ký tự)"
               />
               <input
@@ -697,16 +734,16 @@ export default function ProfilePage() {
                 onChange={e => setConfirmPw(e.target.value)}
                 type="password"
                 autoComplete="new-password"
-                className="w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3 py-2.5 text-sm text-white outline-none focus:border-lime/40"
+                className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-teal-400"
                 placeholder="Xác nhận mật khẩu mới"
               />
               {pwMsg && (
-                <p className={`text-xs ${pwMsg.ok ? 'text-lime' : 'text-red-400'}`}>{pwMsg.text}</p>
+                <p className={`text-xs ${pwMsg.ok ? 'text-teal-600' : 'text-red-500'}`}>{pwMsg.text}</p>
               )}
               <button
                 onClick={handleChangePassword}
                 disabled={pwBusy || !curPw || !newPw}
-                className="w-full py-2.5 rounded-xl bg-white/[0.05] border border-white/10 text-white text-xs font-bold hover:bg-white/[0.08] transition-colors flex items-center justify-center gap-2 disabled:opacity-40"
+                className="w-full py-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-40"
               >
                 {pwBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
                 Cập nhật mật khẩu
@@ -715,33 +752,33 @@ export default function ProfilePage() {
 
             {/* Vùng nguy hiểm */}
             <div className="space-y-3">
-              <h4 className="text-xs font-bold text-red-400/80 uppercase tracking-wider flex items-center gap-2">
+              <h4 className="text-xs font-bold text-red-500 uppercase tracking-wider flex items-center gap-2">
                 <ShieldAlert className="w-3.5 h-3.5" /> Vùng nguy hiểm
               </h4>
               {!deactivateConfirm ? (
                 <button
                   onClick={() => setDeactivateConfirm(true)}
-                  className="w-full py-2.5 rounded-xl bg-red-500/[0.06] border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/[0.12] transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-500 text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Vô hiệu hoá tài khoản
                 </button>
               ) : (
-                <div className="rounded-xl border border-red-500/25 bg-red-500/[0.06] p-3 space-y-2">
-                  <p className="text-xs text-red-300">
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3 space-y-2">
+                  <p className="text-xs text-red-500">
                     Tài khoản sẽ bị vô hiệu hoá và bạn sẽ bị đăng xuất. Dữ liệu được giữ lại; liên hệ hỗ trợ để khôi phục.
                   </p>
                   <div className="flex gap-2">
                     <button
                       onClick={handleDeactivate}
                       disabled={deactivateBusy}
-                      className="flex-1 py-2 rounded-lg bg-red-500/80 text-white text-xs font-bold hover:bg-red-500 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      className="flex-1 py-2 rounded-lg bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                     >
                       {deactivateBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                       Xác nhận
                     </button>
                     <button
                       onClick={() => setDeactivateConfirm(false)}
-                      className="flex-1 py-2 rounded-lg bg-white/[0.05] border border-white/10 text-neutral-300 text-xs font-bold hover:bg-white/[0.08] transition-colors flex items-center justify-center gap-1.5"
+                      className="flex-1 py-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-200 transition-colors flex items-center justify-center gap-1.5"
                     >
                       <X className="w-3.5 h-3.5" /> Huỷ
                     </button>
@@ -756,7 +793,7 @@ export default function ProfilePage() {
       {/* ── Logout ── */}
       <button
         onClick={handleLogout}
-        className="w-full rounded-2xl border border-red-500/15 bg-red-500/[0.04] px-5 py-3.5 flex items-center justify-center gap-2 text-red-400 hover:bg-red-500/[0.08] transition-colors text-sm font-semibold"
+        className="w-full rounded-[16px] border border-red-200 bg-red-50 px-5 py-3.5 flex items-center justify-center gap-2 text-red-500 hover:bg-red-100 transition-colors text-sm font-semibold"
       >
         <LogOut className="w-4 h-4" />
         Đăng xuất

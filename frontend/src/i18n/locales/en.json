@@ -6,9 +6,12 @@
   },
   "nav": {
     "home": "Home",
+    "today": "Today",
     "journey": "Journey",
     "workout": "Workout",
+    "train": "Train",
     "diet": "Diet",
+    "me": "Me",
     "challenges": "Challenges",
     "coach": "AI Coach",
     "logbook": "Logbook",

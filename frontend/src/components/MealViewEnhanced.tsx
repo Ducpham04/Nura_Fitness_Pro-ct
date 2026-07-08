@@ -1,8 +1,9 @@
-import { useState, useEffect, memo, useCallback } from 'react';
+import { useState, useEffect, memo, useCallback, type ComponentType } from 'react';
 import {
   Brain, Loader2, Camera, Utensils, ShoppingCart, X,
   Check, Flame, Wallet, ChevronLeft, ChevronRight,
-  Beef, Wheat, Droplets, Shuffle, CalendarDays,
+  AlertTriangle, Beef, Wheat, Droplets, Shuffle, CalendarDays,
+  Coffee, Sun, Moon, Apple,
 } from 'lucide-react';
 import {
   type Meal, type MealIngredient, type DailyMealPlan, type WeeklyNutritionPlan,
@@ -35,10 +36,10 @@ const VI_DAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const VI_DAYS_FULL = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
 
 const MEALS = [
-  { key: 'breakfast', type: 'BREAKFAST', label: 'Bữa sáng', time: '07:00', emoji: '🌅', pct: 30 },
-  { key: 'lunch',     type: 'LUNCH',     label: 'Bữa trưa', time: '12:30', emoji: '☀️', pct: 40 },
-  { key: 'dinner',    type: 'DINNER',    label: 'Bữa tối',  time: '19:00', emoji: '🌙', pct: 25 },
-  { key: 'snacks',    type: 'SNACK',     label: 'Bữa phụ',  time: '16:00', emoji: '🍎', pct:  5 },
+  { key: 'breakfast', type: 'BREAKFAST', label: 'Bữa sáng', time: '07:00', icon: Coffee, pct: 30 },
+  { key: 'lunch',     type: 'LUNCH',     label: 'Bữa trưa', time: '12:30', icon: Sun, pct: 40 },
+  { key: 'dinner',    type: 'DINNER',    label: 'Bữa tối',  time: '19:00', icon: Moon, pct: 25 },
+  { key: 'snacks',    type: 'SNACK',     label: 'Bữa phụ',  time: '16:00', icon: Apple, pct:  5 },
 ] as const;
 
 const NATURAL_LOG_MEAL_TIMES = [
@@ -81,12 +82,12 @@ const MealCard = ({
   onSwap: () => void;
   isSwapping: boolean;
 }) => (
-  <div className={`rounded-xl border p-3 transition-all ${
-    meal.isEaten ? 'border-lime/25 bg-lime/[0.04]' : 'border-white/[0.07] hover:border-white/[0.12] bg-white/[0.02]'
+  <div className={`rounded-[16px] border p-3 transition-all ${
+    meal.isEaten ? 'border-teal-100 bg-teal-50/60' : 'border-slate-200 bg-slate-50 hover:border-slate-300'
   }`}>
     <div className="flex items-center gap-3">
       {/* Ảnh */}
-      <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-white/[0.05]">
+      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[12px] bg-slate-100">
         <img
           src={meal.imageUrl || 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200'}
           alt={meal.name}
@@ -96,66 +97,70 @@ const MealCard = ({
             img.dataset.fbk = '1';
             img.src = 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200';
           }}
-          className={`w-full h-full object-cover ${meal.isEaten ? 'opacity-50' : 'opacity-80'}`}
+          className={`h-full w-full object-cover ${meal.isEaten ? 'opacity-50' : 'opacity-90'}`}
         />
       </div>
 
-      {/* Info */}
+      {/* Info — tên + 1 dòng thống kê gọn (không xuống dòng) */}
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-semibold truncate ${meal.isEaten ? 'text-neutral-500 line-through' : 'text-white'}`}>
+        <p className={`truncate text-sm font-bold leading-tight ${meal.isEaten ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
           {meal.name}
         </p>
-        <div className="flex items-center gap-2.5 mt-0.5 flex-wrap">
-          <span className="text-[10px] text-orange-400 flex items-center gap-0.5">
-            <Flame className="w-2.5 h-2.5" />{meal.calories} kcal
+        <div className="mt-1 flex items-center gap-1.5 overflow-hidden whitespace-nowrap text-[11px]">
+          <span className="inline-flex items-center gap-1 font-bold text-orange-500">
+            <Flame className="h-3 w-3" />{meal.calories} kcal
           </span>
-          <span className="text-[10px] text-neutral-500">{meal.protein}g đạm</span>
+          <span className="text-slate-300">·</span>
+          <span className="font-medium text-slate-500">{meal.protein}g đạm</span>
           {meal.price > 0 && (
-            <span className="text-[10px] text-lime font-semibold">{meal.price.toLocaleString()}đ</span>
+            <>
+              <span className="text-slate-300">·</span>
+              <span className="font-medium text-slate-500">{meal.price.toLocaleString()}đ</span>
+            </>
           )}
         </div>
       </div>
 
-      {/* Swap button */}
+      {/* Swap — phụ, nhỏ gọn */}
       <button
         onClick={onSwap}
         disabled={isSwapping || meal.isEaten}
         title="Đổi món khác"
-        className="w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0 border border-white/[0.1] bg-white/[0.04] text-neutral-600 hover:border-orange-400/40 hover:text-orange-400 disabled:opacity-30 disabled:cursor-not-allowed"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-slate-400 transition-all hover:bg-slate-100 hover:text-orange-500 disabled:cursor-not-allowed disabled:opacity-30"
       >
         {isSwapping
-          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          : <Shuffle className="w-3.5 h-3.5" />}
+          ? <Loader2 className="w-4 h-4 animate-spin" />
+          : <Shuffle className="w-4 h-4" />}
       </button>
 
-      {/* Check button */}
+      {/* Check — chính */}
       <button
         onClick={onCheck}
-        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0 ${
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] transition-all ${
           meal.isEaten
-            ? 'bg-lime text-black'
-            : 'border border-white/[0.1] bg-white/[0.04] text-neutral-600 hover:border-lime/40 hover:text-lime'
+            ? 'bg-teal-600 text-white shadow-[0_6px_16px_-6px_rgba(13,148,136,0.6)]'
+            : 'border border-slate-200 bg-white text-slate-400 hover:border-teal-300 hover:text-teal-600'
         }`}
       >
-        <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
+        <Check className="w-4 h-4" strokeWidth={2.5} />
       </button>
     </div>
 
     {/* Ingredients (collapsed by default, expandable) */}
     {(meal.ingredients?.length ?? 0) > 0 && (
-      <div className="mt-2.5 rounded-lg border border-white/[0.05] bg-black/10 divide-y divide-white/[0.04]">
+      <div className="mt-2.5 rounded-lg border border-slate-200 bg-white divide-y divide-slate-100">
         {(meal.ingredients ?? []).slice(0, 4).map(ing => (
           <div key={ing.id} className="flex items-center gap-2 px-2.5 py-1.5 text-[10px]">
-            <span className="flex-1 text-neutral-400 truncate">{ing.name}</span>
-            <span className="text-neutral-600 font-semibold whitespace-nowrap">{Math.round(ing.quantity)}g</span>
-            <span className="text-orange-400/70 whitespace-nowrap">{ing.calories} kcal</span>
+            <span className="flex-1 text-slate-600 truncate">{ing.name}</span>
+            <span className="text-slate-500 font-semibold whitespace-nowrap">{Math.round(ing.quantity)}g</span>
+            <span className="text-orange-500 whitespace-nowrap">{ing.calories} kcal</span>
             {ing.fromInventory
-              ? <span className="text-lime/70 font-semibold">✓ Có sẵn</span>
-              : ing.price > 0 ? <span className="text-lime/70">{ing.price.toLocaleString()}đ</span> : null}
+              ? <span className="text-teal-600 font-semibold whitespace-nowrap">✓ Có sẵn</span>
+              : ing.price > 0 ? <span className="text-slate-400 whitespace-nowrap">{ing.price.toLocaleString()}đ</span> : null}
           </div>
         ))}
         {(meal.ingredients?.length ?? 0) > 4 && (
-          <div className="px-2.5 py-1 text-[10px] text-neutral-600 text-center">
+          <div className="px-2.5 py-1 text-[10px] text-slate-600 text-center">
             +{(meal.ingredients?.length ?? 0) - 4} nguyên liệu khác
           </div>
         )}
@@ -166,9 +171,9 @@ const MealCard = ({
 
 // ── MealTimeBlock ─────────────────────────────────────────────────────────────
 const MealTimeBlock = ({
-  label, time, emoji, meals, mealPct, onCheck, onSwap, swappingMealId,
+  label, time, icon: Icon, meals, mealPct, onCheck, onSwap, swappingMealId,
 }: {
-  label: string; time: string; emoji: string; meals: Meal[]; mealPct: number;
+  label: string; time: string; icon: ComponentType<{ className?: string }>; meals: Meal[]; mealPct: number;
   onCheck: (meal: Meal) => void;
   onSwap: (meal: Meal) => void;
   swappingMealId: number | null;
@@ -178,56 +183,47 @@ const MealTimeBlock = ({
   const allEaten = meals.length > 0 && eatenCount === meals.length;
 
   return (
-    <div className="flex gap-3">
-      {/* Timeline line */}
-      <div className="flex flex-col items-center pt-1">
-        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0 border ${
-          allEaten ? 'border-lime/30 bg-lime/10' : 'border-white/[0.08] bg-white/[0.03]'
-        }`}>
-          {emoji}
+    <div className="pb-1">
+      {/* Header bữa — full width, icon inline */}
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg border ${
+            allEaten ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'
+          }`}>
+            <Icon className={`h-3.5 w-3.5 ${allEaten ? 'text-emerald-600' : 'text-orange-500'}`} />
+          </span>
+          <span className="font-grotesk font-bold text-sm text-slate-900">{label}</span>
+          <span className="text-slate-400 text-xs">{time}</span>
         </div>
-        <div className="w-px flex-1 bg-white/[0.06] mt-2 mb-2 min-h-[20px]" />
+        <div className="flex items-center gap-2 text-[10px] shrink-0">
+          {totalKcal > 0 && (
+            <span className="text-slate-500">{totalKcal} kcal · {mealPct}%</span>
+          )}
+          {meals.length > 0 && (
+            <span className={`font-semibold ${allEaten ? 'text-emerald-600' : 'text-slate-500'}`}>
+              {eatenCount}/{meals.length}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0 pb-4">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <span className="text-white font-grotesk font-bold text-sm">{label}</span>
-            <span className="text-neutral-600 text-xs ml-2">{time}</span>
-          </div>
-          <div className="flex items-center gap-2 text-[10px]">
-            {totalKcal > 0 && (
-              <span className="text-neutral-500">
-                {totalKcal} kcal · {mealPct}%
-              </span>
-            )}
-            {meals.length > 0 && (
-              <span className={`font-semibold ${allEaten ? 'text-lime' : 'text-neutral-600'}`}>
-                {eatenCount}/{meals.length}
-              </span>
-            )}
-          </div>
+      {meals.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-200 px-4 py-3 text-center">
+          <p className="text-slate-400 text-xs">Không có món trong bữa này</p>
         </div>
-
-        {meals.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-white/[0.06] px-4 py-3 text-center">
-            <p className="text-neutral-700 text-xs">Không có món trong bữa này</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {meals.map(meal => (
-              <MealCard
-                key={`${meal.mealDetailId}-${meal.id}`}
-                meal={meal}
-                onCheck={() => onCheck(meal)}
-                onSwap={() => onSwap(meal)}
-                isSwapping={swappingMealId === meal.mealDetailId}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      ) : (
+        <div className="space-y-2">
+          {meals.map(meal => (
+            <MealCard
+              key={`${meal.mealDetailId}-${meal.id}`}
+              meal={meal}
+              onCheck={() => onCheck(meal)}
+              onSwap={() => onSwap(meal)}
+              isSwapping={swappingMealId === meal.mealDetailId}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -248,6 +244,7 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
   const { usage, packages, refresh: refreshUsage } = useAiUsage(user?.id ?? null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [naturalLogText, setNaturalLogText] = useState('');
+  const [naturalLogOpen, setNaturalLogOpen] = useState(false);
   const [naturalLogMealTime, setNaturalLogMealTime] = useState('BREAKFAST');
   const [naturalLogLoading, setNaturalLogLoading] = useState(false);
   const [naturalLogResult, setNaturalLogResult] = useState<NaturalFoodLogResult | null>(null);
@@ -453,25 +450,17 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
 
   const currentDay = weeklyPlan?.days.find(d => d.day === selectedDay);
   const totalDays = planMeta?.durationDays || 7;
-  const totalEatenToday = [
-    ...(currentDay?.breakfast || []),
-    ...(currentDay?.lunch || []),
-    ...(currentDay?.dinner || []),
-    ...(currentDay?.snacks || []),
-  ].filter(m => m.isEaten).length;
-  const totalMealsToday = [
-    ...(currentDay?.breakfast || []),
-    ...(currentDay?.lunch || []),
-    ...(currentDay?.dinner || []),
-    ...(currentDay?.snacks || []),
-  ].length;
-  const currentKcal = currentDay
-    ? [...(currentDay.breakfast||[]), ...(currentDay.lunch||[]), ...(currentDay.dinner||[]), ...(currentDay.snacks||[])]
-        .filter(m => m.isEaten).reduce((s, m) => s + m.calories, 0)
-    : 0;
+  const currentDayMeals = currentDay
+    ? [...(currentDay.breakfast || []), ...(currentDay.lunch || []), ...(currentDay.dinner || []), ...(currentDay.snacks || [])]
+    : [];
+  const totalEatenToday = currentDayMeals.filter(m => m.isEaten).length;
+  const totalMealsToday = currentDayMeals.length;
+  const currentKcal = currentDayMeals.filter(m => m.isEaten).reduce((s, m) => s + m.calories, 0);
   const targetKcal = weeklyPlan?.dailyCalories || 2000;
   const currentSpent = currentDay?.totalPrice || 0;
   const dailyBudget = weeklyPlan?.dailyBudget || budget;
+  const leftBudget = dailyBudget - currentSpent;
+  const needShoppingCount = weeklyPlan?.shoppingList?.length ?? 0;
   const naturalLogTotal = naturalLogResult?.total;
   const naturalLogCalories = toNumber(naturalLogTotal?.calories ?? naturalLogResult?.total_calories);
   const naturalLogProtein = toNumber(naturalLogTotal?.protein_g ?? naturalLogTotal?.protein);
@@ -479,30 +468,37 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
   const naturalLogFat = toNumber(naturalLogTotal?.fat_g ?? naturalLogTotal?.fat);
 
   const naturalLogPanel = (
-    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-xl bg-lime/10 border border-lime/20 flex items-center justify-center">
-          <Brain className="w-4 h-4 text-lime" />
+    <div className="rounded-2xl bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+      <button
+        type="button"
+        onClick={() => setNaturalLogOpen(o => !o)}
+        className="flex w-full items-center gap-2.5 text-left"
+      >
+        <div className="w-8 h-8 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+          <Brain className="w-4 h-4 text-orange-500" />
         </div>
-        <div>
-          <h3 className="font-grotesk font-bold text-white text-sm">Ghi bữa nhanh</h3>
-          <p className="text-neutral-500 text-xs">Nhập bằng câu tự nhiên, AI sẽ lưu thành log dinh dưỡng.</p>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-grotesk font-bold text-slate-900 text-sm">Ghi món ăn ngoài thực đơn</h3>
+          <p className="text-slate-400 text-[11px]">Ăn khác kế hoạch? Ghi nhanh tại đây.</p>
         </div>
-      </div>
+        <ChevronRight className={`w-4 h-4 text-slate-300 shrink-0 transition-transform ${naturalLogOpen ? 'rotate-90' : ''}`} />
+      </button>
 
-      <div className="flex flex-col gap-2">
+      {(naturalLogOpen || naturalLogResult) && (
+      <>
+      <div className="mt-3 flex flex-col gap-2">
         <textarea
           value={naturalLogText}
           onChange={e => setNaturalLogText(e.target.value)}
           placeholder="Ví dụ: Sáng ăn 2 trứng luộc, 1 chuối và 1 ly sữa không đường"
           rows={2}
-          className="w-full resize-none rounded-xl border border-white/[0.08] bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-neutral-700 outline-none focus:border-lime/40"
+          className="w-full resize-none rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 outline-none focus:border-orange-300"
         />
         <div className="flex flex-col sm:flex-row gap-2">
           <select
             value={naturalLogMealTime}
             onChange={e => setNaturalLogMealTime(e.target.value)}
-            className="h-10 rounded-xl border border-white/[0.08] bg-black/20 px-3 text-sm text-white outline-none focus:border-lime/40 sm:w-32"
+            className="h-10 rounded-xl border border-slate-200 bg-slate-100 px-3 text-sm text-slate-900 outline-none focus:border-orange-300 sm:w-32"
           >
             {NATURAL_LOG_MEAL_TIMES.map(option => (
               <option key={option.type} value={option.type}>{option.label}</option>
@@ -512,26 +508,26 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
             type="button"
             onClick={handleNaturalFoodLog}
             disabled={!naturalLogText.trim() || naturalLogLoading}
-            className="btn-lime h-10 px-4 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed sm:ml-auto"
+            className="rounded-xl bg-teal-600 text-white hover:bg-teal-700 transition-colors h-10 px-4 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed sm:ml-auto"
           >
             {naturalLogLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-            Ghi log
+            Lưu bữa ăn
           </button>
         </div>
       </div>
 
       {naturalLogError && (
-        <div className="mt-3 rounded-xl border border-red-400/20 bg-red-400/10 px-3 py-2 text-xs text-red-200">
+        <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-500">
           {naturalLogError}
         </div>
       )}
 
       {naturalLogResult && (
-        <div className="mt-3 rounded-xl border border-lime/20 bg-lime/[0.04] p-3">
+        <div className="mt-3 rounded-xl border border-teal-200 bg-teal-600/[0.04] p-3">
           <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-xs font-bold text-lime">Đã lưu log #{naturalLogResult.nutritionLogId ?? '-'}</span>
+            <span className="text-xs font-bold text-teal-600">Đã lưu log #{naturalLogResult.nutritionLogId ?? '-'}</span>
             {naturalLogResult.confidence && (
-              <span className="text-[10px] uppercase tracking-wider text-neutral-500">{naturalLogResult.confidence}</span>
+              <span className="text-[10px] uppercase tracking-wider text-slate-500">{naturalLogResult.confidence}</span>
             )}
           </div>
           <div className="grid grid-cols-4 gap-2">
@@ -541,22 +537,24 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
               { label: 'Carb', value: `${Math.round(naturalLogCarbs)}g` },
               { label: 'Béo', value: `${Math.round(naturalLogFat)}g` },
             ].map(item => (
-              <div key={item.label} className="rounded-lg bg-black/20 px-2 py-1.5 text-center">
-                <div className="text-xs font-bold text-white">{item.value}</div>
-                <div className="text-[11px] text-neutral-600 uppercase tracking-wider">{item.label}</div>
+              <div key={item.label} className="rounded-lg bg-slate-100 px-2 py-1.5 text-center">
+                <div className="text-xs font-bold text-slate-900">{item.value}</div>
+                <div className="text-[11px] text-slate-400 uppercase tracking-wider">{item.label}</div>
               </div>
             ))}
           </div>
           {!!naturalLogResult.items?.length && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {naturalLogResult.items.slice(0, 4).map((item, idx) => (
-                <span key={`${item.name_vi}-${idx}`} className="rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-[10px] text-neutral-400">
+                <span key={`${item.name_vi}-${idx}`} className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-500">
                   {item.name_vi || 'Món ăn'} {item.quantity_g ? `${Math.round(item.quantity_g)}g` : ''}
                 </span>
               ))}
             </div>
           )}
         </div>
+      )}
+      </>
       )}
     </div>
   );
@@ -568,7 +566,7 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
 
   if (loading) return (
     <div className="h-64 flex items-center justify-center">
-      <Loader2 className="w-8 h-8 text-lime animate-spin" />
+      <Loader2 className="w-8 h-8 text-teal-600 animate-spin" />
     </div>
   );
 
@@ -576,31 +574,53 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
     <div className="max-w-2xl mx-auto py-12 flex flex-col gap-6 animate-fade-in">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-lime mb-2">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-teal-600 mb-2">
             <Utensils className="w-3.5 h-3.5" /> Dinh dưỡng
           </div>
-          <h2 className="font-grotesk font-bold italic uppercase text-2xl sm:text-[1.9rem] text-white leading-[0.92] tracking-tight">Kế hoạch dinh dưỡng</h2>
-          <p className="text-neutral-500 text-sm mt-1.5">Lên thực đơn thông minh theo ngân sách và tủ lạnh.</p>
+          <h2 className="font-grotesk font-bold italic uppercase text-2xl sm:text-[1.9rem] text-slate-900 leading-[0.92] tracking-tight">Kế hoạch dinh dưỡng</h2>
+          <p className="text-slate-500 text-sm mt-1.5">Lên thực đơn thông minh theo ngân sách và tủ lạnh.</p>
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
-          <button onClick={() => setCyberpunkModalOpen(true)} className="btn-lime px-5 py-3 text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+          <button onClick={() => setCyberpunkModalOpen(true)} className="rounded-xl bg-teal-600 text-white hover:bg-teal-700 transition-colors px-5 py-3 text-sm font-bold uppercase tracking-wider flex items-center gap-2">
             <Brain className="w-4 h-4" /> Tạo kế hoạch AI
           </button>
           <AiUsageBadge usage={usage} actionCost={5} onUpgradeClick={() => setUpgradeModalOpen(true)} />
         </div>
       </div>
       {naturalLogPanel}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-12 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-lime/10 border border-lime/20 flex items-center justify-center mx-auto mb-5">
-          <Utensils className="w-8 h-8 text-lime" />
+      <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 sm:p-8">
+        <div className="grid gap-6 sm:grid-cols-[1fr_auto] sm:items-center">
+          <div>
+            <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mb-5">
+              <Utensils className="w-7 h-7 text-teal-700" />
+            </div>
+            <h3 className="font-grotesk font-bold text-slate-900 text-xl mb-2">Bắt đầu với thực đơn 7 ngày</h3>
+            <p className="text-slate-600 text-sm max-w-md leading-relaxed">
+              AI sẽ ghép món theo ngân sách, hồ sơ sức khỏe và nguyên liệu bạn đang có. Sau khi tạo xong, mỗi ngày chỉ cần đánh dấu bữa đã ăn.
+            </p>
+          </div>
+          <button onClick={() => setCyberpunkModalOpen(true)} className="rounded-xl bg-teal-600 text-white hover:bg-teal-700 transition-colors px-6 py-3.5 text-sm font-bold uppercase tracking-wider sm:self-end">
+            Tạo kế hoạch AI
+          </button>
         </div>
-        <h3 className="font-grotesk font-bold text-white text-xl mb-2">Chưa có kế hoạch dinh dưỡng</h3>
-        <p className="text-neutral-400 text-sm max-w-md mx-auto leading-relaxed mb-8">
-          AI sẽ lên thực đơn 7 ngày phù hợp với ngân sách, hồ sơ sức khoẻ và nguyên liệu có sẵn.
-        </p>
-        <button onClick={() => setCyberpunkModalOpen(true)} className="btn-lime px-8 py-3.5 text-sm font-bold uppercase tracking-wider">
-          Tạo kế hoạch với AI
-        </button>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+        <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Sau khi có kế hoạch</p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {[
+            'Xem bữa hôm nay',
+            'Bấm check khi đã ăn',
+            'Đổi món nếu không phù hợp',
+          ].map((item, index) => (
+            <div key={item} className="rounded-2xl border border-slate-200 bg-slate-100 px-3 py-3">
+              <span className="mb-2 flex h-7 w-7 items-center justify-center rounded-xl bg-slate-50 text-xs font-bold text-slate-800 border border-slate-200">
+                {index + 1}
+              </span>
+              <p className="text-sm font-semibold text-slate-900">{item}</p>
+            </div>
+          ))}
+        </div>
       </div>
       {cyberpunkModalOpen && <CyberpunkMealModal defaultBudget={budget} onClose={() => setCyberpunkModalOpen(false)} onSuccess={handleAiSuccess} />}
     </div>
@@ -617,98 +637,104 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
     <div className="max-w-3xl mx-auto space-y-4 py-4 animate-fade-in">
 
       {/* ── Hero ── */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/[0.06]">
+      <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-[#121216] shadow-sm">
         <img
           src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1400&q=80"
           alt="" aria-hidden="true"
           className="absolute inset-0 w-full h-full object-cover object-center"
         />
-        <div className="absolute inset-0 bg-gradient-to-tr from-black via-black/85 to-black/45" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-black/72 via-black/40 to-black/08" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/54 via-transparent to-transparent" />
 
         <div className="relative p-5 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.28em] text-lime mb-2">
+              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-bold text-white backdrop-blur">
                 <Utensils className="w-3.5 h-3.5" /> Dinh dưỡng
               </div>
-              <h2 className="font-grotesk font-bold italic uppercase text-2xl sm:text-[2.1rem] text-white leading-[0.9] tracking-tight">
+              <h2 className="font-grotesk text-[1.85rem] font-bold leading-[0.96] tracking-tight text-white sm:text-[2.3rem]">
                 {isToday ? 'Thực đơn hôm nay' : selectedDate
                   ? `${VI_DAYS_FULL[selectedDate.getDay()]}, ${selectedDate.getDate()}/${selectedDate.getMonth()+1}`
                   : `Ngày ${selectedDay}`}
               </h2>
+              <p className="mt-3 max-w-md text-sm leading-relaxed text-white/85">
+                Chọn món dễ làm nhất, đánh dấu khi ăn xong và theo dõi kcal trong ngày.
+              </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setShoppingOpen(true)}
-                className="w-9 h-9 rounded-xl border border-white/15 bg-white/10 backdrop-blur text-neutral-200 hover:text-white flex items-center justify-center transition-colors"
+                className="w-9 h-9 rounded-xl border border-white/20 bg-white/15 backdrop-blur text-white hover:bg-white/25 flex items-center justify-center transition-colors"
               >
                 <ShoppingCart className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setScannerOpen(true)}
-                className="w-9 h-9 rounded-xl border border-white/15 bg-white/10 backdrop-blur text-neutral-200 hover:text-white flex items-center justify-center transition-colors"
+                className="w-9 h-9 rounded-xl border border-white/20 bg-white/15 backdrop-blur text-white hover:bg-white/25 flex items-center justify-center transition-colors"
               >
                 <Camera className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setCyberpunkModalOpen(true)}
-                className="btn-lime px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
+                className="rounded-xl bg-white px-4 py-2 text-xs font-bold uppercase tracking-wider text-teal-700 hover:bg-white/90 flex items-center gap-1.5 transition-colors"
               >
                 <Brain className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Cập nhật</span>
               </button>
             </div>
           </div>
 
-          {/* Stat badges */}
-          <div className="flex flex-wrap items-center gap-2.5 mt-4">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur border border-white/15 px-3 py-1.5 text-xs text-neutral-200">
-              <Check className="w-3.5 h-3.5 text-lime" />
-              <span className="text-white font-bold">{totalEatenToday}/{totalMealsToday}</span> bữa đã ăn
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur border border-white/15 px-3 py-1.5 text-xs text-neutral-200">
-              <Flame className="w-3.5 h-3.5 text-orange-400" />
-              <span className="text-white font-bold">{currentKcal}</span>/{targetKcal} kcal
-            </span>
+          <div className="mt-5 grid grid-cols-3 gap-2.5">
+            <div className="rounded-[16px] border border-white/20 bg-white/15 p-3 text-center backdrop-blur">
+              <Check className="mx-auto mb-1 h-4 w-4 text-emerald-200" />
+              <p className="text-[11px] font-semibold text-white/70">Bữa ăn</p>
+              <p className="font-grotesk text-xl font-bold text-white">{totalEatenToday}<span className="text-sm text-white/60">/{totalMealsToday}</span></p>
+            </div>
+            <div className="rounded-[16px] border border-white/20 bg-white/15 p-3 text-center backdrop-blur">
+              <Flame className="mx-auto mb-1 h-4 w-4 text-orange-200" />
+              <p className="text-[11px] font-semibold text-white/70">Kcal</p>
+              <p className="font-grotesk text-xl font-bold text-white">{currentKcal}<span className="text-sm text-white/60">/{targetKcal}</span></p>
+            </div>
             {(() => {
-              const leftK = Math.round((dailyBudget - currentSpent) / 1000);
+              const leftK = Math.round(leftBudget / 1000);
               const over = leftK < 0;
               return (
-                <span className={`inline-flex items-center gap-1.5 rounded-full backdrop-blur border px-3 py-1.5 text-xs font-bold ${
-                  over ? 'bg-red-500/15 border-red-500/30 text-red-300' : 'bg-lime/15 border-lime/30 text-lime'
+                <div className={`rounded-[16px] border p-3 text-center backdrop-blur ${
+                  over ? 'border-red-400/40 bg-red-500/25' : 'border-white/20 bg-white/15'
                 }`}>
-                  <Wallet className="w-3.5 h-3.5" />
-                  {over ? `Vượt ${Math.abs(leftK)}k` : `Còn ${leftK}k`}
-                </span>
+                  <Wallet className={`mx-auto mb-1 h-4 w-4 ${over ? 'text-red-100' : 'text-emerald-200'}`} />
+                  <p className="text-[11px] font-semibold text-white/70">{over ? 'Vượt ngân sách' : 'Còn lại'}</p>
+                  <p className={`font-grotesk text-xl font-bold ${over ? 'text-red-50' : 'text-white'}`}>{Math.abs(leftK)}k</p>
+                </div>
               );
             })()}
           </div>
+
         </div>
       </div>
 
       {naturalLogPanel}
 
       {/* ── Day selector — nổi bật ── */}
-      <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-b from-white/[0.05] to-white/[0.02] p-4">
+      <div className="rounded-3xl bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-lime/15 border border-lime/25 flex items-center justify-center shrink-0">
-              <CalendarDays className="w-4 h-4 text-lime" />
+            <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+              <CalendarDays className="w-4 h-4 text-orange-500" />
             </div>
-            <p className="font-grotesk font-bold uppercase text-white text-sm tracking-wide leading-none">Chọn ngày</p>
+            <p className="font-grotesk font-bold uppercase text-slate-800 text-sm tracking-wide leading-none">Chọn ngày</p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => { setWeekStart(w => Math.max(1, w - 7)); }}
               disabled={weekStart <= 1}
-              className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.03] flex items-center justify-center text-neutral-400 hover:text-white hover:border-white/20 disabled:opacity-25 transition-colors"
+              className="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-500 hover:text-teal-600 hover:border-teal-200 disabled:opacity-25 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={() => { setWeekStart(w => Math.min(totalDays - 6, w + 7)); }}
               disabled={weekEnd >= totalDays}
-              className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.03] flex items-center justify-center text-neutral-400 hover:text-white hover:border-white/20 disabled:opacity-25 transition-colors"
+              className="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center text-slate-500 hover:text-teal-600 hover:border-teal-200 disabled:opacity-25 transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -729,29 +755,29 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
                 onClick={() => setSelectedDay(dayNum)}
                 className={`relative rounded-2xl py-3 px-1 flex flex-col items-center justify-center gap-1 transition-all ${
                   isSelected
-                    ? 'bg-lime text-black shadow-[0_6px_24px_-6px_rgba(204,255,0,0.5)]'
+                    ? 'bg-teal-600 text-slate-900 shadow-[0_10px_22px_-8px_rgba(13,148,136,0.7)]'
                     : isTodayDay
-                    ? 'border border-lime/40 bg-lime/[0.06] hover:bg-lime/10'
-                    : 'border border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.07]'
+                    ? 'border border-orange-200 bg-orange-50 hover:bg-orange-100'
+                    : 'border border-slate-200 bg-slate-50 hover:bg-slate-100'
                 }`}
               >
                 {isTodayDay && !isSelected && (
-                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[7px] font-bold uppercase tracking-wider text-lime bg-charcoal border border-lime/30 px-1.5 py-px rounded-full">
+                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[7px] font-bold uppercase tracking-wider text-teal-600 bg-white border border-teal-200 px-1.5 py-px rounded-full shadow-sm">
                     Nay
                   </span>
                 )}
                 <div className={`text-xs font-bold leading-none ${
-                  isSelected ? 'text-black' : isTodayDay ? 'text-lime' : 'text-neutral-400'
+                  isSelected ? 'text-slate-900' : isTodayDay ? 'text-orange-600' : 'text-slate-800'
                 }`}>
                   {dow}
                 </div>
                 <div className={`text-base font-grotesk font-bold leading-none ${
-                  isSelected ? 'text-black' : isTodayDay ? 'text-white' : 'text-neutral-300'
+                  isSelected ? 'text-slate-900' : isTodayDay ? 'text-orange-500' : 'text-slate-600'
                 }`}>
                   {dateNum}
                 </div>
                 <div className={`w-1.5 h-1.5 rounded-full ${
-                  isSelected ? 'bg-black/40' : 'bg-white/[0.12]'
+                  isSelected ? 'bg-white/80' : 'bg-slate-200'
                 }`} />
               </button>
             );
@@ -762,78 +788,78 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
       {/* ── Daily progress ── */}
       <div className="grid grid-cols-2 gap-3">
         {/* Calories */}
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+        <div className="rounded-2xl bg-white p-4 shadow-[0_12px_26px_rgba(15,23,42,0.06)]">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
               <Flame className="w-3.5 h-3.5 text-orange-400" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Năng lượng</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Năng lượng</span>
             </div>
-            <span className="text-xs text-white font-bold">{currentKcal}<span className="text-neutral-600 font-normal">/{targetKcal}</span></span>
+            <span className="text-xs text-slate-900 font-bold">{currentKcal}<span className="text-slate-400 font-normal">/{targetKcal}</span></span>
           </div>
-          <div className="h-1.5 bg-white/[0.07] rounded-full overflow-hidden mb-3">
+          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-3">
             <div className="h-full bg-orange-400 rounded-full transition-all duration-700" style={{ width: `${pct(currentKcal, targetKcal)}%` }} />
           </div>
           {/* Macros mini */}
           <div className="grid grid-cols-3 gap-1">
             {[
-              { label: 'Đạm', val: [...(currentDay.breakfast||[]),...(currentDay.lunch||[]),...(currentDay.dinner||[]),...(currentDay.snacks||[])].filter(m=>m.isEaten).reduce((s,m)=>s+m.protein,0), color: '#ef4444', icon: Beef },
+              { label: 'Đạm', val: [...(currentDay.breakfast||[]),...(currentDay.lunch||[]),...(currentDay.dinner||[]),...(currentDay.snacks||[])].filter(m=>m.isEaten).reduce((s,m)=>s+m.protein,0), color: '#FF3B30', icon: Beef },
               { label: 'Tinh bột', val: [...(currentDay.breakfast||[]),...(currentDay.lunch||[]),...(currentDay.dinner||[]),...(currentDay.snacks||[])].filter(m=>m.isEaten).reduce((s,m)=>s+m.carbs,0), color: '#ccff00', icon: Wheat },
-              { label: 'Béo', val: [...(currentDay.breakfast||[]),...(currentDay.lunch||[]),...(currentDay.dinner||[]),...(currentDay.snacks||[])].filter(m=>m.isEaten).reduce((s,m)=>s+m.fat,0), color: '#3b82f6', icon: Droplets },
+              { label: 'Béo', val: [...(currentDay.breakfast||[]),...(currentDay.lunch||[]),...(currentDay.dinner||[]),...(currentDay.snacks||[])].filter(m=>m.isEaten).reduce((s,m)=>s+m.fat,0), color: '#007AFF', icon: Droplets },
             ].map(({ label, val, color, icon: Icon }) => (
-              <div key={label} className="rounded-lg bg-white/[0.04] p-1.5 text-center">
+              <div key={label} className="rounded-lg bg-slate-50 p-1.5 text-center">
                 <Icon className="w-2.5 h-2.5 mx-auto mb-0.5" style={{ color }} />
-                <div className="text-[10px] font-bold text-white">{Math.round(val)}g</div>
-                <div className="text-[11px] text-neutral-600">{label}</div>
+                <div className="text-[10px] font-bold text-slate-900">{Math.round(val)}g</div>
+                <div className="text-[11px] text-slate-500">{label}</div>
               </div>
             ))}
           </div>
         </div>
 
         {/* Budget */}
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+        <div className="rounded-2xl bg-white p-4 shadow-[0_12px_26px_rgba(15,23,42,0.06)]">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
-              <Wallet className="w-3.5 h-3.5 text-lime" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Chi tiêu</span>
+              <Wallet className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Chi tiêu</span>
             </div>
-            <span className="text-xs text-white font-bold">
-              {(currentSpent/1000).toFixed(0)}k<span className="text-neutral-600 font-normal">/{(dailyBudget/1000).toFixed(0)}k</span>
+            <span className="text-xs text-slate-900 font-bold">
+              {(currentSpent/1000).toFixed(0)}k<span className="text-slate-400 font-normal">/{(dailyBudget/1000).toFixed(0)}k</span>
             </span>
           </div>
-          <div className="h-1.5 bg-white/[0.07] rounded-full overflow-hidden mb-3">
-            <div className={`h-full rounded-full transition-all duration-700 ${pct(currentSpent,dailyBudget)>90?'bg-red-400':'bg-lime'}`}
+          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-3">
+            <div className={`h-full rounded-full transition-all duration-700 ${pct(currentSpent,dailyBudget)>90?'bg-red-400':'bg-teal-600'}`}
               style={{ width: `${pct(currentSpent, dailyBudget)}%` }} />
           </div>
-          <div className="rounded-xl bg-white/[0.04] p-2.5 text-center">
-            <div className={`font-grotesk font-bold text-sm ${(dailyBudget - currentSpent) >= 0 ? 'text-lime' : 'text-red-400'}`}>
+          <div className="rounded-xl bg-slate-50 p-2.5 text-center">
+            <div className={`font-grotesk font-bold text-sm ${(dailyBudget - currentSpent) >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
               {((dailyBudget - currentSpent)/1000).toFixed(0)}k
             </div>
-            <div className="text-neutral-600 text-[11px] uppercase tracking-wider mt-0.5">Còn lại</div>
+            <div className="text-slate-500 text-[11px] uppercase tracking-wider mt-0.5">Còn lại</div>
           </div>
         </div>
       </div>
 
       {/* ── Timeline meals ── */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-4 flex items-center gap-2">
+      <div className="rounded-2xl bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
           <Utensils className="w-3.5 h-3.5" />
           Lịch ăn hôm nay
         </h3>
         {medicalDisclaimer && (
-          <div className="mb-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-amber-200 text-xs leading-relaxed flex items-start gap-3">
-            <span className="text-base leading-none">⚠️</span>
+          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-700 text-xs leading-relaxed flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{medicalDisclaimer}</span>
           </div>
         )}
 
-        <div>
-          {MEALS.map(({ key, label, time, emoji, pct: mPct }) => {
+        <div className="space-y-5">
+          {MEALS.map(({ key, label, time, icon, pct: mPct }) => {
             const meals = (currentDay as any)[key] || [];
             if (key === 'snacks' && meals.length === 0) return null;
             return (
               <MealTimeBlock
                 key={key}
-                label={label} time={time} emoji={emoji}
+                label={label} time={time} icon={icon}
                 meals={meals} mealPct={mPct}
                 onCheck={handleMealCheck}
                 onSwap={handleSwapDish}
@@ -843,7 +869,7 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
           })}
         </div>
 
-        <p className="mt-4 text-neutral-600 text-[11px] leading-relaxed text-center px-4">
+        <p className="mt-4 text-slate-400 text-[11px] leading-relaxed text-center px-4">
           Thực đơn do AI tạo chỉ mang tính tham khảo, không thay thế tư vấn y tế. Nếu bạn có bệnh nền
           hoặc dị ứng thực phẩm, hãy cập nhật hồ sơ sức khỏe và tham khảo ý kiến bác sĩ trước khi áp dụng.
         </p>
@@ -870,21 +896,21 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
       )}
 
       {shoppingOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShoppingOpen(false)}>
-          <div className="rounded-2xl border border-white/[0.07] bg-[#111318] p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShoppingOpen(false)}>
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-grotesk font-bold text-white">Cần mua hôm nay</h3>
-              <button onClick={() => setShoppingOpen(false)} className="text-neutral-500 hover:text-white"><X className="w-5 h-5" /></button>
+              <h3 className="font-grotesk font-bold text-slate-900">Cần mua hôm nay</h3>
+              <button onClick={() => setShoppingOpen(false)} className="text-slate-500 hover:text-slate-900"><X className="w-5 h-5" /></button>
             </div>
             {weeklyPlan.shoppingList.length === 0 ? (
-              <p className="text-neutral-500 text-sm text-center py-6">✅ Đã có đủ nguyên liệu!</p>
+              <p className="text-slate-500 text-sm text-center py-6">✅ Đã có đủ nguyên liệu!</p>
             ) : (
               <div className="space-y-2 max-h-80 overflow-y-auto">
                 {weeklyPlan.shoppingList.map(item => (
-                  <div key={item.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-white/[0.07] bg-white/[0.03]">
-                    <div className="w-1.5 h-1.5 rounded-full bg-lime shrink-0" />
-                    <span className="flex-1 text-white text-sm">{item.name}</span>
-                    <span className="text-neutral-500 text-xs font-semibold">{item.quantity}{item.unit}</span>
+                  <div key={item.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50">
+                    <div className="w-1.5 h-1.5 rounded-full bg-teal-600 shrink-0" />
+                    <span className="flex-1 text-slate-900 text-sm">{item.name}</span>
+                    <span className="text-slate-500 text-xs font-semibold">{item.quantity}{item.unit}</span>
                   </div>
                 ))}
               </div>
@@ -894,11 +920,11 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
       )}
 
       {scannerOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="rounded-2xl border border-white/[0.07] bg-[#111318] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-grotesk font-bold text-white">Quét thực phẩm AI</h3>
-              <button onClick={() => setScannerOpen(false)} className="text-neutral-500 hover:text-white"><X className="w-5 h-5" /></button>
+              <h3 className="font-grotesk font-bold text-slate-900">Quét thực phẩm AI</h3>
+              <button onClick={() => setScannerOpen(false)} className="text-slate-500 hover:text-slate-900"><X className="w-5 h-5" /></button>
             </div>
             <AIFoodScanner
               onAnalysisComplete={() => setScannerOpen(false)}

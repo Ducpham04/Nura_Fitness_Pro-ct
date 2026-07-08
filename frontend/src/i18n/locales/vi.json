@@ -6,9 +6,12 @@
   },
   "nav": {
     "home": "Trang chủ",
+    "today": "Hôm nay",
     "journey": "Hành trình",
     "workout": "Tập luyện",
+    "train": "Tập",
     "diet": "Dinh dưỡng",
+    "me": "Tôi",
     "challenges": "Thử thách",
     "coach": "AI Coach",
     "logbook": "Nhật ký",

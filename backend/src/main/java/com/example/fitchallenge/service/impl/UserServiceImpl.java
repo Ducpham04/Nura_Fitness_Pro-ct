@@ -648,8 +648,6 @@ public class UserServiceImpl implements UserService {
     }
 
     private List<AchievementDTO> buildAchievementsDTO(Long userId, User user) {
-        List<AchievementDTO> achievements = new ArrayList<>();
-
         // Tính số challenge hoàn thành
         long challengesCompleted = userChallengeRepository.findAll()
                 .stream()
@@ -662,53 +660,38 @@ public class UserServiceImpl implements UserService {
                 .filter(ut -> "completed".equals(ut.getStatus()))
                 .count();
 
-        // Achievement: First Challenge
-        if (challengesCompleted >= 1) {
-            achievements.add(AchievementDTO.builder()
-                    .name("First Challenge")
-                    .icon("🏆")
-                    .color("from-yellow-400 to-orange-500")
-                    .build());
-        }
-
-        // Achievement: 10 Challenges
-        if (challengesCompleted >= 10) {
-            achievements.add(AchievementDTO.builder()
-                    .name("Challenge Master")
-                    .icon("👑")
-                    .color("from-purple-400 to-pink-500")
-                    .build());
-        }
-
-        // Achievement: First Workout
-        if (workoutsCompleted >= 1) {
-            achievements.add(AchievementDTO.builder()
-                    .name("First Workout")
-                    .icon("💪")
-                    .color("from-blue-400 to-cyan-500")
-                    .build());
-        }
-
-        // Achievement: 7 Day Streak
         int currentStreak = calculateCurrentStreak(userId);
-        if (currentStreak >= 7) {
-            achievements.add(AchievementDTO.builder()
-                    .name("7 Day Streak")
-                    .icon("🔥")
-                    .color("from-red-400 to-orange-500")
-                    .build());
-        }
+        int points = user.getPoints() != null ? user.getPoints() : 0;
 
-        // Achievement: Points milestone
-        if (user.getPoints() != null && user.getPoints() >= 1000) {
-            achievements.add(AchievementDTO.builder()
-                    .name("High Scorer")
-                    .icon("⭐")
-                    .color("from-yellow-400 to-amber-500")
-                    .build());
-        }
+        // Trả TẤT CẢ thành tựu (kể cả chưa mở khoá) kèm tiến độ để FE
+        // hiển thị thanh % cho cái chưa đạt thay vì ẩn đi.
+        List<AchievementDTO> achievements = new ArrayList<>();
+        achievements.add(achievement("First Challenge", "🏆", "from-yellow-400 to-orange-500", (int) challengesCompleted, 1));
+        achievements.add(achievement("First Workout", "💪", "from-blue-400 to-cyan-500", (int) workoutsCompleted, 1));
+        achievements.add(achievement("7 Day Streak", "🔥", "from-red-400 to-orange-500", currentStreak, 7));
+        achievements.add(achievement("Challenge Master", "👑", "from-purple-400 to-pink-500", (int) challengesCompleted, 10));
+        achievements.add(achievement("High Scorer", "⭐", "from-yellow-400 to-amber-500", points, 1000));
 
+        // Đã mở khoá lên đầu; trong cùng nhóm, cái tiến độ cao (theo %) xếp trước.
+        achievements.sort((a, b) -> {
+            if (!a.getUnlocked().equals(b.getUnlocked())) return a.getUnlocked() ? -1 : 1;
+            double pa = a.getProgress() / (double) a.getTarget();
+            double pb = b.getProgress() / (double) b.getTarget();
+            return Double.compare(pb, pa);
+        });
         return achievements;
+    }
+
+    private AchievementDTO achievement(String name, String icon, String color, int progress, int target) {
+        int capped = Math.min(progress, target);
+        return AchievementDTO.builder()
+                .name(name)
+                .icon(icon)
+                .color(color)
+                .progress(capped)
+                .target(target)
+                .unlocked(progress >= target)
+                .build();
     }
 
     private UserGoalsDTO buildUserGoalsDTO(Long userId) {

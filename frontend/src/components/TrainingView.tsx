@@ -10,30 +10,29 @@ import {
   Shield,
   Timer,
   Flame,
-  Target,
   Activity,
+  Target,
   CalendarDays,
   RotateCcw,
   Video,
-  ArrowRight,
   ChevronLeft,
   ChevronRight,
   RefreshCw,
-  Search,
-  X as XIcon,
-  Scale,
   Moon,
   Lightbulb,
   ShieldAlert,
 } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
-import { trainingService, type DailyTrainingLog, type PersonalizedWorkoutExercise, type AlternativeExercise } from '../services/trainingService';
+import { trainingService, type DailyTrainingLog, type PersonalizedWorkoutExercise } from '../services/trainingService';
+import { userService, type BodyMetricPoint } from '../services/userService';
+import { nutritionService, type DailyNutritionPoint } from '../services/nutritionService';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import CyberpunkWorkoutModal from './CyberpunkWorkoutModal';
 import { AiUsageBadge } from './AiUsageBadge';
 import { AiUpgradeModal } from './AiUpgradeModal';
 import { useAiUsage } from '../hooks/useAiUsage';
+import { useDashboard } from '../hooks/useDashboard';
 import { Sparkles } from 'lucide-react';
 
 interface TrainingExercise {
@@ -108,11 +107,34 @@ const formatDuration = (seconds?: number) => {
   return remain ? `${minutes}m ${remain}s` : `${minutes}m`;
 };
 
+const formatDateKey = (date: Date) => date.toISOString().split('T')[0];
+
+const formatShortDate = (value?: string) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${date.getDate()}/${date.getMonth() + 1}`;
+};
+
+const sparklinePoints = (values: number[], width = 260, height = 88, pad = 10) => {
+  if (!values.length) return '';
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  return values.map((value, index) => {
+    const x = values.length === 1
+      ? width / 2
+      : pad + (index * (width - pad * 2)) / (values.length - 1);
+    const y = height - pad - ((value - min) / span) * (height - pad * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+};
+
 const difficultyTone = (difficulty?: string) => {
   const value = (difficulty || '').toLowerCase();
-  if (value.includes('hard') || value.includes('advanced')) return 'text-warning bg-warning/10 border-warning/20';
-  if (value.includes('medium') || value.includes('intermediate')) return 'text-electric bg-electric/10 border-electric/20';
-  return 'text-lime bg-lime/10 border-lime/20';
+  if (value.includes('hard') || value.includes('advanced')) return 'text-orange-600 bg-orange-50 border-orange-200';
+  if (value.includes('medium') || value.includes('intermediate')) return 'text-blue-600 bg-blue-50 border-blue-200';
+  return 'text-emerald-600 bg-emerald-50 border-emerald-200';
 };
 
 /** Convert SNAKE_CASE enum values to Title Case for display. */
@@ -184,85 +206,6 @@ const parseNotes = (notes?: string): { muscle: string; phase: string; benefit: s
   };
 };
 
-const PHASE_VI: Record<string, string> = {
-  'Foundation': 'Nền tảng', 'Strength': 'Sức mạnh', 'Endurance': 'Sức bền',
-  'Hypertrophy': 'Tăng cơ', 'Power': 'Sức mạnh bùng nổ', 'Recovery': 'Phục hồi',
-};
-
-/**
- * Smart video player — embeds YouTube inline, or shows a fallback link for other URLs.
- */
-const ExerciseVideoPlayer = memo(({ videoUrl, name, defaultExpanded = false }: { videoUrl: string; name: string; defaultExpanded?: boolean }) => {
-  const [expanded, setExpanded] = useState(defaultExpanded);
-
-  // Extract YouTube video ID from embed URL, watch URL, or short URL
-  const getYouTubeId = (url: string): string | null => {
-    const patterns = [
-      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
-      /youtu\.be\/([a-zA-Z0-9_-]{11})/,
-    ];
-    for (const p of patterns) {
-      const m = url.match(p);
-      if (m) return m[1];
-    }
-    return null;
-  };
-
-  const ytId = getYouTubeId(videoUrl);
-  const embedUrl = ytId
-    ? `https://www.youtube.com/embed/${ytId}?autoplay=0&rel=0&modestbranding=1`
-    : null;
-
-  if (!embedUrl) {
-    return (
-      <a
-        href={videoUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.06] px-4 py-2.5 text-neutral-300 hover:text-white text-sm transition-colors"
-      >
-        <Video className="w-4 h-4 text-blue-400 shrink-0" />
-        <span>Video hướng dẫn</span>
-        <ArrowRight className="w-3.5 h-3.5 ml-auto" />
-      </a>
-    );
-  }
-
-  return (
-    <div className="rounded-xl overflow-hidden border border-white/[0.07]">
-      {!expanded ? (
-        <button
-          onClick={() => setExpanded(true)}
-          className="w-full flex items-center gap-2 bg-white/[0.06] px-4 py-2.5 text-neutral-300 hover:text-white text-sm transition-colors hover:bg-white/[0.06]"
-        >
-          <div className="w-7 h-7 rounded-lg bg-red-600/80 flex items-center justify-center flex-shrink-0">
-            <Play className="w-3.5 h-3.5 text-white fill-white" />
-          </div>
-          <span className="font-medium">Xem video hướng dẫn</span>
-          <ArrowRight className="w-3.5 h-3.5 ml-auto opacity-50" />
-        </button>
-      ) : (
-        <div className="relative">
-          <iframe
-            src={embedUrl}
-            title={`${name} tutorial`}
-            className="w-full aspect-video"
-            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-          <button
-            onClick={() => setExpanded(false)}
-            className="absolute top-2 right-2 w-7 h-7 bg-black/70 rounded-full flex items-center justify-center text-white hover:bg-black/90 transition-colors"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-});
-
 /** Hiển thị khi schedule rỗng — tự động thử regenerate nếu có plan ID */
 function EmptySchedule({ activePlanId, onRetry, onCreatePlan }: { activePlanId?: number; onRetry: () => void; onCreatePlan: () => void }) {
   const [regenerating, setRegenerating] = useState(false);
@@ -293,35 +236,35 @@ function EmptySchedule({ activePlanId, onRetry, onCreatePlan }: { activePlanId?:
   };
 
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-10 text-center">
-      <div className="w-12 h-12 rounded-2xl bg-lime/10 border border-lime/20 flex items-center justify-center mx-auto mb-4">
-        <Dumbbell className="w-6 h-6 text-lime" />
+    <div className="rounded-2xl bg-white p-10 text-center shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
+      <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center mx-auto mb-4">
+        <Dumbbell className="w-6 h-6 text-teal-600" />
       </div>
-      <h3 className="font-grotesk font-bold text-white text-lg mb-2">Chưa có lịch tập</h3>
-      <p className="text-neutral-400 text-sm mb-6 max-w-md mx-auto">
+      <h3 className="font-grotesk font-bold text-slate-900 text-lg mb-2">Chưa có lịch tập</h3>
+      <p className="text-slate-500 text-sm mb-6 max-w-md mx-auto">
         {activePlanId
           ? 'Plan của bạn đã được tạo nhưng lịch tập cá nhân chưa được sinh. Nhấn bên dưới để tạo.'
           : 'Bạn chưa có chương trình tập. Tạo kế hoạch AI cá nhân hóa theo mục tiêu, thể trạng & thiết bị của bạn để bắt đầu.'}
       </p>
-      {msg && <p className="text-lime text-xs mb-4 animate-pulse">{msg}</p>}
+      {msg && <p className="text-teal-600 text-xs mb-4 animate-pulse">{msg}</p>}
       <div className="flex flex-wrap gap-3 justify-center">
         {activePlanId ? (
           <button
             onClick={tryRegenerate}
             disabled={regenerating}
-            className="btn-lime px-5 py-2.5 text-sm inline-flex items-center gap-2 disabled:opacity-60"
+            className="bg-teal-600 text-white hover:bg-teal-700 transition-colors rounded-xl px-5 py-2.5 text-sm font-bold inline-flex items-center gap-2 disabled:opacity-60"
           >
             {regenerating
-              ? <><div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />Đang tạo...</>
+              ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Đang tạo...</>
               : <><RefreshCw className="w-4 h-4" />Tạo lịch tập ngay</>
             }
           </button>
         ) : (
-          <button onClick={onCreatePlan} className="btn-lime px-5 py-2.5 text-sm inline-flex items-center gap-2">
+          <button onClick={onCreatePlan} className="bg-teal-600 text-white hover:bg-teal-700 transition-colors rounded-xl px-5 py-2.5 text-sm font-bold inline-flex items-center gap-2">
             <Sparkles className="w-4 h-4" />Tạo kế hoạch AI
           </button>
         )}
-        <button onClick={onRetry} className="px-5 py-2.5 text-sm border border-white/[0.08] rounded-xl text-neutral-400 hover:text-white inline-flex items-center gap-2 transition-colors">
+        <button onClick={onRetry} className="px-5 py-2.5 text-sm border border-slate-200 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 inline-flex items-center gap-2 transition-colors">
           <RotateCcw className="w-4 h-4" />Tải lại
         </button>
       </div>
@@ -351,12 +294,6 @@ function TrainingView() {
   const { user } = useAuthContext();
   const { i18n } = useTranslation();
 
-  // ── Swap exercise state ──────────────────────────────────────────────────
-  const [showSwap, setShowSwap] = useState(false);
-  const [alternatives, setAlternatives] = useState<AlternativeExercise[]>([]);
-  const [altLoading, setAltLoading] = useState(false);
-  const [altMuscleFilter, setAltMuscleFilter] = useState('');
-  const [swapping, setSwapping] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [sessionData, setSessionData] = useState<SessionData>({ reps: 0, caloriesBurned: 0, avgRepTime: 0 });
   const [scheduleExercises, setScheduleExercises] = useState<TrainingExercise[]>([]);
@@ -385,8 +322,18 @@ function TrainingView() {
   const [aiPlanModalOpen, setAiPlanModalOpen] = useState(false);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const { usage, packages, refresh: refreshUsage } = useAiUsage(user?.id ?? null);
+  const { data: dashboardData } = useDashboard();
   // Thông tin cá nhân hóa hiển thị sau khi tạo plan (kiến thức + cảnh báo y khoa)
   const [planInsight, setPlanInsight] = useState<{ rationale: string; disclaimer: string; riskTier: string; notes: string[] } | null>(null);
+  const [bodyMetrics, setBodyMetrics] = useState<BodyMetricPoint[]>([]);
+  const [dailyNutrition, setDailyNutrition] = useState<DailyNutritionPoint[]>([]);
+  // ── Tích luỹ toàn buổi (cộng dồn qua từng bài) + báo cáo tổng buổi ──
+  const [sessionTotals, setSessionTotals] = useState<{ time: number; calories: number; reps: number; exercises: number }>({ time: 0, calories: 0, reps: 0, exercises: 0 });
+  const [showSessionReport, setShowSessionReport] = useState(false);
+  // Overlay chuyển bài nhẹ giữa các bài trong buổi
+  const [transition, setTransition] = useState<{ type: 'next' | 'final'; nextName?: string } | null>(null);
+  // Chống kích hoạt trùng khi bài vừa hoàn tất set cuối
+  const completingRef = useRef(false);
 
   const loadTrainingSchedule = useCallback(async () => {
     if (!user) return;
@@ -394,9 +341,12 @@ function TrainingView() {
       setLoading(true);
       const trainings = await trainingService.getUserTraining(user.id);
       const list = Array.isArray(trainings) ? trainings : [];
-      const activeTraining = list.find((t: any) =>
-        t.status === 'ACTIVE' || t.status === 'active' || t.status === 'IN_PROGRESS'
-      ) || list[0];
+      // Ưu tiên kế hoạch active MỚI NHẤT (id lớn nhất) — khi tạo lại kế hoạch,
+      // plan mới luôn thắng, đồng bộ với dashboard (findTop...OrderByUtIdDesc).
+      const byNewest = (a: any, b: any) => (Number(b?.id) || 0) - (Number(a?.id) || 0);
+      const activeTraining = [...list]
+        .filter((t: any) => t.status === 'ACTIVE' || t.status === 'active' || t.status === 'IN_PROGRESS')
+        .sort(byNewest)[0] || [...list].sort(byNewest)[0];
       setActivePlan(activeTraining);
       const planId = activeTraining?.trainingPlanId;
       const startDate = activeTraining?.startDate;
@@ -429,7 +379,11 @@ function TrainingView() {
 
       setScheduleExercises(mapped);
       setSelectedDay(dayNumber);
-      const dayExercises = mapped.filter(ex => ex.dayNumber === dayNumber);
+      // Kế hoạch lặp theo chu kỳ: nếu hôm nay vượt số ngày có bài, ánh xạ về
+      // ngày tương ứng trong chu kỳ (vd ngày 52 → ngày 22 khi plan có 30 ngày).
+      const maxPlanDay = mapped.reduce((m, ex) => Math.max(m, ex.dayNumber || 1), 1);
+      const contentDay = maxPlanDay > 0 ? ((dayNumber - 1) % maxPlanDay) + 1 : dayNumber;
+      const dayExercises = mapped.filter(ex => ex.dayNumber === contentDay);
       setActiveExercise(dayExercises.find(ex => !ex.done) || dayExercises[0] || mapped.find(ex => !ex.done) || mapped[0] || null);
     } catch (error) {
       console.warn('[TrainingView] Failed to load training schedule:', error);
@@ -443,6 +397,30 @@ function TrainingView() {
   useEffect(() => {
     loadTrainingSchedule();
   }, [loadTrainingSchedule]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let alive = true;
+    const loadBodyReport = async () => {
+      const to = new Date();
+      const from = new Date();
+      from.setDate(to.getDate() - 6);
+      const [metrics, nutrition] = await Promise.all([
+        userService.getBodyMetricHistory(),
+        nutritionService.getDailyNutrition(user.id, formatDateKey(from), formatDateKey(to)),
+      ]);
+      if (!alive) return;
+      setBodyMetrics(metrics);
+      setDailyNutrition(nutrition);
+    };
+    loadBodyReport();
+    const onBodyMetricUpdated = () => loadBodyReport();
+    window.addEventListener('body-metric-updated', onBodyMetricUpdated);
+    return () => {
+      alive = false;
+      window.removeEventListener('body-metric-updated', onBodyMetricUpdated);
+    };
+  }, [user?.id]);
 
   // Sau khi tạo kế hoạch AI mới → đóng modal, sinh personalization nếu cần, tải lại lịch
   const handleAiPlanSuccess = async (data: any) => {
@@ -523,73 +501,7 @@ function TrainingView() {
     return () => clearTimeout(t);
   }, [isResting, restCountdown, playCue]);
 
-  // Mở panel đổi bài, load alternatives ngay lập tức
-  const openSwap = async (ex: TrainingExercise) => {
-    setShowSwap(true);
-    setAltMuscleFilter('');
-    setAlternatives([]);
-    setAltLoading(true);
-    try {
-      const list = await trainingService.getAlternativeExercises(ex.id);
-      setAlternatives(list);
-    } catch {
-      toast.error('Không tải được danh sách bài thay thế');
-    } finally {
-      setAltLoading(false);
-    }
-  };
-
-  // Filter alternatives theo nhóm cơ người dùng nhập
-  const filterAlternatives = async (muscle: string) => {
-    setAltMuscleFilter(muscle);
-    if (!panelExercise) return;
-    setAltLoading(true);
-    try {
-      const list = await trainingService.getAlternativeExercises(
-        panelExercise.id,
-        muscle.trim() || undefined
-      );
-      setAlternatives(list);
-    } catch {
-      toast.error('Không tải được danh sách bài tập');
-    } finally {
-      setAltLoading(false);
-    }
-  };
-
-  // Xác nhận đổi bài
-  const confirmSwap = async (alt: AlternativeExercise) => {
-    if (!panelExercise || swapping) return;
-    setSwapping(true);
-    try {
-      const res = await trainingService.swapExercise(panelExercise.id, alt.id);
-      if (res?.success !== false) {
-        toast.success(`Đã đổi sang "${i18n.language === 'vi' && alt.nameVi ? alt.nameVi : alt.name}"`);
-        setShowSwap(false);
-        // Reload lịch tập để cập nhật UI
-        setLoading(true);
-        const newList = await trainingService.getPersonalizedSchedule(user?.id);
-        const planId = activePlan?.id;
-        const completed = new Set<string>(
-          scheduleExercises.filter(e => e.done).map(e => `${e.dayNumber}:${e.exerciseId}`)
-        );
-        const mapped = newList.map(e =>
-          mapPersonalizedExercise(e, planId ? Number(planId) : undefined, completed, i18n.language)
-        );
-        setScheduleExercises(mapped);
-        setActiveExercise(null);
-        setLoading(false);
-      } else {
-        toast.error(res?.message || 'Đổi bài thất bại');
-      }
-    } catch {
-      toast.error('Lỗi khi đổi bài tập');
-    } finally {
-      setSwapping(false);
-    }
-  };
-
-  const startSession = (ex: TrainingExercise) => {
+  const startSession = (ex: TrainingExercise, opts?: { keepTotals?: boolean }) => {
     setActiveExercise(ex);
     setCameraActive(true);
     setSessionData({ reps: 0, caloriesBurned: 0, avgRepTime: 0 });
@@ -599,6 +511,13 @@ function TrainingView() {
     setIsResting(false);
     setRestCountdown(0);
     setCurrentRepInput(ex.targetReps || 0);
+    setTransition(null);
+    completingRef.current = false;
+    // Bắt đầu buổi mới (không phải auto-advance) → reset tích luỹ + ẩn báo cáo tổng
+    if (!opts?.keepTotals) {
+      setSessionTotals({ time: 0, calories: 0, reps: 0, exercises: 0 });
+      setShowSessionReport(false);
+    }
   };
 
   /**
@@ -643,7 +562,7 @@ function TrainingView() {
   const persistTrainingLog = async (
     markDone: boolean,
     extra?: { fatigueLevel?: number; perceivedDifficulty?: number; sleepHours?: number }
-  ): Promise<{ success: boolean; adaptationNote?: string | null }> => {
+  ): Promise<{ success: boolean; adaptationNote?: string | null; error?: string; code?: string }> => {
     if (!user || !activeExercise?.trainingPlanId || !activeExercise.dayNumber || !activeExercise.exerciseId)
       return { success: false };
 
@@ -668,8 +587,9 @@ function TrainingView() {
     });
 
     if (!response.success) {
-      setSaveError(response.error?.message || 'Could not save training log');
-      return { success: false, adaptationNote: null };
+      const msg = response.error?.message || 'Không lưu được kết quả tập luyện.';
+      setSaveError(msg);
+      return { success: false, adaptationNote: null, error: msg, code: response.error?.code };
     }
 
     if (markDone) {
@@ -705,10 +625,97 @@ function TrainingView() {
     if (result.success) {
       setAdaptationNote(result.adaptationNote ?? null);
       setShowCheckIn(false);
+      setShowSessionReport(false);
+      setCameraActive(false);
+      completingRef.current = false;
+      loadTrainingSchedule();
     } else {
-      setCheckInError(saveError || 'Không thể lưu. Vui lòng thử lại.');
+      setCheckInError(result.error || 'Không thể lưu. Vui lòng thử lại.');
     }
   };
+
+  /** Đóng báo cáo tổng buổi — lưu bài cuối (nếu chưa) rồi về queue. */
+  const closeSessionReport = async () => {
+    setSavingCheckIn(true);
+    const result = await persistTrainingLog(true);
+    setSavingCheckIn(false);
+    if (result.success) setAdaptationNote(result.adaptationNote ?? null);
+    else toast(result.error || 'Chưa lưu được kết quả buổi tập.', { icon: '⚠️' });
+    setShowSessionReport(false);
+    setCameraActive(false);
+    completingRef.current = false;
+    loadTrainingSchedule();
+  };
+
+  /** Từ báo cáo tổng → mở check-in phục hồi (RPE/mệt mỏi/giấc ngủ) cho AI thích ứng. */
+  const openSessionCheckIn = () => {
+    setShowSessionReport(false);
+    setCameraActive(false);
+    setCheckIn({ fatigue: 0, rpe: 0, sleep: '' });
+    setCheckInError(null);
+    setShowCheckIn(true);
+  };
+
+  /**
+   * Bài vừa xong set cuối → cộng dồn vào tổng buổi. Nếu còn bài trong ngày:
+   * lưu bài (COMPLETED) + toast nhẹ + tự chuyển bài. Nếu là bài cuối: hiện báo cáo tổng buổi.
+   */
+  const handleExerciseComplete = async () => {
+    if (!activeExercise) return;
+    const thisCalories = activeExercise.estimatedCalories && activeExercise.estimatedCalories > 0
+      ? Math.max(1, Math.round(activeExercise.estimatedCalories))
+      : 0;
+    const thisTime = sessionTime;
+    const thisReps = sessionData.reps;
+    const dayNum = activeExercise.dayNumber || 1;
+    const dayExercises = scheduleExercises.filter(ex => (ex.dayNumber || 1) === dayNum);
+    const nextEx = dayExercises.find(ex => ex.id !== activeExercise.id && !ex.done) || null;
+
+    // Cộng dồn hiển thị (áp dụng cho cả bài cuối)
+    setSessionTotals(t => ({
+      time: t.time + thisTime,
+      calories: t.calories + thisCalories,
+      reps: t.reps + thisReps,
+      exercises: t.exercises + 1,
+    }));
+    setIsResting(false);
+    setRestCountdown(0);
+    setTransition({ type: nextEx ? 'next' : 'final', nextName: nextEx?.name });
+
+    if (nextEx) {
+      // Lưu bài hiện tại rồi tự chuyển sang bài kế. Nếu lưu lỗi (vd hết lượt log/ngày)
+      // vẫn chuyển bài để không kẹt buổi tập — chỉ cảnh báo nhẹ.
+      const result = await persistTrainingLog(true);
+      playCue('rest-done');
+      if (result.success) {
+        toast.success(`Hoàn thành! Chuyển sang: ${nextEx.name}`);
+      } else {
+        // Lấy message thật từ backend (vd hết lượt log/ngày) thay vì biến state stale
+        const reason = result.code === 'QUOTA_EXCEEDED'
+          ? (result.error || 'Hôm nay bạn đã hết lượt ghi log tập luyện.')
+          : (result.error || 'Chưa lưu được kết quả bài này.');
+        toast(`${reason} Vẫn chuyển sang bài tiếp — tiến độ buổi vẫn được cộng dồn.`, { icon: '⚠️' });
+      }
+      window.setTimeout(() => startSession(nextEx, { keepTotals: true }), 750);
+    } else {
+      // Bài cuối buổi → báo cáo tổng (lưu bài cuối khi đóng/đánh giá để tránh lưu trùng)
+      playCue('rest-done');
+      setTransition(null);
+      setShowSessionReport(true);
+      setCameraActive(false);
+    }
+  };
+
+  // Khi set cuối của bài vừa xong → kích hoạt cộng dồn + chuyển bài (một lần).
+  useEffect(() => {
+    if (!cameraActive || !activeExercise) return;
+    const targetSets = activeExercise.targetSets || parseInt(activeExercise.sets?.split('x')[0] || '3') || 3;
+    if (currentSet < targetSets) return;
+    if (completingRef.current) return;
+    completingRef.current = true;
+    void handleExerciseComplete();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSet, cameraActive, activeExercise]);
 
   /**
    * Làm lại bài đã hoàn thành — reset done state và mở lại session.
@@ -720,11 +727,10 @@ function TrainingView() {
     startSession({ ...ex, done: false });
   };
 
-  const completeSet = () => {
+  const advanceSet = (repsThisSet: number, cue: 'set' | 'skip' = 'set') => {
     if (!activeExercise) return;
-    playCue('set');
+    if (cue === 'set') playCue('set');
     const targetSets = activeExercise.targetSets || 1;
-    const repsThisSet = currentRepInput || activeExercise.targetReps || 0;
     const nextSet = Math.min(targetSets, currentSet + 1);
     setCurrentSet(nextSet);
     setSessionData(prev => ({
@@ -740,6 +746,30 @@ function TrainingView() {
     }
     // Reset rep input to target for next set
     setCurrentRepInput(activeExercise.targetReps || 0);
+  };
+
+  const completeSet = () => {
+    if (!activeExercise) return;
+    const repsThisSet = currentRepInput || activeExercise.targetReps || 0;
+    advanceSet(repsThisSet, 'set');
+  };
+
+  const skipCurrentSet = () => {
+    advanceSet(0, 'skip');
+  };
+
+  const requestWorkoutFullscreen = async () => {
+    const target = document.getElementById('active-workout-stage');
+    if (!target || !document.fullscreenEnabled) return;
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await target.requestFullscreen();
+      }
+    } catch {
+      toast.error('Không thể mở toàn màn hình trên thiết bị này');
+    }
   };
 
   const generateNextWeek = async () => {
@@ -810,7 +840,7 @@ function TrainingView() {
     }
   };
 
-  if (cameraActive && activeExercise) {
+  if ((cameraActive || showSessionReport) && activeExercise) {
     const formatTime = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
     const targetSets   = activeExercise.targetSets || parseInt(activeExercise.sets.split('x')[0]) || 3;
     const targetReps   = activeExercise.targetReps || parseInt(activeExercise.sets.split('x')[1]) || 10;
@@ -819,379 +849,516 @@ function TrainingView() {
     const exerciseName = i18n.language === 'vi' ? (activeExercise as any).nameVi || activeExercise.name : activeExercise.name;
     const parsed       = parseNotes(activeExercise.notes);
     const movement     = translateMovement(activeExercise.exerciseType);
+    const allMuscles   = [activeExercise.muscle, ...(activeExercise.secondaryMuscles || [])].filter(Boolean);
+    const activeDayExercises = scheduleExercises.filter(ex => (ex.dayNumber || 1) === (activeExercise.dayNumber || 1));
+    const completedInDay = activeDayExercises.filter(ex => ex.done).length + (allSetsDone && !activeExercise.done ? 1 : 0);
+    const exerciseNumber = Math.max(1, activeDayExercises.findIndex(ex => ex.id === activeExercise.id) + 1);
+    const sessionCalories = (() => {
+      const base = activeExercise.estimatedCalories || 0;
+      return base > 0 ? Math.max(1, Math.round(base * Math.min(1, currentSet / targetSets))) : 0;
+    })();
+    const setProgress = Math.round((currentSet / Math.max(1, targetSets)) * 100);
+    const reportScore = Math.min(100, Math.max(72, Math.round(78 + setProgress / 5)));
+    const reportStreak = dashboardData?.userSummary?.streakDays ?? 0;
+    // Cộng dồn toàn buổi: tổng tích luỹ + phần đang tập (khi chưa kết thúc bài)
+    const runningTime = sessionTotals.time + (transition ? 0 : sessionTime);
+    const runningCalories = sessionTotals.calories + (transition ? 0 : sessionCalories);
+
+    if (showSessionReport) {
+      return (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#f7faf8] animate-fade-in dark:bg-[#080b10]">
+          <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col px-4 pb-6 pt-4">
+            <div className="mb-4 flex items-center justify-between">
+              <button
+                onClick={closeSessionReport}
+                disabled={savingCheckIn}
+                className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm dark:border-white/10 dark:bg-[#121821] dark:text-slate-100"
+                title="Lưu và đóng báo cáo"
+              >
+                {savingCheckIn ? <Loader2 className="h-5 w-5 animate-spin" /> : <X className="h-5 w-5" />}
+              </button>
+              <div className="text-center">
+                <h2 className="font-grotesk text-lg font-bold text-slate-950">Hoàn thành buổi tập</h2>
+                <p className="mt-0.5 text-xs font-medium text-slate-600">{activePlan?.name ? displayPlanName(activePlan.name) : 'Kế hoạch tập cá nhân'}</p>
+              </div>
+              <div className="h-11 w-11" />
+            </div>
+
+            <div className="relative overflow-hidden rounded-[22px] border border-teal-100 bg-white dark:border-teal-400/20 dark:bg-[#121821]">
+              <div className="relative h-64 overflow-hidden bg-slate-100 dark:bg-[#0d1118]">
+                {activeExercise.imageUrl ? (
+                  <img src={activeExercise.imageUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#ccfbf1,#fff7ed)]">
+                    <Dumbbell className="h-16 w-16 text-teal-700" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.22)_44%,rgba(255,255,255,0.96)_100%)] dark:bg-[linear-gradient(180deg,rgba(2,6,23,0.05)_0%,rgba(2,6,23,0.16)_44%,rgba(2,6,23,0.94)_100%)]" />
+                {Array.from({ length: 16 }).map((_, index) => (
+                  <span
+                    key={index}
+                    className={`absolute h-2 w-2 rounded-[2px] ${index % 3 === 0 ? 'bg-orange-400' : index % 3 === 1 ? 'bg-teal-500' : 'bg-slate-300'}`}
+                    style={{
+                      left: `${8 + (index * 17) % 82}%`,
+                      top: `${14 + (index * 23) % 46}%`,
+                      transform: `rotate(${index * 21}deg)`,
+                    }}
+                  />
+                ))}
+              </div>
+
+              <div className="relative -mt-16 px-4 pb-4">
+                <div className="rounded-[20px] border border-white/70 bg-white/82 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.12)] backdrop-blur-md dark:border-white/10 dark:bg-[#121821]/90">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-700 shadow-sm">
+                      <Check className="h-7 w-7 stroke-[3]" />
+                    </div>
+                    <div>
+                      <h3 className="font-grotesk text-xl font-bold leading-tight text-slate-950">Bạn đã hoàn thành buổi tập!</h3>
+                      <p className="mt-1 text-sm text-slate-600">Tổng kết {sessionTotals.exercises} bài trong buổi hôm nay.</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-4 divide-x divide-slate-100 rounded-2xl border border-slate-100 bg-white dark:divide-white/10 dark:border-white/10 dark:bg-[#0d1118]">
+                    {[
+                      { Icon: Timer, label: 'Thời gian', value: formatTime(sessionTotals.time), sub: 'phút', tone: 'text-teal-700' },
+                      { Icon: Flame, label: 'Calories', value: sessionTotals.calories, sub: 'kcal', tone: 'text-orange-600' },
+                      { Icon: Dumbbell, label: 'Bài tập', value: `${sessionTotals.exercises}/${activeDayExercises.length}`, sub: 'bài', tone: 'text-teal-700' },
+                      { Icon: Activity, label: 'Tổng rep', value: sessionTotals.reps, sub: 'lần', tone: 'text-blue-600' },
+                    ].map(({ Icon, label, value, sub, tone }) => (
+                      <div key={label} className="px-2 py-3 text-center">
+                        <Icon className={`mx-auto mb-1 h-4 w-4 ${tone}`} />
+                        <p className="text-[10px] font-medium text-slate-600">{label}</p>
+                        <p className={`mt-1 font-grotesk text-lg font-bold ${tone}`}>{value}</p>
+                        <p className="text-[10px] text-slate-600">{sub}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <section className="mt-4 rounded-[20px] border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-[#121821]">
+              <h3 className="font-grotesk text-base font-bold text-slate-950">Báo cáo tuần đã cập nhật</h3>
+              <div className="mt-3 grid grid-cols-2 divide-x divide-slate-100 rounded-2xl border border-slate-100 dark:divide-white/10 dark:border-white/10">
+                <div className="p-4">
+                  <p className="text-xs font-semibold text-slate-700">Điểm sức khỏe</p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-teal-50">
+                      <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 80 80">
+                        <circle cx="40" cy="40" r="34" fill="none" stroke="#d1fae5" strokeWidth="8" />
+                        <circle cx="40" cy="40" r="34" fill="none" stroke="#0f766e" strokeWidth="8" strokeLinecap="round" strokeDasharray={`${2 * Math.PI * 34}`} strokeDashoffset={`${2 * Math.PI * 34 * (1 - reportScore / 100)}`} />
+                      </svg>
+                      <span className="font-grotesk text-2xl font-bold text-slate-950">{reportScore}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-slate-600">Tăng từ {Math.max(0, reportScore - 2)} → {reportScore}</p>
+                      <p className="mt-1 font-grotesk text-lg font-bold text-teal-700">Rất tốt</p>
+                      <p className="text-xs text-slate-600">so với tuần trước</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700">Chuỗi duy trì</p>
+                      <p className="mt-2 font-grotesk text-2xl font-bold text-slate-950">{reportStreak || 1} ngày</p>
+                      <p className="text-xs font-semibold text-teal-700">+1 ngày</p>
+                    </div>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
+                      <Flame className="h-5 w-5" />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex gap-1">
+                    {Array.from({ length: 14 }).map((_, index) => (
+                      <div key={index} className={`h-2 flex-1 rounded-full ${index < Math.min(14, reportStreak || 1) ? 'bg-teal-600' : 'bg-slate-200'}`} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="mt-4">
+              <p className="mb-2 text-sm font-bold text-slate-900">Bạn nhận được</p>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { Icon: Flame, value: '+1 ngày', label: 'duy trì', tone: 'text-orange-600 bg-orange-50 border-orange-100' },
+                  { Icon: Flame, value: `+${sessionTotals.calories}`, label: 'kcal', tone: 'text-orange-600 bg-orange-50 border-orange-100' },
+                  { Icon: Sparkles, value: '+25', label: 'điểm', tone: 'text-amber-600 bg-amber-50 border-amber-100' },
+                ].map(({ Icon, value, label, tone }) => (
+                  <div key={label} className={`rounded-2xl border p-3 text-center ${tone}`}>
+                    <Icon className="mx-auto mb-1 h-5 w-5" />
+                    <p className="font-grotesk text-lg font-bold">{value}</p>
+                    <p className="text-xs font-medium text-slate-700">{label}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <div className="mt-auto space-y-3 pt-5">
+              <button
+                onClick={openSessionCheckIn}
+                disabled={savingCheckIn}
+                className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl bg-teal-700 px-5 py-4 font-grotesk text-base font-bold text-white transition hover:bg-teal-800 disabled:opacity-60"
+              >
+                Lưu & đánh giá phục hồi
+                <ChevronRight className="h-5 w-5" />
+              </button>
+              <button
+                onClick={closeSessionReport}
+                disabled={savingCheckIn}
+                className="min-h-12 w-full rounded-2xl border border-teal-600 bg-white px-5 py-3 font-grotesk text-sm font-bold text-teal-700 transition hover:bg-teal-50 disabled:opacity-60"
+              >
+                {savingCheckIn ? 'Đang lưu...' : 'Bỏ qua đánh giá & lưu buổi'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
-      <div className="fixed inset-0 z-50 bg-[#080a0e] flex flex-col overflow-hidden animate-fade-in">
-
-        {/* ── Top bar ── */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
-          <button
-            onClick={exitSessionOnly}
-            className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-
-          {/* Session timer */}
-          <div className="flex items-center gap-2 glass rounded-full px-4 py-1.5 border border-white/[0.07]">
-            <div className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse" />
-            <span className="text-white font-grotesk font-bold text-sm tabular-nums">{formatTime(sessionTime)}</span>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#f7faf8] animate-fade-in dark:bg-[#080b10]">
+        {/* Overlay chuyển bài nhẹ giữa các bài trong buổi */}
+        {transition && (
+          <div className="fixed inset-0 z-[55] flex items-center justify-center bg-slate-900/45 backdrop-blur-sm animate-fade-in">
+            <div className="mx-4 w-full max-w-xs rounded-3xl border border-teal-100 bg-white p-6 text-center shadow-2xl dark:border-teal-400/20 dark:bg-[#121821]">
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-teal-50 text-teal-700">
+                <Check className="h-7 w-7 stroke-[3]" />
+              </div>
+              <h3 className="font-grotesk text-lg font-bold text-slate-950">Hoàn thành bài tập!</h3>
+              <p className="mt-1 text-sm text-slate-600">
+                {transition.type === 'next' ? `Chuyển sang: ${transition.nextName}` : 'Đang tổng kết buổi tập…'}
+              </p>
+              <div className="mt-4 flex items-center justify-center gap-4 text-sm font-bold">
+                <span className="inline-flex items-center gap-1 text-teal-700"><Timer className="h-4 w-4" />{formatTime(sessionTotals.time)}</span>
+                <span className="inline-flex items-center gap-1 text-orange-600"><Flame className="h-4 w-4" />{sessionTotals.calories} kcal</span>
+              </div>
+            </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            {/* Bật/tắt âm thanh (beep xong set, hết giờ nghỉ) */}
+        )}
+        <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col px-4 pb-5 pt-4">
+          <div className="mb-4 grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3">
             <button
-              onClick={() => setSoundEnabled(s => !s)}
-              title={soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
-              className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
+              onClick={exitSessionOnly}
+              className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm dark:border-white/10 dark:bg-[#121821] dark:text-slate-100"
+              title="Thoát bài tập"
             >
-              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              <ChevronLeft className="h-5 w-5" />
             </button>
-            <div className="flex items-center gap-1.5">
-              <span className="text-neutral-500 text-xs">{activeExercise.estimatedCalories || 0}</span>
-              <Flame className="w-3.5 h-3.5 text-orange-400" />
+            <div className="min-w-0 text-center">
+              <h2 className="truncate font-grotesk text-lg font-bold text-slate-950">Đang tập</h2>
+              <p className="truncate text-xs font-medium text-slate-600">
+                Buổi sáng · {activePlan?.name ? displayPlanName(activePlan.name) : 'Kế hoạch tập cá nhân'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 rounded-2xl border border-teal-100 bg-white px-3 py-2 text-teal-700 shadow-sm dark:border-teal-400/20 dark:bg-[#121821] dark:text-teal-300">
+              <Timer className="h-4 w-4" />
+              <span className="font-grotesk text-sm font-bold tabular-nums">{formatTime(sessionTime)}</span>
             </div>
           </div>
-        </div>
 
-        {/* ── Exercise info ── */}
-        <div className="px-5 pb-4 shrink-0">
-          <div className="flex items-start gap-3">
-            {activeExercise.imageUrl && (
-              <div className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-white/[0.08] bg-white/[0.04]">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Dumbbell className="w-5 h-5 text-neutral-600" />
+          <div id="active-workout-stage" className="relative overflow-hidden rounded-[22px] border border-slate-200 bg-slate-900 shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
+            <div className="relative aspect-[1.02] min-h-[330px]">
+              {activeExercise.imageUrl ? (
+                <img src={activeExercise.imageUrl} alt={exerciseName} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#0f766e,#f97316)]">
+                  <Dumbbell className="h-16 w-16 text-white/80" />
                 </div>
-                <img
-                  src={activeExercise.imageUrl}
-                  alt={exerciseName}
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  className="relative w-full h-full object-cover opacity-80"
-                />
+              )}
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,23,0.05)_0%,rgba(2,6,23,0.16)_42%,rgba(2,6,23,0.82)_100%)]" />
+
+              <div className="absolute left-4 top-4 rounded-full bg-teal-600 px-3 py-1.5 text-xs font-bold text-white shadow-lg">
+                Đang tập
               </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <h2 className="font-grotesk font-bold text-white text-xl leading-tight">{exerciseName}</h2>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-lime/15 text-lime border border-lime/25 font-semibold inline-flex items-center gap-1">
-                  <Dumbbell className="w-3 h-3" /> {translateMuscle(activeExercise.muscle || '')}
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] text-neutral-400 border border-white/[0.08]">
-                  {movement.label}
-                </span>
-                {activeExercise.difficulty && (
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${difficultyTone(activeExercise.difficulty)}`}>
-                    {activeExercise.difficulty === 'EASY' ? 'Dễ' : activeExercise.difficulty === 'HARD' ? 'Khó' : 'Trung bình'}
-                  </span>
-                )}
+              <div className="absolute right-4 top-4 flex flex-col gap-2">
+                <button
+                  onClick={() => setSoundEnabled(s => !s)}
+                  title={soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-black/38 text-white backdrop-blur-md transition hover:bg-black/50"
+                >
+                  {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={requestWorkoutFullscreen}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-black/38 text-white backdrop-blur-md"
+                  title="Toàn màn hình"
+                >
+                  <Video className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                <div className="mb-3 inline-flex rounded-lg bg-teal-600 px-3 py-1 text-xs font-bold">Hiệp tập</div>
+                <div className="flex items-end justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="font-grotesk text-2xl font-bold leading-tight text-balance">{exerciseName}</h3>
+                    <p className="mt-1 text-sm font-medium text-white/82">
+                      {allMuscles.slice(0, 3).map(translateMuscle).join(' · ') || movement.label}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="font-grotesk text-3xl font-bold tabular-nums">{currentRepInput} / {targetReps}</p>
+                    <p className="text-xs font-semibold text-white/78">Lần lặp</p>
+                  </div>
+                </div>
+                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/24">
+                  <div className="h-full rounded-full bg-teal-400" style={{ width: `${Math.min(100, (currentRepInput / Math.max(1, targetReps)) * 100)}%` }} />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* ── Main content (scrollable) ── */}
-        {/* max-w-lg: giới hạn bề rộng cột (tránh video aspect-video phình to trên
-            desktop). order-*: video + set + nhập rep nằm cùng phần đầu → hiện
-            chung một màn hình, tham khảo (tips/form-check) ở dưới. */}
-        <div className="flex-1 overflow-y-auto px-5 pb-4 flex flex-col gap-3 max-w-lg w-full mx-auto">
+          <div className="mt-4 grid grid-cols-[minmax(0,1fr)_132px] gap-3">
+            <section className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#121821]">
+              <div className="mb-4 flex items-center justify-between">
+                <h4 className="font-grotesk text-base font-bold text-slate-950">Tiến độ buổi tập</h4>
+                <span className="text-sm font-bold text-teal-700">{completedInDay} / {Math.max(1, activeDayExercises.length)} bài</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {Array.from({ length: Math.max(1, activeDayExercises.length) }).map((_, index) => {
+                  const done = index < completedInDay;
+                  const active = index + 1 === exerciseNumber;
+                  let statusClass = 'bg-slate-200 text-slate-700';
+                  if (active) statusClass = 'bg-teal-100 text-teal-800 ring-1 ring-teal-300';
+                  if (done) statusClass = 'bg-teal-600 text-white';
+                  return (
+                    <div key={index} className="flex flex-1 items-center gap-1">
+                      <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${statusClass}`}>
+                        {done ? <Check className="h-3 w-3" /> : index + 1}
+                      </div>
+                      {index < activeDayExercises.length - 1 && (
+                        <div className={`h-1 flex-1 rounded-full ${done ? 'bg-teal-500' : 'bg-slate-200'}`} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                <div className="h-full rounded-full bg-teal-500" style={{ width: `${Math.max(6, setProgress)}%` }} />
+              </div>
+              <p className="mt-3 text-sm font-semibold text-teal-700">{setProgress}% hoàn thành hiệp hiện tại</p>
+              <div className="mt-4 space-y-2">
+                {activeDayExercises.map((exercise, index) => {
+                  const isCurrentExercise = exercise.id === activeExercise.id;
+                  const isCompletedExercise = exercise.done || (isCurrentExercise && allSetsDone);
+                  return (
+                    <div
+                      key={exercise.id}
+                      className={`grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border px-2.5 py-2 ${
+                        isCurrentExercise
+                          ? 'border-teal-200 bg-teal-50'
+                          : isCompletedExercise
+                            ? 'border-emerald-100 bg-emerald-50'
+                            : 'border-slate-200 bg-slate-50'
+                      }`}
+                    >
+                      <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
+                        isCompletedExercise
+                          ? 'bg-emerald-600 text-white'
+                          : isCurrentExercise
+                            ? 'bg-teal-700 text-white'
+                            : 'bg-white text-slate-700 ring-1 ring-slate-200'
+                      }`}>
+                        {isCompletedExercise ? <Check className="h-3 w-3" /> : index + 1}
+                      </span>
+                      <span className={`truncate text-xs font-bold ${
+                        isCurrentExercise ? 'text-teal-950' : isCompletedExercise ? 'text-emerald-800' : 'text-slate-700'
+                      }`}>
+                        {exercise.name}
+                      </span>
+                      <span className="text-[10px] font-semibold text-slate-600">{exercise.sets}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
 
-          {/* VIDEO HƯỚNG DẪN — hiện sẵn cùng phần set (order-1) */}
-          {activeExercise.videoUrl && (
-            <div className="order-1">
-              <ExerciseVideoPlayer
-                videoUrl={activeExercise.videoUrl}
-                name={exerciseName}
-                defaultExpanded={true}
-              />
-            </div>
-          )}
-
-
-          {/* SET PROGRESS (order-1: thao tác chính lên đầu) */}
-          <div className="order-1 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Tiến độ set</span>
-              <span className="text-white font-grotesk font-bold text-sm">
-                {currentSet} / {targetSets} set
-              </span>
-            </div>
-            {/* Set dots */}
-            <div className="flex items-center gap-2 mb-3">
-              {Array.from({ length: targetSets }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-2 flex-1 rounded-full transition-all duration-500 ${
-                    i < currentSet
-                      ? 'bg-lime shadow-[0_0_8px_rgba(204,255,0,0.4)]'
-                      : i === currentSet
-                      ? 'bg-white/20 animate-pulse'
-                      : 'bg-white/[0.06]'
-                  }`}
-                />
-              ))}
-            </div>
-            <div className="flex justify-between text-[10px] text-neutral-600">
-              {Array.from({ length: targetSets }).map((_, i) => (
-                <span key={i} className={i < currentSet ? 'text-lime font-bold' : ''}>S{i + 1}</span>
-              ))}
-            </div>
-          </div>
-
-          {/* REST TIMER — hiện khi đang nghỉ */}
-          {isResting && (
-            <div className="order-1 rounded-2xl border border-blue-500/30 bg-blue-500/[0.06] p-5 text-center relative overflow-hidden">
-              {/* Circular countdown */}
-              <div className="relative w-24 h-24 mx-auto mb-3">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
-                  <circle cx="48" cy="48" r="40" fill="none" stroke="rgba(59,130,246,0.15)" strokeWidth="6" />
+            <section className="rounded-[20px] border border-slate-200 bg-white p-4 text-center shadow-sm dark:border-white/10 dark:bg-[#121821]">
+              <h4 className="font-grotesk text-sm font-bold text-slate-950">Nghỉ giữa hiệp</h4>
+              <div className="relative mx-auto mt-3 h-24 w-24">
+                <svg className="h-full w-full -rotate-90" viewBox="0 0 96 96">
+                  <circle cx="48" cy="48" r="39" fill="none" stroke="#e2e8f0" strokeWidth="8" />
                   <circle
-                    cx="48" cy="48" r="40" fill="none"
-                    stroke="#3B82F6" strokeWidth="6"
+                    cx="48"
+                    cy="48"
+                    r="39"
+                    fill="none"
+                    stroke="#0f766e"
+                    strokeWidth="8"
                     strokeLinecap="round"
-                    strokeDasharray={`${2 * Math.PI * 40}`}
-                    strokeDashoffset={`${2 * Math.PI * 40 * (1 - restPct / 100)}`}
-                    className="transition-all duration-1000"
+                    strokeDasharray={`${2 * Math.PI * 39}`}
+                    strokeDashoffset={`${2 * Math.PI * 39 * (1 - (isResting ? restPct : 100) / 100)}`}
+                    className="transition-all duration-700"
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-blue-400 font-grotesk font-bold text-2xl tabular-nums">
-                    {restCountdown >= 60
-                      ? `${Math.floor(restCountdown / 60)}:${String(restCountdown % 60).padStart(2, '0')}`
-                      : restCountdown}
+                  <span className="font-grotesk text-2xl font-bold text-slate-950 tabular-nums">
+                    {isResting
+                      ? restCountdown >= 60
+                        ? `${Math.floor(restCountdown / 60)}:${String(restCountdown % 60).padStart(2, '0')}`
+                        : `00:${String(restCountdown).padStart(2, '0')}`
+                      : formatDuration(activeExercise.restTime)}
                   </span>
-                  <span className="text-blue-400/60 text-[11px] uppercase tracking-widest">
-                    {restCountdown >= 60 ? 'phút' : 'giây'}
-                  </span>
+                  <span className="text-[10px] font-medium text-slate-600">{isResting ? 'Đang nghỉ' : 'Thời gian nghỉ'}</span>
                 </div>
               </div>
-              <p className="text-blue-300 font-semibold text-sm">Nghỉ giữa set</p>
-              <p className="text-blue-400/60 text-xs mt-0.5">Chuẩn bị cho Set {currentSet + 1}</p>
+              {isResting && (
+                <button onClick={() => setIsResting(false)} className="mt-3 text-xs font-bold text-teal-700">
+                  Bỏ qua
+                </button>
+              )}
+            </section>
+          </div>
+
+          <section className="mt-4 grid grid-cols-4 divide-x divide-slate-100 rounded-[20px] border border-slate-200 bg-white shadow-sm dark:divide-white/10 dark:border-white/10 dark:bg-[#121821]">
+            <p className="col-span-4 -mb-1 px-3 pt-2 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Tổng cả buổi (cộng dồn)</p>
+            {[
+              { Icon: Timer, label: 'Thời gian', value: formatTime(runningTime), sub: 'phút', tone: 'text-teal-700' },
+              { Icon: Flame, label: 'Calories', value: runningCalories, sub: 'kcal', tone: 'text-orange-600' },
+              { Icon: Dumbbell, label: 'Bài xong', value: `${sessionTotals.exercises}/${activeDayExercises.length}`, sub: 'bài', tone: 'text-teal-700' },
+              { Icon: Dumbbell, label: 'Còn lại', value: Math.max(0, targetSets - currentSet), sub: 'hiệp', tone: 'text-slate-700' },
+            ].map(({ Icon, label, value, sub, tone }) => (
+              <div key={label} className="px-2 py-3 text-center">
+                <Icon className={`mx-auto mb-1 h-5 w-5 ${tone}`} />
+                <p className="text-[10px] font-medium text-slate-600">{label}</p>
+                <p className="mt-1 font-grotesk text-xl font-bold text-slate-950">{value}</p>
+                <p className="text-[10px] text-slate-600">{sub}</p>
+              </div>
+            ))}
+          </section>
+
+          <section className="mt-4 rounded-[20px] border border-teal-100 bg-[linear-gradient(135deg,#ecfdf5,#ffffff_58%,#fff7ed)] p-4 shadow-sm dark:border-teal-400/20 dark:bg-[linear-gradient(135deg,#0f2a28,#121821_58%,#1f1a12)]">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-white text-teal-700 shadow-sm dark:bg-[#0d1118] dark:text-teal-300">
+                <Activity className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-grotesk text-sm font-bold text-slate-950">Viway Coach</p>
+                <p className="mt-2 text-sm leading-relaxed text-slate-700">
+                  {movement.desc || parsed.benefit || 'Giữ nhịp ổn định, kiểm soát biên độ và ưu tiên kỹ thuật sạch trong từng lần lặp.'}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {allMuscles.slice(0, 4).map(m => (
+                    <span key={m} className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-teal-800 ring-1 ring-teal-100 dark:bg-[#0d1118] dark:text-teal-200 dark:ring-teal-400/20">
+                      {translateMuscle(m)}
+                    </span>
+                  ))}
+                  {activeExercise.recommendedWeight && (
+                    <span className="rounded-full bg-orange-50 px-2 py-1 text-[10px] font-semibold text-orange-700 ring-1 ring-orange-100">
+                      {activeExercise.recommendedWeight}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-4 rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#121821]">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.08em] text-slate-600">Set {currentSet + 1}</p>
+                <h4 className="font-grotesk text-lg font-bold text-slate-950">Số rep thực hiện</h4>
+              </div>
+              <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700 ring-1 ring-teal-100">Mục tiêu {targetReps}</span>
+            </div>
+            <div className="flex items-center justify-center gap-5">
               <button
-                onClick={() => setIsResting(false)}
-                className="mt-3 text-[10px] text-blue-400/60 hover:text-blue-300 underline underline-offset-2 transition-colors"
+                onClick={() => setCurrentRepInput(r => Math.max(0, r - 1))}
+                className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-2xl font-bold text-slate-900 transition active:scale-95"
               >
-                Bỏ qua
+                -
+              </button>
+              <div className="min-w-24 text-center">
+                <p className="font-grotesk text-6xl font-bold leading-none text-slate-950">{currentRepInput}</p>
+                <p className="mt-1 text-xs font-bold uppercase tracking-[0.08em] text-slate-500">rep</p>
+              </div>
+              <button
+                onClick={() => setCurrentRepInput(r => r + 1)}
+                className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-2xl font-bold text-slate-900 transition active:scale-95"
+              >
+                +
               </button>
             </div>
-          )}
-
-          {/* REP INPUT — cho set hiện tại (order-1: ngay đầu, không phải cuộn) */}
-          {!isResting && !allSetsDone && (
-            <div className="order-1 rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-              <div className="text-center mb-2.5">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-1">
-                  Set {currentSet + 1} — Số rep thực hiện
-                </p>
-                <p className="text-neutral-600 text-xs">Mục tiêu: <span className="text-lime font-bold">{targetReps} rep</span></p>
-              </div>
-
-              {/* Big rep display with +/- (gọn để vừa màn cùng video) */}
-              <div className="flex items-center justify-center gap-5 mb-3">
+            <div className="mt-4 flex justify-center gap-2">
+              {[targetReps - 2, targetReps, targetReps + 2].filter(n => n > 0).map(n => (
                 <button
-                  onClick={() => setCurrentRepInput(r => Math.max(0, r - 1))}
-                  className="w-11 h-11 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white text-xl font-bold flex items-center justify-center hover:bg-white/[0.1] active:scale-95 transition-all"
-                >−</button>
-
-                <div className="text-center">
-                  <div
-                    className="font-grotesk font-bold text-white leading-none"
-                    style={{ fontSize: '52px', textShadow: currentRepInput >= targetReps ? '0 0 25px rgba(204,255,0,0.5)' : 'none' }}
-                  >
-                    <span className={currentRepInput >= targetReps ? 'text-lime' : 'text-white'}>{currentRepInput}</span>
-                  </div>
-                  <div className="text-neutral-600 text-xs uppercase tracking-widest mt-1">rep</div>
-                </div>
-
-                <button
-                  onClick={() => setCurrentRepInput(r => r + 1)}
-                  className="w-11 h-11 rounded-xl bg-white/[0.06] border border-white/[0.08] text-white text-xl font-bold flex items-center justify-center hover:bg-white/[0.1] active:scale-95 transition-all"
-                >+</button>
-              </div>
-
-              {/* Quick presets */}
-              <div className="flex gap-2 justify-center">
-                {[targetReps - 2, targetReps, targetReps + 2].filter(n => n > 0).map(n => (
-                  <button
-                    key={n}
-                    onClick={() => setCurrentRepInput(n)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                      currentRepInput === n
-                        ? 'bg-lime/20 border-lime/40 text-lime'
-                        : 'bg-white/[0.04] border-white/[0.08] text-neutral-500 hover:text-white'
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
+                  key={n}
+                  onClick={() => setCurrentRepInput(n)}
+                  className={`rounded-xl border px-4 py-2 text-xs font-bold ${
+                    currentRepInput === n
+                      ? 'border-teal-200 bg-teal-50 text-teal-700'
+                      : 'border-slate-200 bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
             </div>
-          )}
+          </section>
 
-          {/* ALL SETS DONE — summary */}
-          {allSetsDone && (
-            <div className="order-1 rounded-2xl border border-lime/30 bg-lime/[0.06] p-5 text-center">
-              <div className="w-12 h-12 rounded-full bg-lime/15 flex items-center justify-center mx-auto mb-2">
-                <Check className="w-6 h-6 text-lime" />
-              </div>
-              <p className="text-lime font-grotesk font-bold text-lg">Hoàn thành!</p>
-              <p className="text-neutral-400 text-sm mt-1">
-                {targetSets} set · {sessionData.reps} rep · {formatTime(sessionTime)}
-              </p>
-              <div className="flex justify-center gap-4 mt-3 text-xs text-neutral-500">
-                <span className="inline-flex items-center gap-1"><Flame className="w-3 h-3" /> {activeExercise.estimatedCalories || 0} kcal</span>
-                {activeExercise.muscle && <span className="inline-flex items-center gap-1"><Dumbbell className="w-3 h-3" /> {translateMuscle(activeExercise.muscle)}</span>}
-              </div>
-            </div>
-          )}
-
-          {/* Tips — hướng dẫn nhanh */}
-          {parsed.benefit && !allSetsDone && (
-            <div className="order-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 mb-1 flex items-center gap-1.5">
-                <Activity className="w-3 h-3" /> Lợi ích
-              </p>
-              <p className="text-neutral-500 text-xs leading-relaxed">{parsed.benefit}</p>
-              {parsed.tempo && parsed.tempo !== 'N/A' && (
-                <p className="text-neutral-600 text-xs mt-1.5 flex items-center gap-1.5">
-                  <Timer className="w-3 h-3" /> Nhịp độ: <span className="text-neutral-400 font-mono">{parsed.tempo}</span> (xuống – dừng – lên)
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Equipment */}
-          {activeExercise.equipment && (
-            <div className="order-3 flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-2.5 text-sm">
-              <span className="text-neutral-500 text-xs">Dụng cụ</span>
-              <span className="text-white text-xs font-medium inline-flex items-center gap-1.5">
-                {activeExercise.equipment.toUpperCase() === 'BODYWEIGHT'
-                  ? <><Activity className="w-3.5 h-3.5" /> Trọng lượng cơ thể</>
-                  : <><Dumbbell className="w-3.5 h-3.5" /> {formatEnumLabel(activeExercise.equipment)}</>}
-              </span>
-            </div>
-          )}
-          {activeExercise.recommendedWeight && (
-            <div className="order-3 flex items-center justify-between rounded-xl border border-cyan-500/20 bg-cyan-500/[0.04] px-4 py-2.5">
-              <span className="text-neutral-500 text-xs inline-flex items-center gap-1.5"><Scale className="w-3.5 h-3.5" /> Tạ gợi ý</span>
-              <span className="text-cyan-400 text-xs font-semibold">{activeExercise.recommendedWeight}</span>
-            </div>
-          )}
-        </div>
-
-        {/* ── Bottom action buttons ── */}
-        <div className="px-5 pb-6 pt-3 space-y-2.5 shrink-0 border-t border-white/[0.05] bg-[#080a0e]">
-          {allSetsDone ? (
-            /* Xong tất cả set → nút hoàn thành bài (lưu + mark done) */
-            <button
-              onClick={() => endSession(true)}
-              className="w-full btn-lime py-4 text-sm font-grotesk font-bold rounded-2xl flex items-center justify-center gap-2.5 text-base"
-            >
-              <Check className="w-5 h-5" />
-              Hoàn thành bài tập
-            </button>
-          ) : isResting ? (
-            /* Đang nghỉ — cho phép bắt đầu set kế sớm */
-            <button
-              onClick={() => setIsResting(false)}
-              className="w-full py-4 rounded-2xl font-grotesk font-bold text-sm border border-blue-500/40 text-blue-300 bg-blue-500/10 flex items-center justify-center gap-2"
-            >
-              <Play className="w-4 h-4" fill="currentColor" />
-              Bắt đầu Set {currentSet + 1} ngay
-            </button>
-          ) : (
-            /* Đang tập set — nút hoàn thành set */
-            <button
-              onClick={completeSet}
-              className="w-full btn-lime py-4 rounded-2xl font-grotesk font-bold text-base flex items-center justify-center gap-2.5"
-            >
-              <Check className="w-5 h-5" />
-              Hoàn thành Set {currentSet + 1} / {targetSets}
-            </button>
-          )}
-          {/* Dừng & lưu tiến độ — chỉ khi đã làm ít nhất 1 set */}
-          {!allSetsDone && currentSet > 0 && (
+          <div className="mt-auto grid grid-cols-[1fr_1fr_1.5fr] gap-3 pt-5">
             <button
               onClick={() => endSession(false)}
-              className="w-full py-2.5 rounded-xl text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+              disabled={currentSet === 0}
+              className="flex min-h-14 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white text-sm font-bold text-slate-700 shadow-sm disabled:opacity-40"
             >
-              Dừng & lưu tiến độ ({currentSet}/{targetSets} set)
+              <span className="text-lg leading-none">II</span>
+              <span className="mt-1 text-xs">Dừng & lưu</span>
             </button>
-          )}
-          {/* Thoát không lưu — khi chưa làm gì */}
-          {!allSetsDone && currentSet === 0 && (
             <button
-              onClick={exitSessionOnly}
-              className="w-full py-2.5 rounded-xl text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+              onClick={() => isResting ? setIsResting(false) : skipCurrentSet()}
+              className="flex min-h-14 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white text-sm font-bold text-slate-700 shadow-sm"
             >
-              Thoát không lưu
+              <ChevronRight className="h-5 w-5" />
+              <span className="mt-1 text-xs">{isResting ? 'Bỏ qua nghỉ' : 'Bỏ qua hiệp'}</span>
             </button>
-          )}
+            {!isResting ? (
+              <button
+                onClick={completeSet}
+                className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-teal-700 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-teal-800"
+              >
+                <Check className="h-5 w-5" />
+                Hoàn thành hiệp
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsResting(false)}
+                className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-teal-700 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-teal-800"
+              >
+                <Play className="h-5 w-5" fill="currentColor" />
+                Bắt đầu hiệp
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
   const totalScheduleDays = planDurationDays(activePlan, scheduleExercises);
-  const visibleExercises = scheduleExercises.filter(ex => (ex.dayNumber || 1) === selectedDay);
+  // Số ngày thực sự có bài tập (để lặp chu kỳ khi ngày hiện tại vượt qua)
+  const contentDays = scheduleExercises.reduce((m, ex) => Math.max(m, ex.dayNumber || 1), 1);
+  const toContentDay = (planDay: number | null): number | null =>
+    planDay != null && contentDays > 0 ? ((planDay - 1) % contentDays) + 1 : planDay;
+  const visibleExercises = scheduleExercises.filter(ex => (ex.dayNumber || 1) === toContentDay(selectedDay));
   const completedCount = scheduleExercises.filter(ex => ex.done).length;
   const visibleCompletedCount = visibleExercises.filter(ex => ex.done).length;
   const progressPercent = scheduleExercises.length ? Math.round((completedCount / scheduleExercises.length) * 100) : 0;
   const visibleProgressPercent = visibleExercises.length ? Math.round((visibleCompletedCount / visibleExercises.length) * 100) : 0;
   const selectedDayIsRest = visibleExercises.length === 0;
   const nextExercise = visibleExercises.find(ex => !ex.done) || visibleExercises[0] || scheduleExercises.find(ex => !ex.done) || scheduleExercises[0] || null;
-  // Panel detail dùng bài tập đang được chọn (activeExercise), fallback sang bài tiếp theo
-  const panelExercise = activeExercise ?? nextExercise;
   const totalCalories = visibleExercises.reduce((sum, ex) => sum + (ex.estimatedCalories || 0), 0);
-  const canGenerateNextWeek = activePlan?.weekNumber && activePlan?.totalWeeks
-    ? Number(activePlan.weekNumber) < Number(activePlan.totalWeeks)
-    : false;
+  // Cho phép sinh tuần tiếp theo bất cứ khi nào đang có kế hoạch active.
+  // (Trước đây yêu cầu weekNumber < totalWeeks → plan có field tuần null như
+  //  bản seed/plan cũ sẽ KHÔNG bao giờ hiện nút → user không thể tạo thêm lịch.)
+  const canGenerateNextWeek = !!activePlan?.id;
 
-  // Week navigator
-  const weekSize = 7;
-
-  // getDayDate cần được khai báo trước khi dùng ở getCalendarMondayPlanDay
-  const getDayDateEarly = (dayNumber: number): Date | null => {
-    const raw = activePlan?.startDate;
-    if (!raw) return null;
-    const start = new Date(raw);
-    if (Number.isNaN(start.getTime())) return null;
-    const d = new Date(start);
-    d.setDate(d.getDate() + dayNumber - 1);
-    return d;
-  };
-
-  // ── Calendar-aligned week (T2 → CN) ─────────────────────────────────────
-  const getCalendarMondayPlanDay = (refDay: number): number => {
-    const refDate = getDayDateEarly(refDay);
-    if (!refDate || !activePlan?.startDate) {
-      return Math.floor((refDay - 1) / weekSize) * weekSize + 1;
-    }
-    const dow = refDate.getDay(); // 0=CN, 1=T2 ... 6=T7
-    const daysFromMon = dow === 0 ? 6 : dow - 1;
-    const monday = new Date(refDate);
-    monday.setDate(monday.getDate() - daysFromMon);
-    const startDate = new Date(activePlan.startDate);
-    const diffMs = monday.getTime() - startDate.getTime();
-    const mondayPlanDay = Math.round(diffMs / 86400000) + 1;
-    return mondayPlanDay;
-  };
-
-  const currentWeekStart = getCalendarMondayPlanDay(selectedDay);
-  // 7 days T2→CN, clipped to [1, totalScheduleDays]
-  const weekDays = Array.from({ length: weekSize }, (_, i) => currentWeekStart + i)
-    .filter(d => d >= 1 && d <= totalScheduleDays);
-  const canPrevWeek = currentWeekStart > 1;
-  // Chỉ cho phép sang tuần tiếp nếu thực sự có bài tập được sinh trong tuần đó
-  const nextWeekStart = currentWeekStart + weekSize;
-  const canNextWeek = scheduleExercises.some(ex => {
-    const d = ex.dayNumber || 1;
-    return d >= nextWeekStart && d < nextWeekStart + weekSize;
-  });
-  const currentWeekNum = Math.ceil(selectedDay / weekSize);
-  const totalWeeksCount = Math.ceil(totalScheduleDays / weekSize);
+  const totalWeeksCount = Math.max(1, Math.ceil(totalScheduleDays / 7));
 
   // Date helpers — map plan day number → real calendar date
-  const VI_WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
   const VI_WEEKDAYS_FULL = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
 
   const getDayDate = (dayNumber: number): Date | null => {
@@ -1204,32 +1371,11 @@ function TrainingView() {
     return d;
   };
 
-  const formatDayPill = (dayNumber: number) => {
-    const date = getDayDate(dayNumber);
-    if (!date) return { weekday: `D${dayNumber}`, date: null };
-    return {
-      weekday: VI_WEEKDAYS[date.getDay()],
-      date: `${date.getDate()}/${date.getMonth() + 1}`,
-      dayNum: dayNumber,
-    };
-  };
-
   const formatSelectedDayLabel = (dayNumber: number) => {
     const date = getDayDate(dayNumber);
     if (!date) return `Ngày ${dayNumber}`;
     const weekdayFull = VI_WEEKDAYS_FULL[date.getDay()];
     return `Ngày ${dayNumber} · ${weekdayFull}, ${date.getDate()} tháng ${date.getMonth() + 1}`;
-  };
-
-  const formatWeekRange = () => {
-    // Hiển thị T2 – CN của tuần calendar hiện tại
-    const monDate = getDayDate(currentWeekStart);
-    const lastDay = weekDays[weekDays.length - 1] ?? (currentWeekStart + weekSize - 1);
-    const sunDate = getDayDate(lastDay);
-    if (!monDate) return `Tuần ${currentWeekNum} / ${totalWeeksCount} · ${totalScheduleDays} ngày`;
-    const monStr = `${monDate.getDate()}/${monDate.getMonth() + 1}`;
-    const sunStr = sunDate ? `${sunDate.getDate()}/${sunDate.getMonth() + 1}` : '';
-    return `Tuần ${currentWeekNum} / ${totalWeeksCount} · T2 ${monStr} – CN ${sunStr}`;
   };
 
   // "Today" indicator: find which plan-day corresponds to today
@@ -1246,6 +1392,48 @@ function TrainingView() {
     return null;
   };
   const todayDayNumber = getTodayDayNumber();
+  // Hôm nay đã vượt số ngày có bài trong kế hoạch → gợi ý sinh thêm tuần mới.
+  const reachedPlanEnd = scheduleExercises.length > 0
+    && (todayDayNumber == null || todayDayNumber > contentDays);
+
+  const dateToPlanDay = (date: Date): number | null => {
+    const raw = activePlan?.startDate;
+    if (!raw) return null;
+    const start = new Date(raw);
+    if (Number.isNaN(start.getTime())) return null;
+    const localDate = new Date(date);
+    localDate.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    const diff = Math.round((localDate.getTime() - start.getTime()) / 86400000) + 1;
+    return diff >= 1 && diff <= totalScheduleDays ? diff : null;
+  };
+
+  const selectedDate = getDayDate(selectedDay) || new Date();
+  const selectedMonthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+  const selectedMonthDays = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
+  const monthLeadEmpty = selectedMonthStart.getDay() === 0 ? 6 : selectedMonthStart.getDay() - 1;
+  const monthCells = [
+    ...Array.from({ length: monthLeadEmpty }, () => null),
+    ...Array.from({ length: selectedMonthDays }, (_, index) => {
+      const date = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), index + 1);
+      const dayNumber = dateToPlanDay(date);
+      const dayExercises = dayNumber
+        ? scheduleExercises.filter(ex => (ex.dayNumber || 1) === toContentDay(dayNumber))
+        : [];
+      const dayDone = dayExercises.filter(ex => ex.done).length;
+      return {
+        date,
+        dayNumber,
+        dayExercises,
+        dayDone,
+        isToday: dayNumber != null && dayNumber === todayDayNumber,
+        isSelected: dayNumber != null && dayNumber === selectedDay,
+      };
+    }),
+  ];
+  const selectedMonthLabel = selectedDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+  const monthWorkoutDays = monthCells.filter(cell => cell && cell.dayExercises.length > 0).length;
+  const monthCompletedDays = monthCells.filter(cell => cell && cell.dayExercises.length > 0 && cell.dayDone === cell.dayExercises.length).length;
 
   const jumpToDay = (day: number) => {
     setSelectedDay(day);
@@ -1254,8 +1442,103 @@ function TrainingView() {
     if (firstInDay) setActiveExercise(firstInDay);
   };
 
+  const firstAvailableExercise = scheduleExercises.find(ex => !ex.done) || scheduleExercises[0] || null;
+  const guidePrimaryLabel = !activePlan
+    ? 'Tạo kế hoạch AI'
+    : scheduleExercises.length === 0
+      ? 'Sinh lịch tập'
+      : selectedDayIsRest && firstAvailableExercise
+        ? 'Xem ngày có bài'
+        : nextExercise?.done
+          ? 'Làm lại bài này'
+          : 'Bắt đầu bài tiếp theo';
+  const guidePrimaryAction = () => {
+    if (!activePlan || scheduleExercises.length === 0) {
+      setAiPlanModalOpen(true);
+      return;
+    }
+    if (selectedDayIsRest && firstAvailableExercise?.dayNumber) {
+      jumpToDay(firstAvailableExercise.dayNumber);
+      return;
+    }
+    if (nextExercise) startSession(nextExercise);
+  };
+  const selectedDayMinutes = visibleExercises.reduce((sum, ex) => {
+    const sets = ex.targetSets || parseInt(ex.sets?.split('x')[0] || '3') || 3;
+    const reps = ex.targetReps || parseInt(ex.sets?.split('x')[1] || '10') || 10;
+    const workSeconds = sets * reps * 4;
+    const restSeconds = Math.max(0, sets - 1) * (ex.restTime || 60);
+    return sum + Math.max(4, Math.round((workSeconds + restSeconds) / 60));
+  }, 0);
+  const selectedDayMuscles = Array.from(new Set(
+    visibleExercises.map(ex => translateMuscle(ex.muscle || '')).filter(Boolean)
+  ));
+  const focusExercise = selectedDayIsRest ? firstAvailableExercise : nextExercise;
+  const focusMuscle = focusExercise ? translateMuscle(focusExercise.muscle || '') : '';
+  const readinessSummary = selectedDayIsRest
+    ? 'Ngày phục hồi'
+    : `${visibleExercises.length} bài · khoảng ${selectedDayMinutes || visibleExercises.length * 6} phút`;
+  const planMuscleStats = Array.from(
+    scheduleExercises.reduce((map, ex) => {
+      const muscle = translateMuscle(ex.muscle || 'Toàn thân');
+      map.set(muscle, (map.get(muscle) || 0) + 1);
+      return map;
+    }, new Map<string, number>())
+  ).sort((a, b) => b[1] - a[1]);
+  const topPlanMuscles = planMuscleStats.slice(0, 4);
+  const trainingAdherence = monthWorkoutDays
+    ? Math.round((monthCompletedDays / monthWorkoutDays) * 100)
+    : 0;
+  const totalTargetSets = scheduleExercises.reduce((sum, ex) => {
+    const sets = ex.targetSets || parseInt(ex.sets?.split('x')[0] || '0') || 0;
+    return sum + sets;
+  }, 0);
+  const totalTargetReps = scheduleExercises.reduce((sum, ex) => {
+    const sets = ex.targetSets || parseInt(ex.sets?.split('x')[0] || '0') || 0;
+    const reps = ex.targetReps || parseInt(ex.sets?.split('x')[1] || '0') || 0;
+    return sum + sets * reps;
+  }, 0);
+  const planCompletion = Math.round(activePlan?.completionPercentage ?? progressPercent);
+  const remainingPlanPercent = Math.max(0, 100 - planCompletion);
+  const remainingExercises = Math.max(0, scheduleExercises.length - completedCount);
+  const mainPlanMuscle = topPlanMuscles[0]?.[0] || 'Toàn thân';
+  const canShowAiUsage = usage?.isUnlimited || typeof usage?.remaining === 'number';
+  const recentWeights = bodyMetrics.slice(-8);
+  const currentWeight = recentWeights.length ? recentWeights[recentWeights.length - 1].weightKg : undefined;
+  const firstWeight = recentWeights.length ? recentWeights[0].weightKg : undefined;
+  const weightDelta = currentWeight != null && firstWeight != null
+    ? Math.round((currentWeight - firstWeight) * 10) / 10
+    : null;
+  const todayKey = formatDateKey(new Date());
+  const nutritionByDate = new Map(dailyNutrition.map(item => [item.date, item]));
+  const nutritionSeries = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - index));
+    const key = formatDateKey(date);
+    const point = nutritionByDate.get(key);
+    const isToday = key === todayKey;
+    return {
+      date: key,
+      label: formatShortDate(key),
+      calories: Math.round(Number(point?.calories ?? (isToday ? dashboardData?.stats?.caloriesConsumed ?? 0 : 0))),
+    };
+  });
+  const caloriesConsumedToday = Math.round(Number(
+    dashboardData?.stats?.caloriesConsumed
+      ?? nutritionByDate.get(todayKey)?.calories
+      ?? 0
+  ));
+  const caloriesGoalToday = Math.round(Number(dashboardData?.stats?.caloriesGoal ?? 0));
+  const caloriesBurnedToday = Math.round(Number(dashboardData?.stats?.caloriesBurned ?? totalCalories ?? 0));
+  const calorieAverage = Math.round(
+    nutritionSeries.reduce((sum, point) => sum + point.calories, 0) / Math.max(1, nutritionSeries.length)
+  );
+  const weightPoints = sparklinePoints(recentWeights.map(point => Number(point.weightKg || 0)));
+  const caloriePoints = sparklinePoints(nutritionSeries.map(point => point.calories));
+
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="relative isolate space-y-5 p-0 animate-fade-in sm:p-0">
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-64 bg-[linear-gradient(135deg,rgba(13,148,136,0.06),rgba(59,130,246,0.05)_36%,transparent_72%)]" />
       {/* ── Modal tạo kế hoạch AI ── */}
       {aiPlanModalOpen && (
         <CyberpunkWorkoutModal
@@ -1279,26 +1562,28 @@ function TrainingView() {
 
       {/* ── Modal check-in sau buổi tập (overlay toàn màn, độc lập với session) ── */}
       {showCheckIn && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0f1116] p-6 animate-fade-in">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 animate-fade-in">
             <div className="text-center mb-5">
-              <div className="w-12 h-12 rounded-2xl bg-lime/10 flex items-center justify-center mx-auto mb-3">
-                <Check className="w-6 h-6 text-lime" />
+              <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center mx-auto mb-3">
+                <Check className="w-6 h-6 text-teal-600" />
               </div>
-              <h3 className="font-grotesk font-bold text-white text-lg">Hoàn thành! Ghi nhận cảm nhận</h3>
-              <p className="text-neutral-500 text-xs mt-1">Giúp AI điều chỉnh kế hoạch & theo dõi phục hồi của bạn.</p>
+              <h3 className="font-grotesk font-bold text-slate-900 text-lg">Hoàn thành! Ghi nhận cảm nhận</h3>
+              <p className="text-slate-500 text-xs mt-1">Giúp AI điều chỉnh kế hoạch & theo dõi phục hồi của bạn.</p>
             </div>
 
             {/* Độ mệt mỏi 1-5 */}
             <div className="mb-5">
-              <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">Độ mệt mỏi</label>
+              <label className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-2 block">Độ mệt mỏi</label>
               <div className="grid grid-cols-5 gap-2">
                 {['Rất khỏe', 'Khỏe', 'Bình thường', 'Mệt', 'Kiệt sức'].map((lbl, i) => {
                   const val = i + 1;
                   return (
                     <button key={val} type="button" onClick={() => setCheckIn(c => ({ ...c, fatigue: val }))}
                       className={`py-2 rounded-xl border text-[10px] font-semibold leading-tight transition-all ${
-                        checkIn.fatigue === val ? 'bg-lime/15 border-lime/40 text-lime' : 'bg-white/[0.04] border-white/10 text-neutral-400 hover:text-white'
+                        checkIn.fatigue === val
+                          ? 'bg-teal-50 border-teal-200 text-teal-800'
+                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:text-slate-900'
                       }`}>
                       <span className="block text-sm">{val}</span>{lbl}
                     </button>
@@ -1309,14 +1594,16 @@ function TrainingView() {
 
             {/* Độ khó RPE 1-10 */}
             <div className="mb-5">
-              <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">
-                Độ khó buổi tập (RPE) {checkIn.rpe > 0 && <span className="text-lime normal-case">· {checkIn.rpe}/10</span>}
+              <label className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-2 block">
+                Độ khó buổi tập (RPE) {checkIn.rpe > 0 && <span className="text-teal-600 normal-case">· {checkIn.rpe}/10</span>}
               </label>
               <div className="grid grid-cols-10 gap-1">
                 {Array.from({ length: 10 }, (_, i) => i + 1).map(val => (
                   <button key={val} type="button" onClick={() => setCheckIn(c => ({ ...c, rpe: val }))}
                     className={`py-2 rounded-lg border text-xs font-bold transition-all ${
-                      checkIn.rpe === val ? 'bg-blue-500/20 border-blue-400/50 text-blue-100' : 'bg-white/[0.04] border-white/10 text-neutral-500 hover:text-white'
+                      checkIn.rpe === val
+                        ? 'bg-blue-50 border-blue-300 text-blue-800'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:text-slate-900'
                     }`}>
                     {val}
                   </button>
@@ -1326,29 +1613,29 @@ function TrainingView() {
 
             {/* Giấc ngủ đêm qua */}
             <div className="mb-6">
-              <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">Giấc ngủ đêm qua (tùy chọn)</label>
+              <label className="text-slate-500 text-xs font-medium uppercase tracking-wider mb-2 block">Giấc ngủ đêm qua (tùy chọn)</label>
               <div className="relative">
                 <input type="number" step={0.5} min={0} max={14} value={checkIn.sleep}
                   onChange={e => setCheckIn(c => ({ ...c, sleep: e.target.value }))}
                   placeholder="VD: 7.5"
-                  className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 pr-16 py-3 text-white focus:outline-none focus:border-lime/40" />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 text-sm">giờ</span>
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 pr-16 py-3 text-slate-900 focus:outline-none focus:border-teal-200" />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm">giờ</span>
               </div>
             </div>
 
             {checkInError && (
-              <div className="mb-3 px-4 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center">
+              <div className="mb-3 px-4 py-3 rounded-2xl bg-red-50 border border-red-200 text-red-500 text-xs text-center">
                 {checkInError}
               </div>
             )}
 
             <button onClick={submitCheckIn} disabled={savingCheckIn}
-              className="w-full btn-lime py-3.5 rounded-2xl text-sm font-grotesk font-bold flex items-center justify-center gap-2 disabled:opacity-50">
+              className="w-full bg-teal-600 text-white hover:bg-teal-700 transition-colors py-3.5 rounded-2xl text-sm font-grotesk font-bold flex items-center justify-center gap-2 disabled:opacity-50">
               {savingCheckIn ? 'Đang lưu...' : 'Lưu & hoàn thành'}
               {!savingCheckIn && <Check className="w-4 h-4" />}
             </button>
             <button onClick={() => { setShowCheckIn(false); setCheckInError(null); }} disabled={savingCheckIn}
-              className="w-full py-2.5 mt-1 text-xs text-neutral-600 hover:text-neutral-400 transition-colors disabled:opacity-30">
+              className="w-full py-2.5 mt-1 text-xs text-slate-400 hover:text-slate-500 transition-colors disabled:opacity-30">
               Bỏ qua bước này
             </button>
           </div>
@@ -1358,21 +1645,21 @@ function TrainingView() {
       {/* ── Adaptation feedback banner (sau AI thích ứng hoặc check-in) ── */}
       {adaptationNote && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] w-full max-w-md px-4 animate-fade-in">
-          <div className="rounded-2xl border border-lime/20 bg-[#0a0d08]/95 backdrop-blur-md p-4 shadow-xl">
+          <div className="rounded-2xl border border-teal-200 bg-white/95 backdrop-blur-md p-4 shadow-xl">
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-lime/15 border border-lime/25 flex items-center justify-center shrink-0 mt-0.5">
-                <Sparkles className="w-4 h-4 text-lime" />
+              <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 mt-0.5">
+                <Sparkles className="w-4 h-4 text-teal-600" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-lime text-xs font-bold uppercase tracking-wider mb-1.5">
+                <p className="text-teal-600 text-xs font-bold uppercase tracking-wider mb-1.5">
                   AI đã phân tích & điều chỉnh tuần {(activePlan?.weekNumber || 1) + 1}
                 </p>
-                <p className="text-neutral-300 text-sm leading-relaxed">{adaptationNote}</p>
-                <p className="text-neutral-600 text-[10px] mt-2">
-                  Cuộn xuống lịch tuần để xem lịch tập mới.
+                <p className="text-slate-600 text-sm leading-relaxed">{adaptationNote}</p>
+                <p className="text-slate-400 text-[10px] mt-2">
+                  Cuộn xuống lịch tập tháng để xem lịch tập mới.
                 </p>
               </div>
-              <button onClick={() => setAdaptationNote(null)} className="text-neutral-500 hover:text-white transition-colors shrink-0 mt-0.5">
+              <button onClick={() => setAdaptationNote(null)} className="text-slate-500 hover:text-slate-900 transition-colors shrink-0 mt-0.5">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1380,79 +1667,121 @@ function TrainingView() {
         </div>
       )}
 
-      {/* ── Hero ── */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/[0.06]">
-        <img
-          src="https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1400&q=80"
-          alt="" aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
-        <div className="absolute inset-0 bg-gradient-to-tr from-black via-black/85 to-black/45" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
-
-        <div className="relative p-6 sm:p-7">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 text-lime text-[11px] font-bold uppercase tracking-[0.28em] mb-2">
-                <Activity className="w-3.5 h-3.5" /> Tập luyện
-              </div>
-              <h2 className="font-grotesk font-bold italic uppercase text-white text-3xl sm:text-[2.4rem] leading-[0.9] tracking-tight">
-                Lịch tập cá nhân
-              </h2>
-              {activePlan?.name && (
-                <p className="text-neutral-400 text-sm mt-2 truncate max-w-md">
-                  {displayPlanName(activePlan.name)}
-                </p>
-              )}
-            </div>
-            {/* Chỉ giữ 2 nút: tải lại nhẹ (icon only) + credit badge */}
-            <div className="flex shrink-0 items-center gap-2">
+      {/* ── Training report hero ── */}
+      <div className="overflow-hidden rounded-[18px] border border-teal-100 bg-[linear-gradient(135deg,#ffffff_0%,#f5fffb_52%,#fff7ed_100%)] dark:border-teal-400/20 dark:bg-[linear-gradient(135deg,#111827_0%,#0f1f24_52%,#17140f_100%)]">
+        <div className="flex items-center justify-between gap-3 border-b border-teal-100/80 px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-teal-700">Báo cáo luyện tập</p>
+            <h2 className="mt-1 truncate font-grotesk text-xl font-bold text-slate-950">
+              {activePlan?.name ? displayPlanName(activePlan.name) : 'Kế hoạch tập cá nhân'}
+            </h2>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {canShowAiUsage && (
               <AiUsageBadge usage={usage} actionCost={5} onUpgradeClick={() => setUpgradeModalOpen(true)} />
+            )}
+            {activePlan && (
               <button
-                onClick={loadTrainingSchedule}
-                title="Tải lại lịch tập"
-                className="w-9 h-9 rounded-xl border border-white/15 bg-white/5 backdrop-blur flex items-center justify-center text-neutral-400 hover:text-white hover:border-white/30 transition-colors"
+                onClick={() => {
+                  if (window.confirm('Tạo lại kế hoạch sẽ thay thế kế hoạch tập hiện tại bằng kế hoạch AI mới. Tiến độ của kế hoạch cũ sẽ không còn hiển thị. Bạn chắc chắn?')) {
+                    setAiPlanModalOpen(true);
+                  }
+                }}
+                title="Tạo lại kế hoạch bằng AI"
+                className="flex h-9 items-center gap-1.5 rounded-xl border border-teal-200 bg-teal-50 px-3 text-xs font-bold text-teal-800 transition-colors hover:border-teal-300 hover:bg-teal-100"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
+                <Sparkles className="h-3.5 w-3.5" /> Tạo lại
+              </button>
+            )}
+            <button
+              onClick={loadTrainingSchedule}
+              title="Tải lại lịch tập"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-teal-800 transition-colors hover:border-teal-200 hover:bg-teal-50"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-0 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
+          <div className="p-5 sm:p-6">
+            <p className="mb-2 text-xs font-bold text-slate-700">
+              {selectedDayIsRest ? 'Ngày phục hồi' : focusExercise?.done ? 'Bài đã hoàn thành' : 'Bài tiếp theo'}
+            </p>
+            <div className="flex items-start gap-4">
+              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                {focusExercise?.imageUrl ? (
+                  <img src={focusExercise.imageUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Dumbbell className="h-6 w-6 text-slate-600" />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-grotesk text-2xl font-bold leading-tight text-slate-950 sm:text-3xl">
+                  {focusExercise?.name || 'Tạo lịch tập hôm nay'}
+                </h3>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-800">{readinessSummary}</span>
+                  {focusExercise && <span className="rounded-full bg-teal-50 px-2.5 py-1 text-teal-800 ring-1 ring-teal-200">{focusExercise.sets}</span>}
+                  {focusExercise?.restTime && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-800">Nghỉ {formatDuration(focusExercise.restTime)}</span>}
+                  {focusMuscle && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-800">{focusMuscle}</span>}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-slate-700">
+                <span className="font-bold text-slate-950">Đang tập:</span>{' '}
+                {topPlanMuscles.length ? topPlanMuscles.map(([name]) => name).slice(0, 3).join(' · ') : 'Toàn thân'}
+              </div>
+              <button
+                type="button"
+                onClick={guidePrimaryAction}
+                disabled={!!activePlan && scheduleExercises.length > 0 && !nextExercise}
+                className="flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 text-sm font-bold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {scheduleExercises.length > 0 && nextExercise?.done ? <RotateCcw className="h-4 w-4" /> : <Play className="h-4 w-4" fill="currentColor" />}
+                {guidePrimaryLabel}
               </button>
             </div>
           </div>
 
-          {/* Stat badges + tiến độ */}
-          <div className="mt-4 space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              {activePlan && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur border border-white/15 px-3 py-1.5 text-xs text-neutral-200">
-                  <CalendarDays className="w-3.5 h-3.5 text-lime" />
-                  Tuần <span className="text-white font-bold ml-0.5">{activePlan.weekNumber || 1}</span>
-                  <span className="text-neutral-500">/{activePlan.totalWeeks || totalWeeksCount}</span>
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur border border-white/15 px-3 py-1.5 text-xs text-neutral-200">
-                <Check className="w-3.5 h-3.5 text-lime" />
-                <span className="text-white font-bold">{completedCount}</span>
-                <span className="text-neutral-400">/{scheduleExercises.length} bài</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 backdrop-blur border border-white/15 px-3 py-1.5 text-xs text-neutral-200">
-                <Flame className="w-3.5 h-3.5 text-orange-400" />
-                <span className="text-white font-bold">{totalCalories}</span>
-                <span className="text-neutral-400">kcal hôm nay</span>
-              </span>
-            </div>
-            {activePlan && (
-              <div>
-                <div className="flex items-center justify-between text-[10px] text-neutral-600 mb-1">
-                  <span>Tiến độ chương trình</span>
-                  <span className="text-lime font-bold">{activePlan.completionPercentage ?? progressPercent}%</span>
+          <div className="border-t border-teal-100/80 bg-white/70 p-5 dark:border-teal-400/15 dark:bg-[#0f141c] lg:border-l lg:border-t-0">
+            <div className="mb-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+              <div className="relative h-28">
+                {focusExercise?.imageUrl ? (
+                  <img src={focusExercise.imageUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#ccfbf1,#fff7ed)]">
+                    <Dumbbell className="h-10 w-10 text-teal-700" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,118,110,0.82)_0%,rgba(15,118,110,0.45)_60%,rgba(15,118,110,0.12)_100%)]" />
+                <div className="absolute left-3 top-3 rounded-full bg-white px-3 py-1 text-[11px] font-bold text-slate-900 shadow-sm">
+                  {selectedDayIsRest ? 'Recovery' : `Ngày ${selectedDay}`}
                 </div>
-                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-lime rounded-full transition-all duration-700"
-                    style={{ width: `${activePlan.completionPercentage ?? progressPercent}%` }}
-                  />
+                <div className="absolute bottom-3 left-3 max-w-[72%]">
+                  <p className="font-grotesk text-lg font-bold leading-tight text-white drop-shadow-sm">
+                    {selectedDayIsRest ? 'Giữ nhịp phục hồi' : 'Sẵn sàng cho buổi tập'}
+                  </p>
                 </div>
               </div>
-            )}
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2">
+              {[
+                { label: 'Tuần', value: `${activePlan?.weekNumber || 1}/${activePlan?.totalWeeks || totalWeeksCount}` },
+                { label: 'Tiến độ', value: `${planCompletion}%` },
+                { label: 'Còn lại', value: `${remainingExercises} bài` },
+                { label: 'Kcal hôm nay', value: `${totalCalories}` },
+              ].map(({ label, value }) => (
+                <div key={label} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                  <p className="text-[11px] font-semibold text-slate-700">{label}</p>
+                  <p className="mt-1 font-grotesk text-lg font-bold text-slate-950">{value}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -1461,30 +1790,30 @@ function TrainingView() {
       {planInsight && (planInsight.rationale || planInsight.disclaimer || planInsight.notes.length > 0) && (
         <div className="space-y-3">
           {planInsight.disclaimer && (
-            <div className="rounded-2xl border border-orange-400/30 bg-orange-400/[0.07] p-4 flex items-start gap-3">
-              <ShieldAlert className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
+            <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4 flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-orange-300 font-semibold text-sm">Lưu ý sức khỏe</p>
-                <p className="text-neutral-300 text-xs mt-1 leading-relaxed">{planInsight.disclaimer}</p>
+                <p className="text-orange-600 font-semibold text-sm">Lưu ý sức khỏe</p>
+                <p className="text-slate-600 text-xs mt-1 leading-relaxed">{planInsight.disclaimer}</p>
               </div>
-              <button onClick={() => setPlanInsight(null)} className="text-neutral-500 hover:text-white shrink-0"><X className="w-4 h-4" /></button>
+              <button onClick={() => setPlanInsight(null)} className="text-slate-500 hover:text-slate-900 shrink-0"><X className="w-4 h-4" /></button>
             </div>
           )}
           {(planInsight.rationale || planInsight.notes.length > 0) && (
-            <div className="rounded-2xl border border-lime/20 bg-lime/[0.05] p-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex items-center gap-2">
-                  <Lightbulb className="w-4 h-4 text-lime" />
-                  <span className="font-grotesk font-bold uppercase text-white text-sm tracking-wide">Vì sao kế hoạch này</span>
+                  <Lightbulb className="w-4 h-4 text-orange-500" />
+                  <span className="font-grotesk font-bold uppercase text-slate-900 text-sm tracking-wide">Vì sao kế hoạch này</span>
                 </div>
-                <button onClick={() => setPlanInsight(null)} className="text-neutral-500 hover:text-white shrink-0"><X className="w-4 h-4" /></button>
+                <button onClick={() => setPlanInsight(null)} className="text-slate-500 hover:text-slate-900 shrink-0"><X className="w-4 h-4" /></button>
               </div>
-              {planInsight.rationale && <p className="text-neutral-300 text-xs leading-relaxed mb-2">{planInsight.rationale}</p>}
+              {planInsight.rationale && <p className="text-slate-600 text-xs leading-relaxed mb-2">{planInsight.rationale}</p>}
               {planInsight.notes.length > 0 && (
                 <ul className="space-y-1.5">
                   {planInsight.notes.slice(0, 6).map((n, i) => (
-                    <li key={i} className="flex items-start gap-2 text-neutral-300 text-xs">
-                      <Check className="w-3.5 h-3.5 text-lime mt-0.5 shrink-0" />
+                    <li key={i} className="flex items-start gap-2 text-slate-600 text-xs">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
                       <span>{n}</span>
                     </li>
                   ))}
@@ -1497,15 +1826,15 @@ function TrainingView() {
 
       {/* ── Error ── */}
       {saveError && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-400 text-sm">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-500 text-sm">
           {saveError}
         </div>
       )}
 
       {/* ── Loading ── */}
       {loading && (
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-8 flex items-center justify-center gap-3 text-neutral-400 text-sm">
-          <Loader2 className="w-4 h-4 animate-spin text-lime" />
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 flex items-center justify-center gap-3 text-slate-500 text-sm">
+          <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
           Đang tải lịch tập...
         </div>
       )}
@@ -1521,16 +1850,18 @@ function TrainingView() {
 
           {/* ── Sinh tuần tiếp theo ─────────────────────────────────────────── */}
           {canGenerateNextWeek && (
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-xl bg-lime/15 border border-lime/25 flex items-center justify-center">
-                  <CalendarDays className="w-4 h-4 text-lime" />
+                <div className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center">
+                  <CalendarDays className="w-4 h-4 text-slate-600" />
                 </div>
                 <div>
-                  <p className="font-grotesk font-bold text-white text-sm leading-none">
-                    Sinh lịch tập tuần {(activePlan?.weekNumber || 1) + 1}
+                  <p className="font-grotesk font-bold text-slate-900 text-sm leading-none">
+                    {reachedPlanEnd ? 'Bạn đã đi hết lịch hiện có 🎉' : `Sinh lịch tập tuần ${(activePlan?.weekNumber || 1) + 1}`}
                   </p>
-                  <p className="text-neutral-500 text-[11px] mt-0.5">Mỗi lần sinh tốn 5 credit AI</p>
+                <p className="text-slate-700 text-[11px] mt-0.5">
+                  {reachedPlanEnd ? 'Sinh tuần tiếp theo để tiếp tục hành trình · 5 credit AI' : 'Mỗi lần sinh tốn 5 credit AI'}
+                </p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -1538,14 +1869,15 @@ function TrainingView() {
                 <button
                   onClick={autoRegulateNextWeek}
                   disabled={adaptingNextWeek || generatingNextWeek}
-                  className="flex flex-col items-start gap-1.5 rounded-xl border border-lime/30 bg-lime/[0.08] p-3 text-left hover:bg-lime/15 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="relative flex flex-col items-start gap-1.5 rounded-xl border border-[#0f766e] bg-[#0f766e] p-3 text-left text-white shadow-sm transition-colors hover:bg-[#115e59] disabled:cursor-not-allowed disabled:opacity-50 dark:border-lime/25 dark:bg-[linear-gradient(135deg,#162015_0%,#121821_56%,#0f2a28_100%)] dark:text-slate-50 dark:shadow-[0_16px_38px_-28px_rgba(204,255,0,0.55)] dark:hover:border-lime/40"
                 >
-                  <div className="flex items-center gap-1.5 text-lime text-xs font-bold">
+                  <span className="absolute right-2 top-2 rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white dark:bg-lime dark:text-[#050505]">Khuyên dùng</span>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-white dark:text-lime">
                     {adaptingNextWeek
                       ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Đang phân tích...</>
                       : <><Sparkles className="w-3.5 h-3.5" />AI thích ứng</>}
                   </div>
-                  <p className="text-neutral-400 text-[10px] leading-relaxed">
+                  <p className="text-teal-50 text-[10px] leading-relaxed dark:text-slate-300">
                     AI xem xét RPE, độ mệt và số set đã làm tuần trước để điều chỉnh cường độ phù hợp.
                   </p>
                 </button>
@@ -1553,14 +1885,14 @@ function TrainingView() {
                 <button
                   onClick={generateNextWeek}
                   disabled={generatingNextWeek || adaptingNextWeek}
-                  className="flex flex-col items-start gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-left hover:bg-white/[0.06] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex flex-col items-start gap-1.5 rounded-xl border border-slate-200 bg-white p-3 text-left hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  <div className="flex items-center gap-1.5 text-neutral-200 text-xs font-bold">
+                  <div className="flex items-center gap-1.5 text-slate-700 text-xs font-bold">
                     {generatingNextWeek
                       ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Đang tạo...</>
                       : <><RefreshCw className="w-3.5 h-3.5" />Sinh theo lịch</>}
                   </div>
-                  <p className="text-neutral-500 text-[10px] leading-relaxed">
+                  <p className="text-slate-700 text-[10px] leading-relaxed">
                     Tạo lịch tuần tiếp theo theo chương trình gốc, không thay đổi cường độ.
                   </p>
                 </button>
@@ -1568,120 +1900,116 @@ function TrainingView() {
             </div>
           )}
 
-          {/* Week navigator — lịch tuần nổi bật */}
-          <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-b from-white/[0.05] to-white/[0.02] p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-lime/15 border border-lime/25 flex items-center justify-center shrink-0">
-                  <CalendarDays className="w-4 h-4 text-lime" />
+          {/* Monthly schedule */}
+          <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.06)] sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-700 text-white">
+                  <CalendarDays className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-grotesk font-bold uppercase text-white text-sm tracking-wide leading-none">Lịch tuần</p>
-                  <p className="text-neutral-500 text-[11px] mt-1 truncate">{formatWeekRange()}</p>
+                  <p className="font-grotesk text-base font-bold leading-none text-slate-950">Lịch tập tháng</p>
+                  <p className="mt-1 truncate text-xs font-semibold text-slate-600">
+                    {selectedMonthLabel} · {monthWorkoutDays} ngày tập · {monthCompletedDays} ngày xong
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  onClick={() => jumpToDay(Math.max(1, currentWeekStart - weekSize))}
-                  disabled={!canPrevWeek || currentWeekStart <= 1}
-                  className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.03] flex items-center justify-center text-neutral-400 hover:text-white hover:border-white/20 disabled:opacity-25 transition-colors"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => jumpToDay(Math.min(totalScheduleDays, currentWeekStart + weekSize))}
-                  disabled={!canNextWeek}
-                  className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.03] flex items-center justify-center text-neutral-400 hover:text-white hover:border-white/20 disabled:opacity-25 transition-colors"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+              <div className="shrink-0 rounded-xl bg-teal-50 px-3 py-2 text-right ring-1 ring-teal-100">
+                <p className="font-grotesk text-xl font-bold leading-none text-teal-800">{trainingAdherence}%</p>
+                <p className="mt-1 text-[11px] font-semibold text-slate-700">tuân thủ</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-              {weekDays.map(day => {
-                const dayExercises = scheduleExercises.filter(ex => (ex.dayNumber || 1) === day);
-                const dayDone = dayExercises.filter(ex => ex.done).length;
-                const isRest = dayExercises.length === 0;
-                const isActive = selectedDay === day;
-                const isToday = todayDayNumber === day;
-                const allDone = !isRest && dayDone === dayExercises.length;
-                const pill = formatDayPill(day);
+            <div className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-bold text-slate-500">
+              {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(day => (
+                <div key={day} className="py-1">{day}</div>
+              ))}
+            </div>
+
+            <div className="mt-1.5 grid grid-cols-7 gap-1.5 sm:gap-2">
+              {monthCells.map((cell, index) => {
+                if (!cell) {
+                  return <div key={`empty-${index}`} className="min-h-14 rounded-xl border border-transparent" />;
+                }
+
+                const isPlanDay = cell.dayNumber != null;
+                const isRest = cell.dayExercises.length === 0;
+                const allDone = !isRest && cell.dayDone === cell.dayExercises.length;
+                const disabled = !isPlanDay;
+                const dateNumber = cell.date.getDate();
+
                 return (
                   <button
-                    key={day}
-                    onClick={() => jumpToDay(day)}
-                    className={`relative rounded-2xl py-3 px-1 flex flex-col items-center justify-center gap-1 transition-all ${
-                      isActive
-                        ? 'bg-lime text-black shadow-[0_6px_24px_-6px_rgba(204,255,0,0.5)]'
-                        : isToday
-                        ? 'border border-lime/40 bg-lime/[0.06] hover:bg-lime/10'
-                        : isRest
-                        ? 'border border-dashed border-white/[0.1] hover:bg-white/[0.04]'
-                        : 'border border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.07]'
-                    }`}
+                    key={cell.date.toISOString()}
+                    type="button"
+                    onClick={() => cell.dayNumber && jumpToDay(cell.dayNumber)}
+                    disabled={disabled}
+                    className={`relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border px-1 py-2 text-center transition ${
+                      cell.isSelected
+                        ? 'border-teal-300 bg-teal-50 text-teal-950 shadow-[0_8px_18px_rgba(13,148,136,0.12)]'
+                        : cell.isToday
+                          ? 'border-orange-200 bg-orange-50 text-orange-900'
+                          : disabled
+                            ? 'border-slate-100 bg-slate-50 text-slate-300'
+                            : isRest
+                              ? 'border-dashed border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100'
+                              : 'border-slate-200 bg-white text-slate-900 hover:border-teal-200 hover:bg-white'
+                    } disabled:cursor-default`}
                   >
-                    {/* "Hôm nay" badge */}
-                    {isToday && !isActive && (
-                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[7px] font-bold uppercase tracking-wider text-lime bg-charcoal border border-lime/30 px-1.5 py-px rounded-full">
-                        Nay
-                      </span>
+                    {cell.isToday && (
+                      <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-orange-500" />
                     )}
-
-                    {/* Weekday */}
-                    <div className={`text-xs font-bold leading-none ${
-                      isActive ? 'text-black' : isToday ? 'text-lime' : isRest ? 'text-neutral-600' : 'text-neutral-200'
-                    }`}>
-                      {pill.weekday}
-                    </div>
-
-                    {/* Date */}
-                    {pill.date && (
-                      <div className={`text-[10px] leading-none ${
-                        isActive ? 'text-black/60' : 'text-neutral-600'
-                      }`}>
-                        {pill.date}
-                      </div>
-                    )}
-
-                    {/* Status: rest / done / progress */}
-                    <div className={`mt-0.5 leading-none font-bold flex items-center justify-center ${
-                      isActive ? 'text-black' : allDone ? 'text-lime' : isRest ? 'text-neutral-700' : 'text-neutral-500'
-                    }`}>
-                      {isRest
-                        ? <Moon className="w-3 h-3" />
-                        : allDone
-                        ? <Check className="w-3.5 h-3.5" />
-                        : <span className="text-[10px]">{dayDone}/{dayExercises.length}</span>}
-                    </div>
+                    <span className="font-grotesk text-sm font-bold leading-none">{dateNumber}</span>
+                    <span className="flex h-4 items-center justify-center text-[10px] font-bold leading-none">
+                      {!isPlanDay ? (
+                        ''
+                      ) : isRest ? (
+                        <Moon className="h-3 w-3" />
+                      ) : allDone ? (
+                        <Check className="h-3.5 w-3.5 text-emerald-600" />
+                      ) : (
+                        `${cell.dayDone}/${cell.dayExercises.length}`
+                      )}
+                    </span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Exercise list + detail panel */}
-          <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-
-            {/* Exercise list */}
-            <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] overflow-hidden">
-              <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between gap-4">
-                <div>
-                  <h3 className="font-grotesk font-semibold text-white text-sm leading-tight">
-                    {formatSelectedDayLabel(selectedDay)}
-                    {selectedDayIsRest && <span className="text-neutral-500 font-normal ml-2">· Nghỉ</span>}
-                  </h3>
+          {/* Workout queue */}
+          <div className="grid gap-4">
+            <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+              <div className="border-b border-slate-200 bg-white px-5 py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-teal-700">Thứ tự bài tập</p>
+                    <h3 className="mt-1 font-grotesk text-base font-bold leading-tight text-slate-950">
+                      {formatSelectedDayLabel(selectedDay)}
+                      {selectedDayIsRest && <span className="ml-2 font-normal text-slate-700">· Nghỉ</span>}
+                    </h3>
+                  </div>
                   {!selectedDayIsRest && (
-                    <p className="text-neutral-500 text-xs mt-0.5">
-                      {visibleExercises.length} bài · {visibleCompletedCount}/{visibleExercises.length} hoàn thành
-                    </p>
+                    <div className="shrink-0 text-right">
+                      <div className="font-grotesk text-2xl font-bold leading-none text-teal-700">{visibleProgressPercent}%</div>
+                      <p className="mt-1 text-[11px] font-semibold text-slate-700">hoàn thành</p>
+                    </div>
                   )}
                 </div>
+
                 {!selectedDayIsRest && (
-                  <div className="text-right shrink-0">
-                    <div className="text-lime font-grotesk font-bold text-xl">{visibleProgressPercent}%</div>
-                    <div className="w-20 h-1 bg-white/[0.06] rounded-full overflow-hidden mt-1.5 ml-auto">
-                      <div className="h-full bg-lime rounded-full transition-all" style={{ width: `${visibleProgressPercent}%` }} />
+                  <div className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                      <span className="font-semibold text-slate-950">{visibleExercises.length} bài</span>
+                      <span className="text-slate-700"> trong buổi</span>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                      <span className="font-semibold text-slate-950">~{selectedDayMinutes || visibleExercises.length * 6} phút</span>
+                      <span className="text-slate-700"> ước tính</span>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 truncate">
+                      <span className="font-semibold text-slate-950">Trọng tâm </span>
+                      <span className="text-slate-700">{selectedDayMuscles.slice(0, 2).join(', ') || 'Toàn thân'}</span>
                     </div>
                   </div>
                 )}
@@ -1689,67 +2017,81 @@ function TrainingView() {
 
               {selectedDayIsRest ? (
                 <div className="p-5">
-                  <div className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-4 flex items-start gap-3">
-                    <Shield className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
+                    <Shield className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-semibold text-white text-sm">Ngày nghỉ phục hồi</h4>
-                      <p className="text-neutral-400 text-xs mt-1 leading-relaxed">
+                      <h4 className="text-sm font-semibold text-blue-950">Ngày nghỉ phục hồi</h4>
+                      <p className="mt-1 text-xs leading-relaxed text-blue-800">
                         Không có bài chính. Ưu tiên đi bộ nhẹ, mobility hoặc stretching 10–20 phút.
                       </p>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="divide-y divide-white/[0.05]">
+                <div className="divide-y divide-slate-100">
                   {visibleExercises.map((ex, index) => (
                     <div
                       key={ex.id}
                       role="button"
                       tabIndex={0}
-                      onClick={() => setActiveExercise(ex)}
-                      onKeyDown={e => e.key === 'Enter' && setActiveExercise(ex)}
-                      className={`w-full text-left px-5 py-4 transition-colors relative cursor-pointer ${
+                      onClick={() => ex.done ? replayExercise(ex) : startSession(ex)}
+                      onKeyDown={e => e.key === 'Enter' && (ex.done ? replayExercise(ex) : startSession(ex))}
+                      className={`group relative w-full cursor-pointer px-4 py-4 text-left transition-colors sm:px-5 ${
                         activeExercise?.id === ex.id
-                          ? 'bg-white/[0.07] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-lime before:rounded-r'
-                          : 'hover:bg-white/[0.04]'
+                          ? 'bg-teal-50 ring-1 ring-teal-200'
+                          : 'bg-white hover:bg-slate-50'
                       }`}
                     >
-                      <div className="flex items-start gap-3">
-                        {/* Index / done badge */}
-                        <div className={`w-7 h-7 shrink-0 rounded-lg flex items-center justify-center text-xs font-bold mt-0.5 ${ex.done ? 'bg-lime/15 text-lime' : 'bg-white/[0.06] text-neutral-500'}`}>
-                          {ex.done ? <Check className="w-3.5 h-3.5" /> : index + 1}
+                      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+                        <div className="relative">
+                          <div className="h-12 w-12 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+                            {ex.imageUrl ? (
+                              <img src={ex.imageUrl} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center">
+                                <Dumbbell className="h-5 w-5 text-slate-600" />
+                              </div>
+                            )}
+                          </div>
+                          <div className={`absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-lg text-[10px] font-bold ring-2 ring-white ${
+                            ex.done
+                              ? 'bg-emerald-600 text-white'
+                              : activeExercise?.id === ex.id
+                                ? 'bg-teal-700 text-white'
+                                : 'bg-slate-900 text-white'
+                          }`}>
+                            {ex.done ? <Check className="h-3.5 w-3.5" /> : index + 1}
+                          </div>
                         </div>
 
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`font-semibold text-sm ${ex.done ? 'text-neutral-500 line-through' : 'text-white'}`}>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`text-sm font-bold ${ex.done ? 'text-slate-700 line-through' : 'text-slate-950'}`}>
                               {ex.name}
                             </span>
                             {ex.difficulty && (
-                              <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${difficultyTone(ex.difficulty)}`}>
+                              <span className={`rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase ${difficultyTone(ex.difficulty)}`}>
                                 {ex.difficulty}
                               </span>
                             )}
                           </div>
-                          {/* Muscle group badge + secondary muscles + exercise type */}
-                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
                             {ex.muscle && (
-                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-lime/10 text-lime/80 border border-lime/20 inline-flex items-center gap-1">
-                                <Dumbbell className="w-2.5 h-2.5" /> {ex.muscle}
+                              <span className="inline-flex items-center gap-1 rounded bg-teal-50 px-1.5 py-0.5 text-[10px] font-semibold text-teal-800 ring-1 ring-teal-200">
+                                <Dumbbell className="h-2.5 w-2.5" /> {translateMuscle(ex.muscle)}
                               </span>
                             )}
                             {ex.secondaryMuscles?.slice(0, 2).map(m => (
-                              <span key={m} className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] text-neutral-500 border border-white/[0.07]">
-                                {m}
+                              <span key={m} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-700">
+                                {translateMuscle(m)}
                               </span>
                             ))}
                             {ex.exerciseType && (
-                              <span className="text-[10px] text-neutral-500">{formatEnumLabel(ex.exerciseType)}</span>
+                              <span className="text-[10px] font-medium text-slate-700">{formatEnumLabel(ex.exerciseType)}</span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2.5 mt-1.5 text-xs text-neutral-500 flex-wrap">
-                            <span>{ex.sets}</span>
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-700">
+                            <span className="font-bold text-slate-950">{ex.sets}</span>
                             <span>·</span>
                             <span>Nghỉ {formatDuration(ex.restTime)}</span>
                             <span>·</span>
@@ -1757,25 +2099,36 @@ function TrainingView() {
                             {ex.recommendedWeight && (
                               <>
                                 <span>·</span>
-                                <span className="text-cyan-400 font-medium inline-flex items-center gap-1"><Dumbbell className="w-2.5 h-2.5" /> {ex.recommendedWeight}</span>
+                                <span className="inline-flex items-center gap-1 font-semibold text-teal-800"><Dumbbell className="h-2.5 w-2.5" /> {ex.recommendedWeight}</span>
                               </>
                             )}
                           </div>
                         </div>
 
-                        {/* Right indicator / Replay button */}
                         {ex.done ? (
                           <button
                             onClick={e => { e.stopPropagation(); replayExercise(ex); }}
                             title="Làm lại bài này"
-                            className="shrink-0 w-7 h-7 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-neutral-600 hover:text-lime hover:border-lime/30 hover:bg-lime/10 transition-all"
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-teal-800 transition hover:border-teal-200 hover:bg-teal-50"
                           >
-                            <RotateCcw className="w-3 h-3" />
+                            <RotateCcw className="h-4 w-4" />
                           </button>
                         ) : activeExercise?.id === ex.id ? (
-                          <div className="shrink-0 w-1 h-8 bg-lime rounded-full mt-0.5" />
+                          <button
+                            onClick={e => { e.stopPropagation(); startSession(ex); }}
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-700 text-white transition hover:bg-teal-800"
+                            title="Bắt đầu bài này"
+                          >
+                            <Play className="h-4 w-4" fill="currentColor" />
+                          </button>
                         ) : (
-                          <ChevronRight className="w-4 h-4 text-neutral-700 shrink-0 mt-1" />
+                          <button
+                            onClick={e => { e.stopPropagation(); startSession(ex); }}
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-teal-800 transition hover:border-teal-200 hover:bg-teal-50"
+                            title="Bắt đầu bài này"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
                         )}
                       </div>
                     </div>
@@ -1784,302 +2137,245 @@ function TrainingView() {
               )}
             </div>
 
-            {/* Exercise detail panel */}
-            {panelExercise && (() => {
-              const ex = panelExercise;
-              const parsed = parseNotes(ex.notes);
-              const movement = translateMovement(ex.exerciseType);
-              const isSelected = activeExercise?.id === ex.id;
-              const allMuscles = [ex.muscle, ...(ex.secondaryMuscles || [])].filter(Boolean);
-
-              return (
-                <aside className="rounded-2xl border border-white/[0.07] bg-white/[0.03] overflow-hidden xl:sticky xl:top-6 self-start">
-                  {/* Visual header */}
-                  <div className="relative h-44">
-                    {ex.imageUrl ? (
-                      <img src={ex.imageUrl} alt={ex.name} className="absolute inset-0 w-full h-full object-cover opacity-60" />
-                    ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-lime/[0.08] via-transparent to-electric/[0.04]" />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0f1014] via-[#0f1014]/50 to-transparent" />
-
-                    {/* Status badge */}
-                    <div className="absolute top-3.5 left-4 right-4 flex items-center justify-between">
-                      <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full border ${
-                        isSelected ? 'text-lime/90 border-lime/30 bg-lime/10' : 'text-neutral-400 border-white/10 bg-black/30'
-                      }`}>
-                        <Target className="w-2.5 h-2.5" />
-                        {isSelected ? 'Đang xem' : 'Tiếp theo'}
-                      </div>
-                      {ex.difficulty && (
-                        <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full border ${difficultyTone(ex.difficulty)}`}>
-                          {ex.difficulty === 'EASY' ? 'Dễ' : ex.difficulty === 'HARD' ? 'Khó' : 'Trung bình'}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Exercise name + primary muscle */}
-                    <div className="absolute bottom-3.5 left-4 right-4">
-                      <h3 className="font-grotesk font-bold text-white text-lg leading-snug">{ex.name}</h3>
-                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-lime/20 text-lime border border-lime/30">
-                          <Dumbbell className="w-2.5 h-2.5" /> {translateMuscle(ex.muscle || '')}
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/[0.08] text-neutral-300 border border-white/10">
-                          {movement.label}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 space-y-3">
-                    {/* Thống số chính */}
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { Icon: Dumbbell, label: 'Khối lượng', value: ex.sets, color: 'text-lime' },
-                        { Icon: Timer,    label: 'Nghỉ',       value: formatDuration(ex.restTime), color: 'text-blue-400' },
-                        { Icon: Flame,    label: 'Kcal',       value: `${ex.estimatedCalories || 0}`, color: 'text-orange-400' },
-                      ].map(({ Icon, label, value, color }) => (
-                        <div key={label} className="rounded-xl border border-white/[0.07] bg-white/[0.04] p-2.5">
-                          <Icon className={`w-3 h-3 ${color} mb-1`} />
-                          <p className="text-neutral-500 text-[11px] uppercase tracking-wider">{label}</p>
-                          <p className="text-white font-bold text-sm mt-0.5">{value}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Bài này tập gì? */}
-                    <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 space-y-2">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 flex items-center gap-1.5">
-                        <Activity className="w-3 h-3" /> Bài này tập gì?
-                      </p>
-
-                      {/* Movement pattern explanation */}
-                      {movement.desc && (
-                        <p className="text-neutral-300 text-xs leading-relaxed">{movement.desc}</p>
-                      )}
-
-                      {/* Nhóm cơ được kích hoạt */}
-                      {allMuscles.length > 0 && (
-                        <div>
-                          <p className="text-[10px] text-neutral-600 mb-1">Cơ bắp kích hoạt:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {allMuscles.slice(0, 5).map((m, i) => (
-                              <span key={m} className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                                i === 0
-                                  ? 'bg-lime/10 text-lime border-lime/20 font-semibold'
-                                  : 'bg-white/[0.05] text-neutral-400 border-white/[0.08]'
-                              }`}>
-                                {translateMuscle(m)}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Lợi ích từ notes */}
-                      {parsed.benefit && (
-                        <div className="border-t border-white/[0.05] pt-2">
-                          <p className="text-[10px] text-neutral-600 mb-0.5">Lợi ích:</p>
-                          <p className="text-neutral-400 text-xs leading-relaxed">{parsed.benefit}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Thông tin thêm */}
-                    <div className="space-y-1.5">
-                      {ex.equipment && (
-                        <div className="flex items-center justify-between text-xs py-1 border-b border-white/[0.04]">
-                          <span className="text-neutral-500 flex items-center gap-1.5">
-                            <Dumbbell className="w-3 h-3" /> Dụng cụ
-                          </span>
-                          <span className="text-white font-medium inline-flex items-center gap-1.5">
-                            {ex.equipment.toUpperCase() === 'BODYWEIGHT' ? <><Activity className="w-3 h-3" /> Trọng lượng cơ thể (không cần dụng cụ)</> : <><Dumbbell className="w-3 h-3" /> {formatEnumLabel(ex.equipment)}</>}
-                          </span>
-                        </div>
-                      )}
-                      {ex.recommendedWeight && (
-                        <div className="flex items-center justify-between text-xs py-1 border-b border-white/[0.04]">
-                          <span className="text-neutral-500 inline-flex items-center gap-1.5"><Scale className="w-3 h-3" /> Tạ gợi ý</span>
-                          <span className="text-cyan-400 font-semibold">{ex.recommendedWeight}</span>
-                        </div>
-                      )}
-                      {parsed.tempo && parsed.tempo !== 'N/A' && (
-                        <div className="flex items-center justify-between text-xs py-1 border-b border-white/[0.04]">
-                          <span className="text-neutral-500 flex items-center gap-1.5">
-                            <Timer className="w-3 h-3" /> Nhịp độ
-                          </span>
-                          <span className="text-neutral-300 font-mono">{parsed.tempo} <span className="text-neutral-600 font-sans">(xuống–dừng–lên)</span></span>
-                        </div>
-                      )}
-                      {parsed.phase && (
-                        <div className="flex items-center justify-between text-xs py-1">
-                          <span className="text-neutral-500 inline-flex items-center gap-1.5"><Target className="w-3 h-3" /> Giai đoạn tập</span>
-                          <span className="text-neutral-300">{PHASE_VI[parsed.phase] || parsed.phase}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Video hướng dẫn */}
-                    {ex.videoUrl && (
-                      <ExerciseVideoPlayer videoUrl={ex.videoUrl} name={ex.name} />
-                    )}
-
-                    {/* ── Swap Exercise Panel ─────────────────────────── */}
-                    {!ex.done && (
-                      <div>
-                        {/* Nút mở / đóng swap */}
-                        <button
-                          onClick={() => showSwap ? setShowSwap(false) : openSwap(ex)}
-                          className={`w-full py-2.5 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 border transition-all ${
-                            showSwap
-                              ? 'border-white/20 bg-white/[0.06] text-neutral-300'
-                              : 'border-white/[0.08] bg-white/[0.03] text-neutral-400 hover:text-white hover:border-white/20'
-                          }`}
-                        >
-                          <RefreshCw className={`w-3.5 h-3.5 ${showSwap ? 'rotate-180' : ''} transition-transform`} />
-                          {showSwap ? 'Đóng' : 'Không thích? Đổi bài khác'}
-                        </button>
-
-                        {/* Swap panel */}
-                        {showSwap && (
-                          <div className="mt-2 rounded-xl border border-white/[0.08] bg-[#0d0f13] overflow-hidden">
-                            {/* Header + filter nhóm cơ */}
-                            <div className="px-3 pt-3 pb-2 border-b border-white/[0.06]">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-2">
-                                Chọn nhóm cơ mong muốn
-                              </p>
-                              <div className="flex flex-wrap gap-1 mb-2">
-                                {['', 'Chest', 'Back', 'Quadriceps', 'Glutes', 'Core', 'Shoulders', 'Full Body'].map(m => (
-                                  <button
-                                    key={m}
-                                    onClick={() => filterAlternatives(m)}
-                                    className={`text-[10px] px-2 py-1 rounded-full border transition-all ${
-                                      altMuscleFilter === m
-                                        ? 'bg-lime/20 border-lime/40 text-lime font-bold'
-                                        : 'border-white/[0.08] text-neutral-500 hover:text-white hover:border-white/20'
-                                    }`}
-                                  >
-                                    {m === '' ? <span className="inline-flex items-center gap-1"><Target className="w-2.5 h-2.5" /> Cùng nhóm cơ</span> : translateMuscle(m)}
-                                  </button>
-                                ))}
-                              </div>
-                              {/* Custom input */}
-                              <div className="relative">
-                                <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-600" />
-                                <input
-                                  type="text"
-                                  placeholder="Tìm nhóm cơ khác..."
-                                  value={altMuscleFilter}
-                                  onChange={e => setAltMuscleFilter(e.target.value)}
-                                  onKeyDown={e => e.key === 'Enter' && filterAlternatives(altMuscleFilter)}
-                                  className="w-full pl-7 pr-8 py-1.5 text-xs bg-white/[0.04] border border-white/[0.07] rounded-lg text-white placeholder-neutral-600 outline-none focus:border-lime/30"
-                                />
-                                {altMuscleFilter && (
-                                  <button
-                                    onClick={() => filterAlternatives('')}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-white"
-                                  >
-                                    <XIcon className="w-3 h-3" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Danh sách alternatives */}
-                            <div className="max-h-64 overflow-y-auto divide-y divide-white/[0.04]">
-                              {altLoading ? (
-                                <div className="flex items-center justify-center py-6 gap-2 text-neutral-500 text-xs">
-                                  <div className="w-4 h-4 border-2 border-lime/30 border-t-lime rounded-full animate-spin" />
-                                  Đang tải...
-                                </div>
-                              ) : alternatives.length === 0 ? (
-                                <div className="py-6 text-center text-neutral-600 text-xs">
-                                  Không tìm thấy bài tập phù hợp
-                                </div>
-                              ) : alternatives.map(alt => {
-                                const altName = i18n.language === 'vi' && alt.nameVi ? alt.nameVi : alt.name;
-                                const diff = (alt.difficultyLevel || '').toLowerCase();
-                                return (
-                                  <button
-                                    key={alt.id}
-                                    onClick={() => confirmSwap(alt)}
-                                    disabled={swapping}
-                                    className="w-full text-left px-3 py-2.5 hover:bg-white/[0.04] transition-colors flex items-center gap-2.5 group"
-                                  >
-                                    {/* Ảnh nhỏ */}
-                                    <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-white/[0.04] border border-white/[0.06]">
-                                      {alt.imageUrl ? (
-                                        <img src={alt.imageUrl} alt={altName} className="w-full h-full object-cover opacity-70" />
-                                      ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-neutral-500">
-                                          {alt.requiredEquipment === 'BODYWEIGHT' ? <Activity className="w-4 h-4" /> : <Dumbbell className="w-4 h-4" />}
-                                        </div>
-                                      )}
-                                    </div>
-                                    {/* Info */}
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-white text-xs font-semibold truncate group-hover:text-lime transition-colors">
-                                        {altName}
-                                      </p>
-                                      <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                                        <span className="text-[11px] text-neutral-500 inline-flex items-center gap-1">
-                                          <Dumbbell className="w-2 h-2" /> {translateMuscle(alt.primaryMuscle || '')}
-                                        </span>
-                                        {alt.defaultSets && alt.defaultReps && (
-                                          <span className="text-[11px] text-neutral-600">
-                                            · {alt.defaultSets}×{alt.defaultReps}
-                                          </span>
-                                        )}
-                                        <span className={`text-[11px] px-1 rounded border ml-auto ${
-                                          diff.includes('hard') ? 'text-orange-400 border-orange-400/20 bg-orange-400/10' :
-                                          diff.includes('medium') ? 'text-yellow-400 border-yellow-400/20 bg-yellow-400/10' :
-                                          'text-lime border-lime/20 bg-lime/10'
-                                        }`}>
-                                          {diff.includes('hard') ? 'Khó' : diff.includes('medium') ? 'TB' : 'Dễ'}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <ArrowRight className="w-3.5 h-3.5 text-neutral-700 group-hover:text-lime transition-colors shrink-0" />
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {/* ── End Swap Panel ──────────────────────────────── */}
-
-                    {/* CTA */}
-                    {ex.done ? (
-                      <div className="space-y-2">
-                        <div className="rounded-xl border border-lime/20 bg-lime/10 px-4 py-3 flex items-center gap-2 text-lime text-sm font-semibold">
-                          <Check className="w-4 h-4" />
-                          Đã hoàn thành hôm nay
-                        </div>
-                        <button
-                          onClick={() => replayExercise(ex)}
-                          className="w-full py-2.5 rounded-xl text-xs font-semibold border border-white/[0.08] text-neutral-400 hover:text-white hover:border-white/20 flex items-center justify-center gap-1.5 transition-all"
-                        >
-                          <RotateCcw className="w-3 h-3" />
-                          Làm lại bài này
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => startSession(ex)}
-                        className="w-full btn-lime py-3 text-sm font-semibold rounded-xl flex items-center justify-center gap-2"
-                      >
-                        <Play className="w-4 h-4" fill="currentColor" />
-                        Bắt đầu với AI Coach
-                      </button>
-                    )}
-                  </div>
-                </aside>
-              );
-            })()}
           </div>
+
+      {!loading && scheduleExercises.length > 0 && (
+        <section className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-teal-700">Báo cáo tập luyện</p>
+              <h3 className="mt-1 font-grotesk text-xl font-bold text-slate-950">Theo dõi kế hoạch và mục tiêu cải thiện</h3>
+            </div>
+            <div className="rounded-xl border border-teal-100 bg-teal-50 px-4 py-2 text-teal-950">
+              <p className="text-[11px] font-semibold text-teal-700">Trọng tâm hiện tại</p>
+              <p className="font-grotesk text-sm font-bold">{mainPlanMuscle}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                Icon: Activity,
+                label: 'Tuân thủ tháng',
+                value: `${trainingAdherence}%`,
+                sub: `${monthCompletedDays}/${monthWorkoutDays || 0} ngày tập hoàn tất`,
+                tone: 'text-teal-700 bg-teal-50 border-teal-100',
+              },
+              {
+                Icon: Dumbbell,
+                label: 'Khối lượng kế hoạch',
+                value: `${totalTargetSets} set`,
+                sub: `~${totalTargetReps} reps mục tiêu`,
+                tone: 'text-slate-900 bg-slate-50 border-slate-200',
+              },
+              {
+                Icon: Target,
+                label: 'Mục tiêu còn lại',
+                value: `${remainingPlanPercent}%`,
+                sub: `${remainingExercises} bài chưa hoàn tất`,
+                tone: 'text-blue-700 bg-blue-50 border-blue-100',
+              },
+              {
+                Icon: Flame,
+                label: 'Kcal buổi chọn',
+                value: `${totalCalories}`,
+                sub: `${visibleExercises.length} bài trong ngày`,
+                tone: 'text-orange-700 bg-orange-50 border-orange-100',
+              },
+            ].map(({ Icon, label, value, sub, tone }) => (
+              <div key={label} className={`rounded-2xl border p-4 ${tone}`}>
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.08em] opacity-75">{label}</p>
+                    <p className="mt-2 font-grotesk text-2xl font-bold leading-none">{value}</p>
+                  </div>
+                  <Icon className="h-5 w-5 shrink-0" />
+                </div>
+                <p className="text-xs font-semibold leading-relaxed text-slate-700">{sub}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="mb-3 flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-950">Phân bổ nhóm cơ trong kế hoạch</span>
+                <span className="font-bold text-teal-800">{topPlanMuscles.length} nhóm chính</span>
+              </div>
+              <div className="space-y-3">
+                {topPlanMuscles.length > 0 ? topPlanMuscles.map(([muscle, count]) => {
+                  const pct = scheduleExercises.length ? Math.round((count / scheduleExercises.length) * 100) : 0;
+                  return (
+                    <div key={muscle}>
+                      <div className="mb-1 flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-900">{muscle}</span>
+                        <span className="font-bold text-teal-800">{pct}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-white">
+                        <div className="h-full rounded-full bg-teal-700" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                }) : (
+                  <p className="text-sm text-slate-700">Chưa đủ dữ liệu nhóm cơ để phân tích.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-teal-100 bg-[linear-gradient(135deg,#f0fdfa,#ffffff_62%,#fff7ed)] p-4 text-slate-950 dark:border-teal-400/20 dark:bg-[linear-gradient(135deg,#0f2a28,#111827_62%,#1f1a12)] dark:text-slate-50">
+              <p className="text-xs font-bold text-teal-700">Mục tiêu hoàn thành kế hoạch</p>
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <span className="font-grotesk text-4xl font-bold">{planCompletion}%</span>
+                <span className="pb-1 text-xs font-semibold text-slate-700">mục tiêu 100%</span>
+              </div>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-teal-100">
+                <div className="h-full rounded-full bg-teal-700" style={{ width: `${planCompletion}%` }} />
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-slate-700">
+                Cần thêm {remainingPlanPercent}% tiến độ để hoàn tất kế hoạch hiện tại.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+          {/* Body condition report */}
+          {(recentWeights.length > 0 || nutritionSeries.some(pt => pt.calories > 0) || caloriesConsumedToday > 0 || caloriesBurnedToday > 0) && (
+          <section className="rounded-[18px] border border-slate-200 bg-white p-5">
+            <div className="mb-5 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-teal-700">Báo cáo thể trạng</p>
+                <h3 className="mt-1 font-grotesk text-lg font-bold text-slate-950">Cân nặng và kcal hằng ngày</h3>
+              </div>
+              <div className="rounded-xl bg-slate-100 px-3 py-2 text-right">
+                <p className="text-[11px] font-semibold text-slate-700">Cân nặng hiện tại</p>
+                <p className="font-grotesk text-xl font-bold text-slate-950">
+                  {currentWeight != null ? `${currentWeight.toFixed(1)} kg` : '--'}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-slate-950">Xu hướng cân nặng</p>
+                      <p className="mt-0.5 text-xs text-slate-700">
+                        {weightDelta == null
+                          ? 'Cần ít nhất 2 lần đo để thấy xu hướng'
+                          : `${weightDelta > 0 ? '+' : ''}${weightDelta} kg so với mốc đầu`}
+                      </p>
+                    </div>
+                    <Activity className="h-5 w-5 text-teal-700" />
+                  </div>
+
+                  <div className="h-28 rounded-xl bg-white p-3">
+                    {recentWeights.length >= 2 ? (
+                      <svg viewBox="0 0 260 88" className="h-full w-full" role="img" aria-label="Biểu đồ cân nặng">
+                        <polyline
+                          points={weightPoints}
+                          fill="none"
+                          stroke="#0f766e"
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        {recentWeights.map((point, index) => {
+                          const coords = sparklinePoints(recentWeights.map(item => Number(item.weightKg || 0))).split(' ')[index]?.split(',') || ['0', '0'];
+                          return <circle key={`${point.recordedAt}-${index}`} cx={coords[0]} cy={coords[1]} r="3.5" fill="#0f766e" />;
+                        })}
+                      </svg>
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-center text-xs font-semibold text-slate-600">
+                        Chưa đủ dữ liệu cân nặng
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-3 flex justify-between text-[11px] font-semibold text-slate-700">
+                    <span>{formatShortDate(recentWeights[0]?.recordedAt)}</span>
+                    <span>{formatShortDate(recentWeights[recentWeights.length - 1]?.recordedAt)}</span>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-slate-950">Kcal tiêu thụ 7 ngày</p>
+                      <p className="mt-0.5 text-xs text-slate-700">
+                        Trung bình {calorieAverage.toLocaleString('vi-VN')} kcal/ngày
+                      </p>
+                    </div>
+                    <Flame className="h-5 w-5 text-orange-600" />
+                  </div>
+
+                  <div className="h-28 rounded-xl bg-white p-3">
+                    {nutritionSeries.some(point => point.calories > 0) ? (
+                      <svg viewBox="0 0 260 88" className="h-full w-full" role="img" aria-label="Biểu đồ kcal tiêu thụ">
+                        <polyline
+                          points={caloriePoints}
+                          fill="none"
+                          stroke="#ea580c"
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        {nutritionSeries.map((point, index) => {
+                          const coords = caloriePoints.split(' ')[index]?.split(',') || ['0', '0'];
+                          return <circle key={point.date} cx={coords[0]} cy={coords[1]} r="3.5" fill="#ea580c" />;
+                        })}
+                      </svg>
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-center text-xs font-semibold text-slate-600">
+                        Chưa có log kcal dinh dưỡng
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-3 flex justify-between text-[11px] font-semibold text-slate-700">
+                    <span>{nutritionSeries[0]?.label}</span>
+                    <span>{nutritionSeries[nutritionSeries.length - 1]?.label}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-orange-100 bg-[linear-gradient(135deg,#fff7ed_0%,#ffffff_54%,#ecfdf5_100%)] p-4 dark:border-orange-400/20 dark:bg-[linear-gradient(135deg,#271b10_0%,#111827_54%,#0f2a28_100%)]">
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-orange-700">Hôm nay</p>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-orange-100 bg-white/72 px-3 py-2">
+                    <p className="text-[11px] font-semibold text-slate-700">Kcal nạp</p>
+                    <p className="mt-1 font-grotesk text-xl font-bold text-slate-950">{caloriesConsumedToday.toLocaleString('vi-VN')}</p>
+                  </div>
+                  <div className="rounded-xl border border-teal-100 bg-white/72 px-3 py-2">
+                    <p className="text-[11px] font-semibold text-slate-700">Kcal đốt</p>
+                    <p className="mt-1 font-grotesk text-xl font-bold text-slate-950">{caloriesBurnedToday.toLocaleString('vi-VN')}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="mb-1 flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-700">So với mục tiêu kcal</span>
+                    <span className="font-bold text-slate-950">
+                      {caloriesGoalToday > 0 ? `${Math.min(100, Math.round((caloriesConsumedToday / caloriesGoalToday) * 100))}%` : '--'}
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-orange-100">
+                    <div
+                      className="h-full rounded-full bg-orange-400"
+                      style={{ width: `${caloriesGoalToday > 0 ? Math.min(100, Math.round((caloriesConsumedToday / caloriesGoalToday) * 100)) : 0}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-slate-700">
+                    {caloriesGoalToday > 0
+                      ? `Mục tiêu ngày: ${caloriesGoalToday.toLocaleString('vi-VN')} kcal.`
+                      : 'Chưa có mục tiêu kcal ngày từ hồ sơ dinh dưỡng.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+          )}
         </div>
       )}
     </div>

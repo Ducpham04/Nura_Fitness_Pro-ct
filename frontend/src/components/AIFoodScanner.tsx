@@ -50,7 +50,7 @@ export default function AIFoodScanner({ onAnalysisComplete, onQuotaExceeded }: P
       setIsScanning(true);
       setError(null);
     } catch (err) {
-      setError('Unable to access camera. Please check permissions.');
+      setError('Không truy cập được camera. Vui lòng kiểm tra quyền.');
       console.error('Camera error:', err);
     }
   };
@@ -149,7 +149,7 @@ export default function AIFoodScanner({ onAnalysisComplete, onQuotaExceeded }: P
         throw new Error('Không thể phân tích ảnh, thử lại nhé');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to analyze image');
+      setError(err instanceof Error ? err.message : 'Phân tích ảnh thất bại');
     } finally {
       setIsAnalyzing(false);
     }
@@ -414,7 +414,7 @@ export default function AIFoodScanner({ onAnalysisComplete, onQuotaExceeded }: P
                     onAnalysisComplete?.(result);
                   }
                 } catch (err) {
-                  setError('Failed to log meal');
+                  setError('Ghi bữa ăn thất bại');
                 } finally {
                   setIsAnalyzing(false);
                 }

@@ -1,4 +1,5 @@
 import { ArrowRight } from 'lucide-react';
+import { useState } from 'react';
 import Logo from '../components/Logo';
 import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
@@ -7,6 +8,14 @@ export default function Welcome() {
   const navigate = useNavigate();
   const { user } = useAuthContext();
   const userName = user?.fullName || 'bạn';
+  const [leaving, setLeaving] = useState(false);
+
+  // Chuyển mượt từ "thế giới tối" (onboarding/welcome) sang app nền sáng:
+  // phủ dần sang trắng rồi mới đổi route, tránh cú nhảy tối→sáng giật mắt.
+  const enterApp = () => {
+    setLeaving(true);
+    setTimeout(() => navigate('/dashboard'), 450);
+  };
 
   return (
     <div className="min-h-screen bg-obsidian flex items-center justify-center relative overflow-hidden font-inter px-6">
@@ -21,7 +30,7 @@ export default function Welcome() {
           <Logo size={44} wordmarkClass="text-2xl" dark />
         </div>
 
-        <h1 className="font-grotesk font-bold text-9xl sm:text-6xl text-white mb-8 leading-tight">
+        <h1 className="font-grotesk font-bold text-4xl sm:text-6xl text-white mb-8 leading-tight">
           Chào <span className="text-gradient-lime">{userName}</span>,<br />
           Hành trình của bạn đã sẵn sàng
         </h1>
@@ -30,12 +39,18 @@ export default function Welcome() {
         </p>
 
         <button
-          onClick={() => navigate('/dashboard')}
-          className="btn-lime px-10 py-4 text-base font-grotesk font-bold inline-flex items-center gap-2 shadow-lg shadow-lime/30"
+          onClick={enterApp}
+          disabled={leaving}
+          className="btn-lime px-10 py-4 text-base font-grotesk font-bold inline-flex items-center gap-2 shadow-lg shadow-lime/30 disabled:opacity-70"
         >
           Vào trang chính <ArrowRight className="w-5 h-5" />
         </button>
       </div>
+
+      {/* Lớp phủ chuyển cảnh tối → sáng */}
+      <div
+        className={`fixed inset-0 z-50 bg-[#f4f6f2] pointer-events-none transition-opacity duration-[450ms] ease-out ${leaving ? 'opacity-100' : 'opacity-0'}`}
+      />
     </div>
   );
 }

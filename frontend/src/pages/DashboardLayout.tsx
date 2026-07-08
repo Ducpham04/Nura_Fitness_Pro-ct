@@ -104,10 +104,10 @@ export default function DashboardLayout() {
   }
 
   // Don't show feedback button to admins
-  const showFeedback = user?.role !== 'ADMIN';
+  const showFeedback = user?.role !== 'ADMIN' && location.pathname !== '/dashboard';
 
   return (
-    <div className="min-h-screen bg-obsidian font-inter">
+    <div className="min-h-screen bg-[#f4f6f2] dark:bg-obsidian font-inter">
       <Navigation />
       <main className="px-3 sm:px-5 md:px-6 pt-16 md:py-8 main-pad-mobile">
         <Outlet />

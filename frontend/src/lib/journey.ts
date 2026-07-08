@@ -11,10 +11,10 @@ export interface StageMeta {
 }
 
 export const STAGES: StageMeta[] = [
-  { title: 'Khởi động',  weeks: 'Tuần 1–2', desc: 'Làm quen động tác & tạo thói quen mỗi ngày.', reward: 'Huy hiệu Người mới' },
-  { title: 'Tăng tốc',   weeks: 'Tuần 3–4', desc: 'Tập đều đặn, tăng dần cường độ.',             reward: '+50 credit AI' },
-  { title: 'Bứt phá',    weeks: 'Tuần 5–6', desc: 'Thử thách giới hạn, đẩy hiệu suất.',            reward: 'Huy hiệu Chiến binh' },
-  { title: 'Chinh phục', weeks: 'Tuần 7–8', desc: 'Về đích & giữ vững phong độ.',                  reward: 'Cúp vàng hành trình' },
+  { title: 'Làm quen', weeks: 'Tuần 1–2', desc: 'Làm quen động tác & tạo thói quen mỗi ngày.', reward: 'Huy hiệu Người mới' },
+  { title: 'Giữ nhịp', weeks: 'Tuần 3–4', desc: 'Tập đều đặn, tăng dần cường độ.',             reward: '+50 credit AI' },
+  { title: 'Ổn định',  weeks: 'Tuần 5–6', desc: 'Duy trì phong độ, đẩy hiệu suất.',            reward: 'Huy hiệu Chiến binh' },
+  { title: 'Về đích',  weeks: 'Tuần 7–8', desc: 'Về đích & giữ vững thành quả.',                reward: 'Cúp vàng hành trình' },
 ];
 
 export function clampPct(value: number, min = 0, max = 100) {

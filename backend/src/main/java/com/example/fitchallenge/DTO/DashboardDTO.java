@@ -304,6 +304,54 @@ public class DashboardDTO {
         private List<SpendItem> budgetBreakdown;
         private List<RecentActivity> recentActivities;
         private String aiSuggestion;
+        /** Xu hướng calo đốt 7 ngày gần nhất (T2..CN) */
+        private List<WeeklyTrendPoint> weeklyTrend;
+        /** Thống kê bữa ăn đã ghi trong tuần */
+        private MealsLoggedWeek mealsLogged;
+        /** Huy hiệu đạt được tuần này (suy ra từ dữ liệu thật) */
+        private List<Achievement> achievements;
+        /** Mục tiêu tuần này + tiến độ thật */
+        private List<WeeklyGoal> weeklyGoals;
+    }
+
+    @Data
+    @Builder
+    public static class WeeklyTrendPoint {
+        private String label;   // T2..CN
+        private String date;    // ISO date
+        private Integer calories; // calo đốt trong ngày
+    }
+
+    @Data
+    @Builder
+    public static class MealTypeCount {
+        private String type;    // Sáng / Trưa / Tối / Bữa phụ
+        private Integer done;
+        private Integer goal;
+    }
+
+    @Data
+    @Builder
+    public static class MealsLoggedWeek {
+        private Integer total;
+        private Integer goal;
+        private List<MealTypeCount> byType;
+    }
+
+    @Data
+    @Builder
+    public static class Achievement {
+        private String title;
+        private String desc;
+        private String icon;    // streak | flame | meal | check
+    }
+
+    @Data
+    @Builder
+    public static class WeeklyGoal {
+        private String label;
+        private String progress; // vd "3/5"
+        private Boolean done;
     }
 
     @Data

@@ -695,6 +695,109 @@ public class DashboardServiceImpl implements DashboardService {
             aiSuggestion = "Bạn đang làm rất tốt tuần này! Tiếp tục duy trì nhé — mục tiêu " + weeklyGoal + " buổi/tuần là hoàn toàn trong tầm tay.";
         }
 
+        // ── 9. Xu hướng calo đốt 7 ngày gần nhất ─────────────────────────
+        LocalDate weekStart7 = today.minusDays(6);
+        List<DailyTrainingLog> weekTrainingLogs = dailyTrainingLogRepository.findByUser_Id(userId);
+        Map<LocalDate, Integer> burnedByDay = weekTrainingLogs.stream()
+                .filter(l -> l.getTrainingDate() != null
+                        && !l.getTrainingDate().isBefore(weekStart7)
+                        && DailyTrainingLog.DailyTrainingStatus.COMPLETED.equals(l.getStatus()))
+                .collect(Collectors.groupingBy(
+                        DailyTrainingLog::getTrainingDate,
+                        Collectors.summingInt(l -> l.getCaloriesBurned() != null ? l.getCaloriesBurned() : 0)));
+        String[] dow = {"T2", "T3", "T4", "T5", "T6", "T7", "CN"};
+        List<DashboardDTO.WeeklyTrendPoint> weeklyTrend = new ArrayList<>();
+        for (int i = 0; i < 7; i++) {
+            LocalDate d = weekStart7.plusDays(i);
+            weeklyTrend.add(DashboardDTO.WeeklyTrendPoint.builder()
+                    .label(dow[d.getDayOfWeek().getValue() - 1])
+                    .date(d.toString())
+                    .calories(burnedByDay.getOrDefault(d, 0))
+                    .build());
+        }
+        int weekBurned = burnedByDay.values().stream().mapToInt(Integer::intValue).sum();
+
+        // ── 10. Bữa ăn đã ghi trong tuần (theo loại) ─────────────────────
+        int doneBreakfast = 0, doneLunch = 0, doneDinner = 0, doneSnack = 0;
+        // (a) từ personalized_meal_details đã đánh dấu "đã ăn"
+        if (activePlanOpt.isPresent() && activePlanOpt.get().getStartDate() != null) {
+            PersonalizedNutritionPlan plan = activePlanOpt.get();
+            long startEpoch = plan.getStartDate().toEpochDay();
+            int dayStart = (int) Math.max(1, weekStart7.toEpochDay() - startEpoch + 1);
+            int dayEnd = (int) (today.toEpochDay() - startEpoch + 1);
+            for (PersonalizedMealDetail m : personalizedMealDetailRepository.findAllByPlan(plan)) {
+                if (!Boolean.TRUE.equals(m.getWasEaten()) || m.getMealType() == null) continue;
+                Integer dn = m.getDayNumber();
+                if (dn == null || dn < dayStart || dn > dayEnd) continue;
+                switch (m.getMealType()) {
+                    case BREAKFAST -> doneBreakfast++;
+                    case LUNCH -> doneLunch++;
+                    case DINNER -> doneDinner++;
+                    case SNACK -> doneSnack++;
+                }
+            }
+        }
+        // (b) từ daily_nutrition_logs (log thủ công)
+        for (DailyNutritionLog l : dailyNutritionLogRepository
+                .findByUser_IdAndTrackingDateBetween(userId, weekStart7, today)) {
+            String mt = l.getMealType() != null ? l.getMealType().toUpperCase() : "";
+            switch (mt) {
+                case "BREAKFAST" -> doneBreakfast++;
+                case "LUNCH" -> doneLunch++;
+                case "DINNER" -> doneDinner++;
+                case "SNACK" -> doneSnack++;
+                default -> { }
+            }
+        }
+        int mealGoalPerType = 7;
+        List<DashboardDTO.MealTypeCount> mealByType = List.of(
+                DashboardDTO.MealTypeCount.builder().type("Sáng").done(doneBreakfast).goal(mealGoalPerType).build(),
+                DashboardDTO.MealTypeCount.builder().type("Trưa").done(doneLunch).goal(mealGoalPerType).build(),
+                DashboardDTO.MealTypeCount.builder().type("Tối").done(doneDinner).goal(mealGoalPerType).build(),
+                DashboardDTO.MealTypeCount.builder().type("Bữa phụ").done(doneSnack).goal(mealGoalPerType).build());
+        int mealsTotal = doneBreakfast + doneLunch + doneDinner + doneSnack;
+        DashboardDTO.MealsLoggedWeek mealsLogged = DashboardDTO.MealsLoggedWeek.builder()
+                .total(mealsTotal)
+                .goal(mealGoalPerType * 3)
+                .byType(mealByType)
+                .build();
+
+        // ── 11. Huy hiệu tuần này (chỉ trả huy hiệu ĐÃ đạt, số liệu thật) ──
+        int streakDays = user.getStreakCount() != null ? user.getStreakCount() : 0;
+        List<DashboardDTO.Achievement> achievements = new ArrayList<>();
+        if (streakDays >= 3) {
+            achievements.add(DashboardDTO.Achievement.builder()
+                    .title("Kiên trì").desc(streakDays + " ngày liên tiếp").icon("streak").build());
+        }
+        if (weekBurned >= 500) {
+            achievements.add(DashboardDTO.Achievement.builder()
+                    .title("Bứt phá").desc("Đốt " + formatVi(weekBurned) + " kcal").icon("flame").build());
+        }
+        if (weeklyGoal > 0 && workoutsThisWeek >= weeklyGoal) {
+            achievements.add(DashboardDTO.Achievement.builder()
+                    .title("Hoàn thành").desc("Đủ " + weeklyGoal + " buổi tập").icon("check").build());
+        }
+        if (mealsTotal >= 10) {
+            achievements.add(DashboardDTO.Achievement.builder()
+                    .title("Ăn uống tốt").desc(mealsTotal + " bữa đã ghi").icon("meal").build());
+        }
+
+        // ── 12. Mục tiêu tuần này + tiến độ thật ─────────────────────────
+        int mainMealsGoal = mealGoalPerType * 3;
+        List<DashboardDTO.WeeklyGoal> weeklyGoals = List.of(
+                DashboardDTO.WeeklyGoal.builder()
+                        .label("Hoàn thành " + weeklyGoal + " buổi tập")
+                        .progress(workoutsThisWeek + "/" + weeklyGoal)
+                        .done(weeklyGoal > 0 && workoutsThisWeek >= weeklyGoal).build(),
+                DashboardDTO.WeeklyGoal.builder()
+                        .label("Ghi đủ bữa ăn trong tuần")
+                        .progress(mealsTotal + "/" + mainMealsGoal)
+                        .done(mealsTotal >= mainMealsGoal).build(),
+                DashboardDTO.WeeklyGoal.builder()
+                        .label("Đốt " + formatVi(3000) + " kcal")
+                        .progress(formatVi(weekBurned) + "/" + formatVi(3000))
+                        .done(weekBurned >= 3000).build());
+
         return DashboardDTO.CustomerDashboardResponse.builder()
                 .user(userSummary)
                 .stats(dailyStats)
@@ -703,7 +806,16 @@ public class DashboardServiceImpl implements DashboardService {
                 .budgetBreakdown(breakdown)
                 .recentActivities(recentActivities)
                 .aiSuggestion(aiSuggestion)
+                .weeklyTrend(weeklyTrend)
+                .mealsLogged(mealsLogged)
+                .achievements(achievements)
+                .weeklyGoals(weeklyGoals)
                 .build();
+    }
+
+    /** Định dạng số nguyên kiểu Việt (1840 → "1.840"). */
+    private static String formatVi(int value) {
+        return String.format("%,d", value).replace(',', '.');
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -58,7 +58,7 @@ export default function SetupWizard({ userId, userName, onComplete }: Props) {
         days: 7
       });
       if (!mealPlanResponse.success) {
-        throw new Error(mealPlanResponse.error?.message || mealPlanResponse.message || 'Failed to generate meal plan');
+        throw new Error(mealPlanResponse.error?.message || mealPlanResponse.message || 'Tạo thực đơn thất bại');
       }
 
       setPhase('mealSuccess');
@@ -75,7 +75,7 @@ export default function SetupWizard({ userId, userName, onComplete }: Props) {
       // Trigger AI Workout Plan
       const workoutPlanResponse = await userService.generateAiWorkoutPlan(userId);
       if (!workoutPlanResponse.success) {
-        throw new Error(workoutPlanResponse.error?.message || workoutPlanResponse.message || 'Failed to generate workout plan');
+        throw new Error(workoutPlanResponse.error?.message || workoutPlanResponse.message || 'Tạo kế hoạch tập thất bại');
       }
       setPhase('success');
     } catch (error) {

@@ -2,10 +2,9 @@ import { useState, useEffect, useRef, useMemo, useCallback, Fragment } from 'rea
 import type { LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, Crosshair, ScanLine, Dumbbell,
-  ChefHat, Flame, HeartPulse, Award, Sparkles,
-  Beef, Salad, Sprout, Droplets, Zap, Waves,
+  ArrowLeft, ArrowRight, Crosshair, ScanLine, Award, Sparkles,
   Sofa, Footprints, Bike, Rocket, Gauge, Check,
+  Flame, Dumbbell, HeartPulse, Wind, Trophy, Zap, Activity, Target,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { userService } from '../services/userService';
@@ -93,7 +92,7 @@ const FALLBACK_GOALS = [
   { id: 'fb-6', name: 'Strength'       },
 ];
 
-type GoalInfo = { label: string; desc: string; color: string; mood: 'wave' | 'cheer' | 'training' | 'water' | 'sleep' | 'streak' | 'default'; bgImage: string };
+type GoalInfo = { label: string; desc: string; color: string; mood: 'wave' | 'cheer' | 'training' | 'water' | 'sleep' | 'streak' | 'default'; Icon: LucideIcon; bgImage: string };
 
 function getGoalBgSVG(name: string): string {
   const g = (name || '').toLowerCase();
@@ -116,14 +115,14 @@ function getGoalBgSVG(name: string): string {
 
 function goalDisplay(name: string): GoalInfo {
   const g = (name || '').toLowerCase();
-  if (/lose|weight loss|fat|giảm|mỡ/.test(g))            return { label: 'Giảm mỡ',       desc: 'Đốt mỡ thừa, lấy lại vóc dáng tự tin.',          color: '#f97316', mood: 'cheer', bgImage: getGoalBgSVG(name) };
-  if (/muscle|cơ|hypertrophy|gain|build/.test(g))         return { label: 'Tăng cơ',       desc: 'Cơ rắn chắc, thân hình thon gọn hơn mỗi tuần.',  color: LIME, mood: 'training', bgImage: getGoalBgSVG(name) };
-  if (/endurance|cardio|stamina|bền/.test(g))             return { label: 'Sức bền',       desc: 'Tim khoẻ hơn, vận động lâu mà ít mệt.',          color: '#ef4444', mood: 'training', bgImage: getGoalBgSVG(name) };
-  if (/flexib|mobility|dẻo|linh hoạt/.test(g))           return { label: 'Dẻo dai',       desc: 'Khớp linh hoạt, giảm đau lưng và nguy cơ chấn thương.',color: '#a855f7', mood: 'wave', bgImage: getGoalBgSVG(name) };
-  if (/athletic|performance|thể thao|hiệu suất/.test(g)) return { label: 'Thể thao',      desc: 'Nhanh hơn, bùng nổ hơn — đỉnh cao phong độ.',    color: '#f59e0b', mood: 'training', bgImage: getGoalBgSVG(name) };
-  if (/strength|sức mạnh|power/.test(g))                 return { label: 'Sức mạnh',      desc: 'Nâng nặng hơn mỗi tuần, cảm giác mạnh mẽ thật sự.',color: '#22d3ee', mood: 'training', bgImage: getGoalBgSVG(name) };
-  if (/general|fitness|maintain|duy trì|tổng/.test(g))   return { label: 'Thể lực chung', desc: 'Khoẻ, dẻo, bền — không cực đoan, bền vững lâu dài.',color: '#6366f1', mood: 'wave', bgImage: getGoalBgSVG(name) };
-  return { label: name, desc: '', color: '#94a3b8', mood: 'default', bgImage: getGoalBgSVG(name) };
+  if (/lose|weight loss|fat|giảm|mỡ/.test(g))            return { label: 'Giảm mỡ',       desc: 'Đốt mỡ thừa, lấy lại vóc dáng tự tin.',          color: '#f97316', mood: 'cheer', Icon: Flame, bgImage: getGoalBgSVG(name) };
+  if (/muscle|cơ|hypertrophy|gain|build/.test(g))         return { label: 'Tăng cơ',       desc: 'Cơ rắn chắc, thân hình thon gọn hơn mỗi tuần.',  color: LIME, mood: 'training', Icon: Dumbbell, bgImage: getGoalBgSVG(name) };
+  if (/endurance|cardio|stamina|bền/.test(g))             return { label: 'Sức bền',       desc: 'Tim khoẻ hơn, vận động lâu mà ít mệt.',          color: '#ef4444', mood: 'training', Icon: HeartPulse, bgImage: getGoalBgSVG(name) };
+  if (/flexib|mobility|dẻo|linh hoạt/.test(g))           return { label: 'Dẻo dai',       desc: 'Khớp linh hoạt, giảm đau lưng và nguy cơ chấn thương.',color: '#a855f7', mood: 'wave', Icon: Wind, bgImage: getGoalBgSVG(name) };
+  if (/athletic|performance|thể thao|hiệu suất/.test(g)) return { label: 'Thể thao',      desc: 'Nhanh hơn, bùng nổ hơn — đỉnh cao phong độ.',    color: '#f59e0b', mood: 'training', Icon: Trophy, bgImage: getGoalBgSVG(name) };
+  if (/strength|sức mạnh|power/.test(g))                 return { label: 'Sức mạnh',      desc: 'Nâng nặng hơn mỗi tuần, cảm giác mạnh mẽ thật sự.',color: '#22d3ee', mood: 'training', Icon: Zap, bgImage: getGoalBgSVG(name) };
+  if (/general|fitness|maintain|duy trì|tổng/.test(g))   return { label: 'Thể lực chung', desc: 'Khoẻ, dẻo, bền — không cực đoan, bền vững lâu dài.',color: '#6366f1', mood: 'wave', Icon: Activity, bgImage: getGoalBgSVG(name) };
+  return { label: name, desc: '', color: '#94a3b8', mood: 'default', Icon: Target, bgImage: getGoalBgSVG(name) };
 }
 
 const activityLevels: Array<{ id: string; label: string; desc: string; Icon: LucideIcon; color: string }> = [
@@ -133,38 +132,10 @@ const activityLevels: Array<{ id: string; label: string; desc: string; Icon: Luc
   { id: 'very',     label: 'Vận động nhiều', desc: 'Cường độ cao gần như mỗi ngày — bạn nghiêm túc.',  Icon: Rocket,     color: '#a855f7' },
 ];
 
-const dietTypes: Array<{ id: string; label: string; subtitle: string; desc: string; tags: string[]; Icon: LucideIcon; color: string }> = [
-  {
-    id: 'omnivore', label: 'Ăn đa dạng', subtitle: 'Không kiêng khem, linh hoạt nhất',
-    desc: 'Phở, cơm, thịt cá — không kiêng gì cả, AI cân bằng dinh dưỡng cho bạn.',
-    tags: ['Phở bò', 'Cá hồi', 'Cơm trắng', 'Rau muống', 'Trứng'],
-    Icon: Beef, color: '#f97316',
-  },
-  {
-    id: 'vegetarian', label: 'Ăn chay', subtitle: 'Không thịt, giữ trứng & sữa',
-    desc: 'Bỏ thịt, vẫn có trứng và sữa — đủ dinh dưỡng và dễ theo lâu dài.',
-    tags: ['Đậu phụ', 'Nấm hương', 'Trứng chiên', 'Sữa đậu', 'Rau xanh'],
-    Icon: Salad, color: LIME,
-  },
-  {
-    id: 'vegan', label: 'Thuần chay', subtitle: '100% từ thực vật',
-    desc: '100% thực vật — AI đảm bảo bạn vẫn đủ protein, sắt và B12.',
-    tags: ['Đậu lăng', 'Hạt điều', 'Bơ đậu phộng', 'Trái cây', 'Ngũ cốc'],
-    Icon: Sprout, color: '#22d3ee',
-  },
-  {
-    id: 'keto', label: 'Keto / Low-carb', subtitle: 'Ít tinh bột, nhiều chất béo lành',
-    desc: 'Cắt tinh bột, tăng chất béo tốt — cơ thể chuyển sang đốt mỡ hiệu quả hơn.',
-    tags: ['Bơ', 'Phô mai', 'Thịt xông khói', 'Hạt chia', 'Trứng'],
-    Icon: Droplets, color: '#a855f7',
-  },
-];
-
 const STEPS = [
   { title: 'Thông tin cơ thể của bạn',   subtitle: 'Dữ liệu này giúp Viway cá nhân hoá kế hoạch',  Icon: ScanLine   },
   { title: 'Bạn muốn đạt được điều gì?', subtitle: 'Chọn mục tiêu chính của bạn',                   Icon: Crosshair  },
   { title: 'Mức độ vận động hiện tại',   subtitle: 'Bạn đang tập luyện thường xuyên thế nào?',      Icon: Gauge      },
-  { title: 'Thói quen dinh dưỡng',       subtitle: 'Thực đơn sẽ được cá nhân hoá theo lựa chọn',    Icon: ChefHat    },
 ];
 
 /* ── Page ─────────────────────────────────────────────────────────── */
@@ -177,7 +148,9 @@ export default function Onboarding() {
 
   const [form, setForm] = useState<FormData>({
     age: '', weight: '', height: '', gender: '',
-    goal: '', activityLevel: 'moderate', dietType: '',
+    // dietType mặc định "Ăn đa dạng" — người dùng có thể đổi trong app sau,
+    // giúp rút onboarding còn 3 bước.
+    goal: '', activityLevel: 'moderate', dietType: 'omnivore',
   });
 
   useEffect(() => {
@@ -199,7 +172,6 @@ export default function Onboarding() {
     if (step === 0) return !!(form.age && form.weight && form.height && form.gender);
     if (step === 1) return !!form.goal;
     if (step === 2) return !!form.activityLevel;
-    if (step === 3) return !!form.dietType;
     return true;
   };
 
@@ -302,7 +274,7 @@ export default function Onboarding() {
             ))}
           </div>
 
-          <span className="text-[11px] font-bold text-neutral-400 w-12 text-right">Bước {step + 1}/4</span>
+          <span className="text-[11px] font-bold text-neutral-400 w-12 text-right">Bước {step + 1}/{STEPS.length}</span>
         </div>
 
         {/* Header with Vico mascot */}
@@ -381,7 +353,10 @@ export default function Onboarding() {
                           </span>
                         )}
                         <div className="flex justify-center mb-2 relative z-5">
-                          <Vico size={56} mood={gd.mood} />
+                          <span className="flex h-12 w-12 items-center justify-center rounded-2xl"
+                            style={{ background: `${gd.color}1f`, border: `1px solid ${gd.color}55` }}>
+                            <gd.Icon className="w-6 h-6" style={{ color: gd.color }} />
+                          </span>
                         </div>
                         <p className="font-bold text-sm leading-tight mb-1 text-center relative z-5" style={{ color: sel ? LIME : '#e5e7eb' }}>{gd.label}</p>
                         <p className="text-[10.5px] leading-snug text-neutral-300 relative z-5">{gd.desc}</p>
@@ -421,49 +396,6 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* ── Step 3: Diet ── */}
-          {step === 3 && (
-            <div className="space-y-2.5">
-              {dietTypes.map(d => {
-                const sel = form.dietType === d.id;
-                return (
-                  <button key={d.id} onClick={() => update('dietType', d.id)}
-                    className="w-full text-left rounded-2xl border overflow-hidden transition-all"
-                    style={sel
-                      ? { borderColor: LIME, background: 'rgba(204,255,0,0.04)', boxShadow: `0 0 0 1px ${LIME}55, 0 10px 24px rgba(204,255,0,0.10)` }
-                      : { borderColor: '#1f2129', background: '#13151a' }}>
-                    <div className="flex items-center gap-3 px-4 pt-3.5 pb-2">
-                      <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background: `${d.color}1a`, border: `1px solid ${d.color}40` }}>
-                        <d.Icon className="w-5 h-5" style={{ color: d.color }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm leading-tight" style={{ color: sel ? LIME : '#e5e7eb' }}>{d.label}</p>
-                        <p className="text-[11px] mt-0.5 text-neutral-400">{d.subtitle}</p>
-                      </div>
-                      <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
-                        style={sel ? { borderColor: LIME, backgroundColor: LIME } : { borderColor: '#2a2d35' }}>
-                        {sel && <Check className="w-3 h-3 text-black" strokeWidth={3} />}
-                      </div>
-                    </div>
-
-                    <p className="px-4 text-[11.5px] leading-snug text-neutral-300">{d.desc}</p>
-
-                    <div className="flex flex-wrap gap-1.5 px-4 py-3">
-                      {d.tags.map(tag => (
-                        <span key={tag} className="text-[10.5px] font-medium px-2.5 py-1 rounded-full transition-colors"
-                          style={sel
-                            ? { background: 'rgba(204,255,0,0.10)', color: LIME }
-                            : { background: '#1c1f27', color: '#6b7280' }}>
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         {/* CTA button */}

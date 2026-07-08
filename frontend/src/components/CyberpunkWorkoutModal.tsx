@@ -98,7 +98,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
           onQuotaExceeded?.();
           return;
         }
-        setError(response.error?.message || 'Failed to generate workout plan');
+        setError(response.error?.message || 'Tạo kế hoạch tập thất bại');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
@@ -108,21 +108,21 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center overflow-y-auto p-4 animate-fade-in">
-      <div className="relative max-h-[calc(100vh-2rem)] w-full max-w-lg glass rounded-[2.5rem] border border-white/10 overflow-y-auto shadow-2xl animate-slide-up">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center overflow-y-auto p-4 animate-fade-in">
+      <div className="relative max-h-[calc(100vh-2rem)] w-full max-w-lg bg-white rounded-[2.5rem] border border-slate-200 overflow-y-auto shadow-2xl animate-slide-up">
         
         {/* Header */}
-        <div className="p-8 border-b border-white/5 flex items-center justify-between">
+        <div className="p-8 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-lime/10 flex items-center justify-center">
-              <Dumbbell className="w-6 h-6 text-lime" />
+            <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center">
+              <Dumbbell className="w-6 h-6 text-teal-600" />
             </div>
             <div>
-              <h2 className="text-xl font-grotesk font-bold text-white tracking-tight">AI Lập Kế Hoạch Tập</h2>
-              <p className="text-xs text-neutral-500 font-medium uppercase tracking-widest">Tạo kế hoạch nhiều tuần</p>
+              <h2 className="text-xl font-grotesk font-bold text-slate-900 tracking-tight">AI Lập Kế Hoạch Tập</h2>
+              <p className="text-xs text-slate-500 font-medium uppercase tracking-widest">Tạo kế hoạch nhiều tuần</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/[0.06] rounded-full transition-colors text-neutral-500 hover:text-white">
+          <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-500 hover:text-slate-900">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -132,17 +132,17 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
           {loading ? (
             <div className="py-16 flex flex-col items-center justify-center gap-8">
               <div className="relative w-20 h-20">
-                <div className="absolute inset-0 border-2 border-electric/10 rounded-full"></div>
-                <div className="absolute inset-0 border-2 border-electric rounded-full border-t-transparent animate-spin"></div>
+                <div className="absolute inset-0 border-2 border-teal-100 rounded-full"></div>
+                <div className="absolute inset-0 border-2 border-teal-500 rounded-full border-t-transparent animate-spin"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <Activity className="w-8 h-8 text-electric" />
+                  <Activity className="w-8 h-8 text-teal-600" />
                 </div>
               </div>
               <div className="text-center space-y-3">
-                <p className="text-white text-xl font-grotesk font-bold">AI đang phân tích cơ bắp</p>
+                <p className="text-slate-900 text-xl font-grotesk font-bold">AI đang phân tích cơ bắp</p>
                 <div className="flex flex-col gap-1">
-                  <p className="text-neutral-500 text-sm animate-pulse">Đang tính toán tải trọng sinh cơ học...</p>
-                  <p className="text-neutral-500 text-sm animate-pulse delay-75">Đang tạo kế hoạch tuần 1...</p>
+                  <p className="text-slate-500 text-sm animate-pulse">Đang tính toán tải trọng sinh cơ học...</p>
+                  <p className="text-slate-500 text-sm animate-pulse delay-75">Đang tạo kế hoạch tuần 1...</p>
                 </div>
               </div>
             </div>
@@ -151,7 +151,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
               <div className="space-y-6">
                 <div className="grid gap-6">
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-3 block">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 block">
                       Chương trình
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -162,12 +162,12 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                           onClick={() => setProgram(option)}
                           className={`min-h-[72px] rounded-2xl border px-3 py-3 text-left transition-all ${
                             program.value === option.value
-                              ? 'border-lime/50 bg-lime/10 text-lime shadow-lg shadow-lime/5'
-                              : 'border-white/10 bg-white/[0.06] text-neutral-300 hover:border-white/20 hover:bg-white/[0.06]'
+                              ? 'border-lime/50 bg-teal-50 text-teal-600 shadow-lg shadow-lime/5'
+                              : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                           }`}
                         >
                           <span className="block font-grotesk text-base font-bold leading-tight">{option.label}</span>
-                          <span className={`mt-1 block text-[11px] font-medium ${program.value === option.value ? 'text-lime/70' : 'text-neutral-500'}`}>
+                          <span className={`mt-1 block text-[11px] font-medium ${program.value === option.value ? 'text-teal-600' : 'text-slate-500'}`}>
                             {option.hint}
                           </span>
                         </button>
@@ -176,7 +176,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-3 block">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 block">
                       Thời lượng / buổi (phút)
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -186,7 +186,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                           type="button"
                           onClick={() => setDuration(minutes)}
                           className={`py-3 rounded-xl font-bold font-grotesk text-xs uppercase tracking-widest transition-all ${
-                            duration === minutes ? 'bg-lime text-black' : 'bg-white/[0.06] text-neutral-500 hover:bg-white/[0.06]'
+                            duration === minutes ? 'bg-teal-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-50'
                           }`}
                         >
                           <span className="inline-flex items-center justify-center gap-2">
@@ -200,7 +200,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-3 block">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 block">
                     Mục tiêu tập luyện
                   </label>
                   <div className="grid grid-cols-5 gap-2">
@@ -211,13 +211,13 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                         onClick={() => setGoal(opt.value)}
                         className={`min-h-[68px] rounded-2xl border px-2 py-2.5 flex flex-col items-center justify-center gap-1 transition-all ${
                           goal === opt.value
-                            ? 'border-lime/50 bg-lime/10 text-lime shadow-lg shadow-lime/5'
-                            : 'border-white/10 bg-white/[0.06] text-neutral-300 hover:border-white/20 hover:bg-white/[0.06]'
+                            ? 'border-lime/50 bg-teal-50 text-teal-600 shadow-lg shadow-lime/5'
+                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                         }`}
                       >
                         <span className="text-lg leading-none">{opt.emoji}</span>
                         <span className="font-grotesk text-[10px] font-bold leading-tight text-center">{opt.label}</span>
-                        <span className={`text-[11px] font-medium leading-tight text-center ${goal === opt.value ? 'text-lime/70' : 'text-neutral-600'}`}>
+                        <span className={`text-[11px] font-medium leading-tight text-center ${goal === opt.value ? 'text-teal-600' : 'text-slate-400'}`}>
                           {opt.hint}
                         </span>
                       </button>
@@ -227,7 +227,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
 
                 {/* Số buổi/tuần */}
                 <div>
-                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5">
                     <CalendarDays className="w-3.5 h-3.5" /> Số buổi / tuần
                   </label>
                   <div className="grid grid-cols-5 gap-2">
@@ -237,20 +237,20 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                         type="button"
                         onClick={() => setDaysPerWeek(d)}
                         className={`py-3 rounded-xl font-bold font-grotesk text-sm transition-all ${
-                          daysPerWeek === d ? 'bg-lime text-black' : 'bg-white/[0.06] text-neutral-400 hover:bg-white/[0.1]'
+                          daysPerWeek === d ? 'bg-teal-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                         }`}
                       >
                         {d}
                       </button>
                     ))}
                   </div>
-                  <p className="text-[10px] text-neutral-600 mt-2">Hệ thống tự chọn cách chia phù hợp trình độ & số ngày của bạn.</p>
+                  <p className="text-[10px] text-slate-400 mt-2">Hệ thống tự chọn cách chia phù hợp trình độ & số ngày của bạn.</p>
                 </div>
 
                 {/* Vùng cơ ưu tiên */}
                 <div>
-                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5">
-                    <Target className="w-3.5 h-3.5" /> Vùng cơ ưu tiên <span className="text-neutral-600 normal-case tracking-normal">(tùy chọn)</span>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5">
+                    <Target className="w-3.5 h-3.5" /> Vùng cơ ưu tiên <span className="text-slate-400 normal-case tracking-normal">(tùy chọn)</span>
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     {focusOptions.map((opt) => {
@@ -261,7 +261,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                           type="button"
                           onClick={() => toggleFocus(opt.label)}
                           className={`py-2.5 rounded-xl font-grotesk text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 ${
-                            on ? 'bg-lime/10 border-lime/40 text-lime' : 'bg-white/[0.06] border-white/10 text-neutral-400 hover:bg-white/[0.1]'
+                            on ? 'bg-teal-50 border-teal-300 text-teal-600' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
                           }`}
                         >
                           {on && <Check className="w-3 h-3" />}{opt.label}
@@ -269,7 +269,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                       );
                     })}
                   </div>
-                  <p className="text-[10px] text-neutral-600 mt-2">Ưu tiên thêm khối lượng cho vùng đã chọn — vẫn giữ cân bằng cơ.</p>
+                  <p className="text-[10px] text-slate-400 mt-2">Ưu tiên thêm khối lượng cho vùng đã chọn — vẫn giữ cân bằng cơ.</p>
                 </div>
 
                 {/* Toggle: mỗi ngày một vùng */}
@@ -277,20 +277,20 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                   type="button"
                   onClick={() => setPreferSplit(s => !s)}
                   className={`w-full flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-all ${
-                    preferSplit ? 'border-lime/40 bg-lime/[0.06]' : 'border-white/10 bg-white/[0.04]'
+                    preferSplit ? 'border-teal-300 bg-teal-50' : 'border-slate-200 bg-slate-50'
                   }`}
                 >
                   <div className="text-left">
-                    <p className="text-sm font-semibold text-white">Chia "mỗi ngày một vùng"</p>
-                    <p className="text-[10px] text-neutral-500 mt-0.5">Kiểu Đẩy/Kéo/Chân — cần trung cấp+ & ≥5 buổi (nếu không hệ thống sẽ tự chỉnh).</p>
+                    <p className="text-sm font-semibold text-slate-900">Chia "mỗi ngày một vùng"</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Kiểu Đẩy/Kéo/Chân — cần trung cấp+ & ≥5 buổi (nếu không hệ thống sẽ tự chỉnh).</p>
                   </div>
-                  <span className={`shrink-0 w-10 h-6 rounded-full transition-colors relative ${preferSplit ? 'bg-lime' : 'bg-white/15'}`}>
+                  <span className={`shrink-0 w-10 h-6 rounded-full transition-colors relative ${preferSplit ? 'bg-teal-600' : 'bg-slate-200'}`}>
                     <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${preferSplit ? 'left-[18px]' : 'left-0.5'}`} />
                   </span>
                 </button>
 
                 <div>
-                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-3 block">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 block">
                     Cường độ
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -303,7 +303,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                         key={level}
                         onClick={() => setIntensity(level)}
                         className={`py-3 rounded-xl font-bold font-grotesk text-xs uppercase tracking-widest transition-all ${
-                          intensity === level ? 'bg-electric text-white' : 'bg-white/[0.06] text-neutral-500 hover:bg-white/[0.06]'
+                          intensity === level ? 'bg-teal-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
                         }`}
                       >
                         {levelLabel}
@@ -313,7 +313,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em] mb-3 block">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 block">
                     Thiết bị tập
                   </label>
                   <div className="grid grid-cols-3 gap-2 mb-3">
@@ -324,8 +324,8 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                         onClick={() => setEquipment(preset.value)}
                         className={`py-2.5 rounded-xl font-grotesk text-xs font-semibold transition-all flex flex-col items-center gap-1 ${
                           equipment === preset.value
-                            ? 'bg-lime/10 border border-lime/40 text-lime'
-                            : 'bg-white/[0.06] border border-white/10 text-neutral-400 hover:bg-white/[0.06]'
+                            ? 'bg-teal-50 border border-teal-300 text-teal-600'
+                            : 'bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-50'
                         }`}
                       >
                         <span>{preset.emoji}</span>
@@ -336,13 +336,13 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                   <input
                     value={equipment}
                     onChange={(e) => setEquipment(e.target.value)}
-                    className="w-full bg-white/[0.06] border border-white/10 rounded-xl px-4 py-3 text-white text-xs focus:outline-none focus:border-electric/40 transition-all"
-                    placeholder="dumbbell, barbell, bodyweight..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 text-xs focus:outline-none focus:border-teal-400 transition-all"
+                    placeholder="tạ tay, tạ đòn, tự trọng lượng..."
                   />
                 </div>
 
                 {error && (
-                  <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-2xl text-red-400 text-xs font-medium flex items-center gap-3">
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-500 text-xs font-medium flex items-center gap-3">
                     <X className="w-4 h-4 flex-shrink-0" />
                     <span>{error}</span>
                   </div>
@@ -351,7 +351,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
 
               <button
                 onClick={handleGenerate}
-                className="btn-lime w-full py-5 text-sm font-grotesk font-bold uppercase tracking-widest shadow-xl group"
+                className="w-full rounded-2xl bg-teal-600 text-white hover:bg-teal-700 transition-colors py-5 text-sm font-grotesk font-bold uppercase tracking-widest shadow-[0_14px_30px_-10px_rgba(13,148,136,0.6)] group"
               >
                 <div className="flex items-center justify-center gap-3 relative z-10 group-active:scale-95 transition-transform">
                   <Zap className="w-5 h-5" fill="currentColor" />
