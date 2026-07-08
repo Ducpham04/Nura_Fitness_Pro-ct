@@ -867,7 +867,7 @@ function TrainingView() {
     if (showSessionReport) {
       return (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-[#f7faf8] animate-fade-in dark:bg-[#080b10]">
-          <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col px-4 pb-6 pt-4">
+          <div className="mx-auto flex min-h-full w-full max-w-[430px] lg:max-w-3xl flex-col px-4 pb-6 pt-4">
             <div className="mb-4 flex items-center justify-between">
               <button
                 onClick={closeSessionReport}
@@ -1037,7 +1037,7 @@ function TrainingView() {
             </div>
           </div>
         )}
-        <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col px-4 pb-5 pt-4">
+        <div className="mx-auto flex min-h-full w-full max-w-[430px] lg:max-w-3xl flex-col px-4 pb-5 pt-4">
           <div className="mb-4 grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3">
             <button
               onClick={exitSessionOnly}

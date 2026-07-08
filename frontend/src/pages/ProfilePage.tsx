@@ -214,7 +214,7 @@ export default function ProfilePage() {
   const bodyFat = bodyProfile?.bodyFat ?? bodyProfile?.bodyFatPercentage;
 
   return (
-    <div className="mx-auto w-full max-w-[460px] space-y-4 pb-24 pt-1 sm:px-2 text-[#111827]">
+    <div className="mx-auto w-full max-w-[460px] lg:max-w-3xl space-y-4 pb-24 pt-1 sm:px-2 text-[#111827]">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-1">

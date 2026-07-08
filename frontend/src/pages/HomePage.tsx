@@ -301,7 +301,7 @@ export default function HomePage() {
 
   return (
     <motion.div variants={containerStagger} initial="hidden" animate="show"
-      className="mx-auto w-full max-w-[460px] space-y-5 pb-24 sm:px-2">
+      className="mx-auto w-full max-w-[460px] lg:max-w-3xl space-y-5 pb-24 sm:px-2">
       <Confetti active={goalReached} />
 
       <motion.section variants={fadeScale}
