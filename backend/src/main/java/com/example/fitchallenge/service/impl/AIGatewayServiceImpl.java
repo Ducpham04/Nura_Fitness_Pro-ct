@@ -211,7 +211,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             aiPayload.put("preferences_negative", negative.stream().distinct().toList());
             aiPayload.put("diet_rules", safety.getDietRules());
             aiPayload.put("medical_conditions", safety.getConditions());
-            aiPayload.put("user_profile", buildUserProfileHints(profile, dailyBudget));
+            aiPayload.put("user_profile", buildUserProfileHints(profile, healthProfile, dailyBudget));
             aiPayload.put("food_catalog", slim);
 
             String endpoint = aiServiceUrl + "/smart-meal-plan";
@@ -251,7 +251,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
         }
     }
 
-    private Map<String, Object> buildUserProfileHints(UserBodyProfile profile, int dailyBudget) {
+    private Map<String, Object> buildUserProfileHints(UserBodyProfile profile, HealthProfile healthProfile, int dailyBudget) {
         Map<String, Object> userProfile = new HashMap<>();
         String rawGoal = profile.getGoal() != null ? profile.getGoal().toLowerCase() : "maintenance";
         String goal = "maintenance";
@@ -276,8 +276,13 @@ public class AIGatewayServiceImpl implements AIGatewayService {
         String goalFallback = "moderate";
         if (goal.equals("weight_loss")) goalFallback = "lightly_active";
         else if (goal.equals("muscle_gain")) goalFallback = "very_active";
+        // Ưu tiên HealthProfile.dailyActivityLevel (giá trị THẬT từ onboarding/sửa hồ sơ);
+        // body profile.activityLevel với user cũ là giá trị suy từ trình độ tập.
+        String rawActivity = healthProfile != null && healthProfile.getDailyActivityLevel() != null
+                ? healthProfile.getDailyActivityLevel()
+                : profile.getActivityLevel();
         String activityLevel = com.example.fitchallenge.utils.ActivityLevelUtil
-                .toAiEnum(profile.getActivityLevel(), goalFallback);
+                .toAiEnum(rawActivity, goalFallback);
 
         userProfile.put("weight", profile.getWeight());
         userProfile.put("height", profile.getHeight());

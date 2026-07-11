@@ -96,6 +96,30 @@ public class BodyMetricHistoryServiceImpl implements BodyMetricHistoryService {
             // Lưu
             bodyMetricHistoryRepository.save(bodyMetric);
 
+            // ── Đồng bộ số đo mới về hồ sơ gốc ─────────────────────────────
+            // Check-in là cách user cập nhật cân nặng thường xuyên nhất — nếu chỉ
+            // lưu lịch sử thì dashboard/kế hoạch vẫn tính theo cân nặng cũ mãi.
+            // @PreUpdate computeMetrics của UserBodyProfile tự tính lại BMI/BMR/calo.
+            if (bodyProfileOpt.isPresent()) {
+                var bp = bodyProfileOpt.get();
+                boolean changed = false;
+                if (dto.getWeightKg() != null && dto.getWeightKg().compareTo(BigDecimal.ZERO) > 0) {
+                    bp.setWeight(dto.getWeightKg());
+                    changed = true;
+                }
+                if (dto.getHeightCm() != null && dto.getHeightCm().compareTo(BigDecimal.ZERO) > 0) {
+                    bp.setHeight(dto.getHeightCm());
+                    changed = true;
+                }
+                if (dto.getBodyFatPct() != null && dto.getBodyFatPct().compareTo(BigDecimal.ZERO) > 0) {
+                    bp.setBodyFat(dto.getBodyFatPct());
+                    changed = true;
+                }
+                if (changed) {
+                    userBodyProfileRepository.save(bp);
+                }
+            }
+
             // Trả về DTO
             BodyMetricHistoryDTO responseDto = toDto(bodyMetric);
             return new NotificationResponse(true, "Body metric created successfully", responseDto);

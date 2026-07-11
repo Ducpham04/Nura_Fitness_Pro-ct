@@ -12,7 +12,16 @@ interface EditForm {
   gender: string;   // MALE | FEMALE
   goal: string;
   budget: string;   // VND/ngày
+  activityLevel: string; // sedentary | light | moderate | very
 }
+
+/** Cùng bộ giá trị + mô tả với Onboarding — mức vận động THẬT hằng ngày. */
+const ACTIVITY_OPTIONS: Array<{ id: string; label: string; desc: string }> = [
+  { id: 'sedentary', label: 'Ít vận động',    desc: 'Văn phòng, ít đi lại trong ngày' },
+  { id: 'light',     label: 'Vận động nhẹ',   desc: 'Đi bộ / tập nhẹ vài buổi mỗi tuần' },
+  { id: 'moderate',  label: 'Vận động đều',   desc: 'Tập 3–5 ngày mỗi tuần' },
+  { id: 'very',      label: 'Vận động nhiều', desc: 'Cường độ cao gần như mỗi ngày' },
+];
 
 export default function ProfileEditPage() {
   const navigate = useNavigate();
@@ -20,20 +29,25 @@ export default function ProfileEditPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [goals, setGoals] = useState<any[]>([]);
+  const [showRegenPrompt, setShowRegenPrompt] = useState(false);
   const [form, setForm] = useState<EditForm>({
-    age: '', weight: '', height: '', gender: '', goal: '', budget: '',
+    age: '', weight: '', height: '', gender: '', goal: '', budget: '', activityLevel: '',
   });
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const [body, goalsRes] = await Promise.all([
+        const [body, goalsRes, health] = await Promise.all([
           userService.getBodyProfile(),
           userService.getGoals(),
+          userService.getHealthProfile().catch(() => null),
         ]);
         if (!mounted) return;
         const b = body as any;
+        // Mức vận động: nguồn thật là HealthProfile.dailyActivityLevel (từ onboarding)
+        const rawActivity = ((health as any)?.dailyActivityLevel || '').toLowerCase();
+        const knownActivity = ACTIVITY_OPTIONS.some(o => o.id === rawActivity) ? rawActivity : '';
         if (b) {
           setForm({
             age: b.age?.toString() || '',
@@ -42,6 +56,7 @@ export default function ProfileEditPage() {
             gender: b.gender || '',
             goal: b.goal || '',
             budget: b.targetBudgetPerDay?.toString() || '',
+            activityLevel: knownActivity,
           });
         }
         const gData = (goalsRes?.data as any)?.data || goalsRes?.data;
@@ -73,14 +88,17 @@ export default function ProfileEditPage() {
         age: parseInt(form.age),
         gender: form.gender,
         goal: form.goal,
+        // Backend đồng bộ giá trị này vào cả HealthProfile.dailyActivityLevel
+        ...(form.activityLevel ? { activityLevel: form.activityLevel } : {}),
       } as any);
 
       if (form.budget && user?.id) {
         await userService.updateBudgetLimit(user.id, parseInt(form.budget));
       }
 
-      toast.success('Đã cập nhật hồ sơ');
-      navigate('/dashboard/profile');
+      toast.success('Đã cập nhật hồ sơ — chỉ số đã được tính lại');
+      // Kế hoạch ăn/tập là snapshot lúc tạo → gợi ý tạo lại thay vì im lặng
+      setShowRegenPrompt(true);
     } catch (e) {
       console.error('Save profile failed:', e);
       toast.error('Lưu hồ sơ thất bại, thử lại sau');
@@ -157,6 +175,27 @@ export default function ProfileEditPage() {
         </div>
       </div>
 
+      {/* Mức độ vận động */}
+      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 space-y-4">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <Activity className="w-4 h-4 text-neutral-500" /> Mức độ vận động hằng ngày
+        </h3>
+        <p className="text-neutral-500 text-xs -mt-2">
+          Ảnh hưởng trực tiếp tới lượng calo khuyến nghị & kế hoạch AI — chọn đúng mức thực tế.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          {ACTIVITY_OPTIONS.map(opt => (
+            <button key={opt.id} type="button" onClick={() => update('activityLevel', opt.id)}
+              className={`p-3.5 rounded-2xl text-left border transition-all ${
+                form.activityLevel === opt.id ? 'bg-lime/10 border-lime/30 text-lime' : 'bg-white/[0.06] border-white/5 text-white'
+              }`}>
+              <div className="font-grotesk font-semibold text-sm">{opt.label}</div>
+              <div className="text-[10px] text-neutral-500 mt-1 line-clamp-1">{opt.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Mục tiêu */}
       <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 space-y-4">
         <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -224,6 +263,40 @@ export default function ProfileEditPage() {
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
         {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
       </button>
+
+      {/* Gợi ý tạo lại kế hoạch sau khi hồ sơ đổi — plan là snapshot lúc tạo */}
+      {showRegenPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => { setShowRegenPrompt(false); navigate('/dashboard/profile'); }}>
+          <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#12161d] p-6 space-y-4"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-full bg-lime/15 flex items-center justify-center">
+                <Check className="w-5 h-5 text-lime" />
+              </div>
+              <h3 className="font-grotesk font-bold text-white">Chỉ số đã được tính lại</h3>
+            </div>
+            <p className="text-neutral-400 text-sm leading-relaxed">
+              Kế hoạch ăn & lịch tập hiện tại vẫn dựa trên hồ sơ cũ.
+              Tạo lại kế hoạch để AI áp dụng thông số mới của bạn.
+            </p>
+            <div className="space-y-2">
+              <button onClick={() => navigate('/dashboard/diet')}
+                className="w-full btn-lime rounded-2xl py-3 text-sm font-grotesk font-bold">
+                Tạo lại kế hoạch ăn
+              </button>
+              <button onClick={() => navigate('/dashboard/workout')}
+                className="w-full rounded-2xl py-3 text-sm font-grotesk font-bold border border-white/10 bg-white/[0.06] text-white">
+                Tạo lại lịch tập
+              </button>
+              <button onClick={() => { setShowRegenPrompt(false); navigate('/dashboard/profile'); }}
+                className="w-full rounded-2xl py-2.5 text-xs text-neutral-500 hover:text-neutral-300">
+                Để sau — chỉ số mới vẫn được áp dụng trên Tổng quan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

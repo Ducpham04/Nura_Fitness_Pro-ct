@@ -24,6 +24,7 @@ public class UserBodyProfileServiceImpl implements UserBodyProfileService {
     private final UserBodyProfileRepository userBodyProfileRepository;
     private final UserRepository userRepository;
     private final GoalRepository goalRepository;
+    private final com.example.fitchallenge.repository.HealthProfileRepository healthProfileRepository;
 
     @Override
     public NotificationResponse createOrUpdateBodyProfile(Long userId, UserBodyProfileRequest request) {
@@ -50,8 +51,18 @@ public class UserBodyProfileServiceImpl implements UserBodyProfileService {
             if (request.getInjuryNotes() != null) profile.setInjuryNotes(request.getInjuryNotes());
             if (request.getTargetBudgetPerDay() != null) profile.setTargetBudgetPerDay(request.getTargetBudgetPerDay());
 
-            // Map experienceLevel → activityLevel
-            if (request.getExperienceLevel() != null) {
+            // ── Mức vận động ──────────────────────────────────────────
+            // Ưu tiên giá trị THẬT user chọn (request.activityLevel). Chỉ suy từ
+            // experienceLevel khi profile chưa có gì (backward compat flow cũ) —
+            // trước đây suy vô điều kiện làm "vận động nhẹ" bị ghi thành sedentary.
+            if (request.getActivityLevel() != null && !request.getActivityLevel().isBlank()) {
+                profile.setActivityLevel(request.getActivityLevel());
+                // Đồng bộ nguồn thật bên HealthProfile để AI meal/workout dùng cùng một số
+                healthProfileRepository.findByUser_Id(userId).ifPresent(hp -> {
+                    hp.setDailyActivityLevel(request.getActivityLevel());
+                    healthProfileRepository.save(hp);
+                });
+            } else if (request.getExperienceLevel() != null && profile.getActivityLevel() == null) {
                 profile.setActivityLevel(mapToActivityLevel(request.getExperienceLevel()));
             }
 

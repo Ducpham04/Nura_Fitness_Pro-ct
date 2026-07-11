@@ -15,6 +15,8 @@ public class UserBodyProfileRequest {
     private Integer age;
     private String gender;
     private String experienceLevel; // beginner, intermediate, advanced
+    /** Mức vận động THẬT user chọn: sedentary | light | moderate | very (ActivityLevelUtil normalize). */
+    private String activityLevel;
     private String goal; // lose_weight, build_muscle, maintain_fitness
     private String injuryNotes;
     private Integer targetBudgetPerDay;
