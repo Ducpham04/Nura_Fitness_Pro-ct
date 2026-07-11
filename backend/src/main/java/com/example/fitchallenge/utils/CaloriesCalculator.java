@@ -60,6 +60,70 @@ public class CaloriesCalculator {
         return calculateCalories(exerciseType, null, durationMinutes, weightKg);
     }
 
+    // ── MET pha trộn: tập ≠ nghỉ ─────────────────────────────────────────────
+    /** MET khi đứng nghỉ / đi lại nhẹ giữa các hiệp (Compendium: standing ~1.3-1.8). */
+    private static final double REST_MET = 1.5;
+    /** Giây mỗi rep — trung bình tempo 3-0-1/2-0-2 thực tế. */
+    private static final int SECONDS_PER_REP = 3;
+    /** Tỷ lệ thời gian TẬP trong tổng thời gian một bài strength điển hình (còn lại là nghỉ). */
+    private static final double ACTIVE_FRACTION_DEFAULT = 0.55;
+
+    /**
+     * Calo cho MỘT bài tập theo sets/reps/rest — MET pha trộn.
+     *
+     * Công thức cũ nhân MET bài tập (6-8) cho CẢ thời gian nghỉ giữa hiệp
+     * (nghỉ thực chỉ ~1.5 MET) → calo báo cáo phồng ~30-60%. Bản này tách:
+     *   kcal = 3.5 × kg / 200 × (MET_bài × phút_tập + 1.5 × phút_nghỉ)
+     *
+     * @param timeBased bài giữ tư thế: reps = SỐ GIÂY giữ (không nhân giây/rep)
+     */
+    public static Integer calculateCaloriesForSets(
+            String exerciseType,
+            String exerciseName,
+            int sets,
+            int reps,
+            int restSeconds,
+            boolean timeBased,
+            BigDecimal weightKg
+    ) {
+        if (sets <= 0 || reps <= 0) return 0;
+        double weight = weightKg != null && weightKg.compareTo(BigDecimal.ZERO) > 0
+                ? weightKg.doubleValue()
+                : 70.0;
+        double met = getMETValue(exerciseType, exerciseName);
+        double activeMinutes = (timeBased ? (double) sets * reps : (double) sets * reps * SECONDS_PER_REP) / 60.0;
+        double restMinutes = Math.max(0, sets - 1) * Math.max(0, restSeconds) / 60.0;
+        double calories = 3.5 * weight / 200.0 * (met * activeMinutes + REST_MET * restMinutes);
+        return (int) Math.round(calories);
+    }
+
+    /**
+     * Calo theo TỔNG thời gian (không biết cơ cấu tập/nghỉ) — áp hệ số pha trộn
+     * mặc định cho bài strength (55% tập / 45% nghỉ). Cardio là hoạt động liên
+     * tục → giữ nguyên MET đầy đủ.
+     */
+    public static Integer calculateCaloriesBlended(
+            String exerciseType,
+            String exerciseName,
+            Integer durationMinutes,
+            BigDecimal weightKg
+    ) {
+        if (durationMinutes == null || durationMinutes <= 0) return 0;
+        double weight = weightKg != null && weightKg.compareTo(BigDecimal.ZERO) > 0
+                ? weightKg.doubleValue()
+                : 70.0;
+        double met = getMETValue(exerciseType, exerciseName);
+        String type = exerciseType != null ? exerciseType.toLowerCase() : "";
+        String name = exerciseName != null ? exerciseName.toLowerCase() : "";
+        boolean continuous = type.contains("cardio") || name.contains("run") || name.contains("cycling")
+                || name.contains("swim") || name.contains("walk") || name.contains("jump rope");
+        double effectiveMet = continuous
+                ? met
+                : met * ACTIVE_FRACTION_DEFAULT + REST_MET * (1 - ACTIVE_FRACTION_DEFAULT);
+        double calories = effectiveMet * 3.5 * weight * durationMinutes / 200.0;
+        return (int) Math.round(calories);
+    }
+
     /**
      * Ước tính duration thực tế của một exercise dựa trên sets, reps, rest time.
      *
@@ -205,13 +269,13 @@ public class CaloriesCalculator {
             BigDecimal userWeightKg
     ) {
         if (actualDurationMinutes != null && actualDurationMinutes > 0) {
-            return calculateCalories(exerciseType, null, actualDurationMinutes, userWeightKg);
+            // Tổng thời gian đo được gồm cả nghỉ → dùng MET pha trộn
+            return calculateCaloriesBlended(exerciseType, null, actualDurationMinutes, userWeightKg);
         }
 
         if (setsCompleted != null && setsCompleted > 0 && repsCompleted != null && repsCompleted > 0) {
             // Estimate 45s rest (default) when actual rest data unavailable
-            int estimatedMinutes = estimateDurationMinutes(setsCompleted, repsCompleted, 45);
-            return calculateCalories(exerciseType, null, estimatedMinutes, userWeightKg);
+            return calculateCaloriesForSets(exerciseType, null, setsCompleted, repsCompleted, 45, false, userWeightKg);
         }
 
         return 0;

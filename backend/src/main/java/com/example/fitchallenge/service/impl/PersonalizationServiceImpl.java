@@ -399,15 +399,13 @@ public class PersonalizationServiceImpl implements PersonalizationService {
         
         BigDecimal userWeightKg = bodyProfile != null ? bodyProfile.getWeight() : null;
 
-        // Duration based on actual sets, reps, and rest time
-        int estimatedDurationMinutes = CaloriesCalculator.estimateDurationMinutes(
-                personalizedSets, personalizedReps, personalizedRestTime);
-
-        // Calculate estimated calories using exercise name for accurate MET lookup
-        Integer estimatedCalories = CaloriesCalculator.calculateCalories(
+        // MET pha trộn (tập theo MET bài, nghỉ 1.5 MET) — thay công thức cũ
+        // nhân MET bài cho cả thời gian nghỉ khiến calo phồng 30-60%.
+        boolean caloriesTimeBased = com.example.fitchallenge.utils.ExerciseFormatUtil.isTimeBased(exercise);
+        Integer estimatedCalories = CaloriesCalculator.calculateCaloriesForSets(
                 exercise.getExerciseType(),
                 exercise.getExerciseName(),
-                estimatedDurationMinutes,
+                personalizedSets, personalizedReps, personalizedRestTime, caloriesTimeBased,
                 userWeightKg
         );
 

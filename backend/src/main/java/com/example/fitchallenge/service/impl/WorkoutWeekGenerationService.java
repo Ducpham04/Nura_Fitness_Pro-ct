@@ -191,12 +191,12 @@ public class WorkoutWeekGenerationService {
                     reps = Math.max(15, valueOrDefault(exercise.getDefaultReps(), 30));
                 }
                 int restSeconds = toInt(item.get("rest_seconds"), valueOrDefault(exercise.getDefaultRestSeconds(), 60));
-                int estimatedExerciseMinutes = com.example.fitchallenge.utils.CaloriesCalculator
-                        .estimateDurationMinutes(sets, reps, restSeconds, timeBased);
-                int perExerciseCalories = com.example.fitchallenge.utils.CaloriesCalculator.calculateCalories(
+                // MET pha trộn: phút tập theo MET bài, phút nghỉ 1.5 MET —
+                // công thức cũ nhân MET bài cho cả giờ nghỉ làm calo phồng 30-60%.
+                int perExerciseCalories = com.example.fitchallenge.utils.CaloriesCalculator.calculateCaloriesForSets(
                         exercise.getExerciseType(),
                         exercise.getExerciseName(),
-                        estimatedExerciseMinutes,
+                        sets, reps, restSeconds, timeBased,
                         null  // weight is refined by PersonalizationService later
                 );
 

@@ -612,18 +612,20 @@ public class DashboardServiceImpl implements DashboardService {
                 : List.of();
 
         // ── 6. DailyStats ────────────────────────────────────────────────
+        // Macro goals: cùng quy tắc với AI service (protein g/kg theo mục tiêu,
+        // fat %, carb phần còn lại) — bỏ tỷ lệ 25/50/25 cứng từng lệch với
+        // kế hoạch ăn AI lẫn card Phân tích thể trạng.
+        BigDecimal[] macroGoals = computeMacroGoals(profile, caloriesGoal);
+
         DashboardDTO.DailyStats dailyStats = DashboardDTO.DailyStats.builder()
                 .caloriesConsumed(caloriesConsumed)
                 .caloriesGoal(caloriesGoal)
                 .proteinConsumed(proteinConsumed)
-                .proteinGoal(caloriesGoal.multiply(new BigDecimal("0.25"))
-                        .divide(new BigDecimal("4"), RoundingMode.HALF_UP))
+                .proteinGoal(macroGoals[0])
                 .carbsConsumed(carbsConsumed)
-                .carbsGoal(caloriesGoal.multiply(new BigDecimal("0.50"))
-                        .divide(new BigDecimal("4"), RoundingMode.HALF_UP))
+                .carbsGoal(macroGoals[1])
                 .fatConsumed(fatConsumed)
-                .fatGoal(caloriesGoal.multiply(new BigDecimal("0.25"))
-                        .divide(new BigDecimal("9"), RoundingMode.HALF_UP))
+                .fatGoal(macroGoals[2])
                 .waterConsumed(null)   // chưa có tính năng ghi nước → không bịa số
                 .waterGoal(waterGoal)
                 .budgetRemaining(budgetLimit.subtract(budgetSpent))
@@ -1128,5 +1130,44 @@ public class DashboardServiceImpl implements DashboardService {
 
         return profile.getRecommendedCalories() != null
                 ? profile.getRecommendedCalories() : BigDecimal.valueOf(2000);
+    }
+
+    /**
+     * Macro goals [protein g, carb g, fat g] — cùng tham số với
+     * ai-service/app/core/analyzer.py (ISSN): protein theo g/kg mục tiêu
+     * (giảm 2.4 / tăng cơ 2.0 / còn lại 1.6), fat 30% khi giảm cân, 25% còn lại,
+     * carb = calo còn lại. Thiếu cân nặng → fallback tỷ lệ 25/50/25 cũ.
+     */
+    private BigDecimal[] computeMacroGoals(UserBodyProfile profile, BigDecimal caloriesGoal) {
+        if (profile != null && profile.getWeight() != null
+                && profile.getWeight().compareTo(BigDecimal.ZERO) > 0) {
+            String goal = profile.getGoal() != null ? profile.getGoal().toLowerCase() : "";
+            boolean isLoss = goal.contains("weight") || goal.contains("giảm") || goal.contains("lose");
+            boolean isGain = goal.contains("muscle") || goal.contains("tăng");
+
+            BigDecimal proteinPerKg = isLoss ? new BigDecimal("2.4")
+                    : isGain ? new BigDecimal("2.0") : new BigDecimal("1.6");
+            BigDecimal proteinG = profile.getWeight().multiply(proteinPerKg)
+                    .setScale(0, RoundingMode.HALF_UP);
+
+            BigDecimal fatPct = isLoss ? new BigDecimal("0.30") : new BigDecimal("0.25");
+            BigDecimal fatCal = caloriesGoal.multiply(fatPct);
+            BigDecimal fatG = fatCal.divide(new BigDecimal("9"), 0, RoundingMode.HALF_UP);
+
+            BigDecimal carbCal = caloriesGoal
+                    .subtract(proteinG.multiply(new BigDecimal("4")))
+                    .subtract(fatCal);
+            BigDecimal carbG = carbCal.max(BigDecimal.ZERO)
+                    .divide(new BigDecimal("4"), 0, RoundingMode.HALF_UP);
+
+            return new BigDecimal[]{proteinG, carbG, fatG};
+        }
+
+        // Fallback: tỷ lệ chung khi chưa có cân nặng
+        return new BigDecimal[]{
+                caloriesGoal.multiply(new BigDecimal("0.25")).divide(new BigDecimal("4"), 0, RoundingMode.HALF_UP),
+                caloriesGoal.multiply(new BigDecimal("0.50")).divide(new BigDecimal("4"), 0, RoundingMode.HALF_UP),
+                caloriesGoal.multiply(new BigDecimal("0.25")).divide(new BigDecimal("9"), 0, RoundingMode.HALF_UP),
+        };
     }
 }

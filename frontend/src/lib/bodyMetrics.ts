@@ -93,9 +93,12 @@ export function computeBodyMetrics(input: BodyMetricsInput): BodyMetrics {
   const calorieFloor = isMale ? 1500 : 1200;
   const target = Math.max(calorieFloor, Math.round(tdee + delta));
 
-  const protPerKg = dir === 'surplus' ? 2.2 : dir === 'deficit' ? 2.0 : 1.8;
+  // Tham số ĐỒNG BỘ với ai-service/app/core/analyzer.py (ISSN/Helms) — trước
+  // đây FE dùng 2.0-2.2 g/kg & fat 28% cứng → card Tổng quan lệch kế hoạch ăn AI.
+  const protPerKg = dir === 'deficit' ? 2.4 : dir === 'surplus' ? 2.0 : 1.6;
   const protG = Math.round(weight * protPerKg);
-  const fatCal = Math.round(target * 0.28);
+  const fatPct = dir === 'deficit' ? 0.30 : 0.25;
+  const fatCal = Math.round(target * fatPct);
   const fatG   = Math.round(fatCal / 9);
   const carbG  = Math.max(0, Math.round((target - protG * 4 - fatCal) / 4));
 
