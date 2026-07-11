@@ -88,7 +88,10 @@ export function computeBodyMetrics(input: BodyMetricsInput): BodyMetrics {
   const tdee = bmr * (ACTIVITY_FACTOR[input.activityLevel || 'moderate'] ?? 1.55);
   const dir  = resolveDir(input.goal || '');
   const delta  = dir === 'deficit' ? -500 : dir === 'surplus' ? 300 : 0;
-  const target = Math.round(tdee + delta);
+  // Sàn calo an toàn (1200 nữ / 1500 nam) — không bao giờ kê thấp hơn,
+  // kể cả deficit với người nhỏ con ít vận động (từng ra 889 kcal).
+  const calorieFloor = isMale ? 1500 : 1200;
+  const target = Math.max(calorieFloor, Math.round(tdee + delta));
 
   const protPerKg = dir === 'surplus' ? 2.2 : dir === 'deficit' ? 2.0 : 1.8;
   const protG = Math.round(weight * protPerKg);

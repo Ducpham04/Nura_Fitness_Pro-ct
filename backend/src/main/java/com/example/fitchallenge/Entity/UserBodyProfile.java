@@ -116,13 +116,10 @@ public class UserBodyProfile {
             }
             
             if (activityLevel != null && this.bmr != null) {
-                BigDecimal multiplier = BigDecimal.valueOf(1.2);
-                switch (activityLevel.toLowerCase().replace("_", " ")) {
-                    case "lightly active": multiplier = BigDecimal.valueOf(1.375); break;
-                    case "moderately active": multiplier = BigDecimal.valueOf(1.55); break;
-                    case "very active": multiplier = BigDecimal.valueOf(1.725); break;
-                    case "extra active": multiplier = BigDecimal.valueOf(1.9); break;
-                }
+                // ActivityLevelUtil nhận mọi biến thể ("light"/"moderate"/"very" từ
+                // onboarding lẫn "lightly active" cũ) — switch cũ làm user
+                // không-sedentary bị tính hệ số 1.2 (TDEE thấp hơn thực 13-37%).
+                BigDecimal multiplier = com.example.fitchallenge.utils.ActivityLevelUtil.factor(activityLevel);
                 this.recommendedCalories = this.bmr.multiply(multiplier).setScale(0, RoundingMode.HALF_UP);
             }
         }

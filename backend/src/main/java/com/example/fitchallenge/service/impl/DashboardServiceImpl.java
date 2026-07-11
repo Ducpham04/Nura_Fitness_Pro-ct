@@ -443,8 +443,11 @@ public class DashboardServiceImpl implements DashboardService {
 
         // ── 2. Nutrition — đọc từ personalized_meal_details (was_eaten=true) ──
         // Đây là nguồn dữ liệu thực tế khi user đánh dấu "đã ăn" trong Diet tab.
-        BigDecimal caloriesGoal = profile != null && profile.getRecommendedCalories() != null
-                ? profile.getRecommendedCalories() : BigDecimal.valueOf(2000);
+        // Mục tiêu calo: TÍNH TƯƠI (BMR × hệ số vận động ± mục tiêu, có sàn an toàn)
+        // thay vì tin recommendedCalories lưu sẵn — giá trị cũ trong DB bị tính với
+        // hệ số 1.2 cho mọi user (bug switch activity), và TDEE thuần không ± mục tiêu
+        // khiến vòng tròn calo lệch hẳn so với kế hoạch ăn AI kê.
+        BigDecimal caloriesGoal = computeCaloriesGoal(profile);
         BigDecimal waterGoal = healthProfile != null && healthProfile.getWaterIntakeLitersPerDay() != null
                 ? healthProfile.getWaterIntakeLitersPerDay() : BigDecimal.valueOf(2.5);
 
@@ -1075,7 +1078,7 @@ public class DashboardServiceImpl implements DashboardService {
         if (period == null || "all".equalsIgnoreCase(period)) {
             return null; // Lấy tất cả
         }
-        
+
         ZonedDateTime now = ZonedDateTime.now();
         switch (period.toLowerCase()) {
             case "day":
@@ -1089,5 +1092,41 @@ public class DashboardServiceImpl implements DashboardService {
             default:
                 return null;
         }
+    }
+
+    /**
+     * Mục tiêu calo/ngày cho vòng tròn dashboard = TDEE (hệ số vận động đúng)
+     * ± điều chỉnh theo mục tiêu, không thấp hơn sàn an toàn (1200 nữ / 1500 nam).
+     * Tính tươi từ weight/height/age để không phụ thuộc recommendedCalories cũ
+     * (từng bị lưu sai do bug hệ số activity). Fallback: giá trị lưu sẵn → 2000.
+     */
+    private BigDecimal computeCaloriesGoal(UserBodyProfile profile) {
+        if (profile == null) return BigDecimal.valueOf(2000);
+
+        if (profile.getWeight() != null && profile.getHeight() != null
+                && profile.getAge() != null && profile.getGender() != null) {
+            BigDecimal bmr = com.example.fitchallenge.utils.BodyMetricsCalculator.calculateBMR(
+                    profile.getWeight(), profile.getHeight(), profile.getAge(), profile.getGender());
+            if (bmr.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal tdee = bmr.multiply(
+                        com.example.fitchallenge.utils.ActivityLevelUtil.factor(profile.getActivityLevel()));
+
+                // ± mục tiêu — cùng hằng số với AI service (GOAL_ADJUSTMENTS)
+                String goal = profile.getGoal() != null ? profile.getGoal().toLowerCase() : "";
+                int delta = 0;
+                if (goal.contains("weight") || goal.contains("giảm") || goal.contains("lose")) delta = -500;
+                else if (goal.contains("muscle") || goal.contains("tăng")) delta = 300;
+                else if (goal.contains("endurance") || goal.contains("bền")) delta = 200;
+
+                String g = profile.getGender().toLowerCase();
+                int floor = (g.startsWith("f") || g.contains("nữ")) ? 1200 : 1500;
+
+                BigDecimal target = tdee.add(BigDecimal.valueOf(delta));
+                return target.max(BigDecimal.valueOf(floor)).setScale(0, RoundingMode.HALF_UP);
+            }
+        }
+
+        return profile.getRecommendedCalories() != null
+                ? profile.getRecommendedCalories() : BigDecimal.valueOf(2000);
     }
 }

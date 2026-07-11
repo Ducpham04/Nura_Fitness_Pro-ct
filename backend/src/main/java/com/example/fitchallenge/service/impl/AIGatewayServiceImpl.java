@@ -270,9 +270,14 @@ public class AIGatewayServiceImpl implements AIGatewayService {
         if (rawLevel.contains("inter") || rawLevel.contains("trung")) fitnessLevel = "intermediate";
         else if (rawLevel.contains("adv") || rawLevel.contains("cao")) fitnessLevel = "advanced";
 
-        String activityLevel = "moderate";
-        if (goal.equals("weight_loss")) activityLevel = "lightly_active";
-        else if (goal.equals("muscle_gain")) activityLevel = "very_active";
+        // Dùng mức vận động THẬT user khai ở onboarding; chỉ khi thiếu mới suy từ
+        // goal (hành vi cũ suy 100% từ goal → người tăng cơ ít vận động bị kê dư
+        // ~700 kcal/ngày, người giảm cân năng động bị deficit sâu hơn dự kiến).
+        String goalFallback = "moderate";
+        if (goal.equals("weight_loss")) goalFallback = "lightly_active";
+        else if (goal.equals("muscle_gain")) goalFallback = "very_active";
+        String activityLevel = com.example.fitchallenge.utils.ActivityLevelUtil
+                .toAiEnum(profile.getActivityLevel(), goalFallback);
 
         userProfile.put("weight", profile.getWeight());
         userProfile.put("height", profile.getHeight());
@@ -545,7 +550,12 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             if (rawLevel.contains("inter") || rawLevel.contains("trung")) fitnessLevel = "intermediate";
             else if (rawLevel.contains("adv") || rawLevel.contains("cao")) fitnessLevel = "advanced";
             userProfile.put("fitness_level", fitnessLevel);
-            userProfile.put("activity_level", "moderate");
+            // Mức vận động thật (health profile → body profile → fallback moderate)
+            String realActivity = healthProfile.getDailyActivityLevel() != null
+                    ? healthProfile.getDailyActivityLevel()
+                    : profile.getActivityLevel();
+            userProfile.put("activity_level",
+                    com.example.fitchallenge.utils.ActivityLevelUtil.toAiEnum(realActivity, "moderate"));
             userProfile.put("budget_per_day", 100000);
             aiRequest.put("user_profile", userProfile);
 

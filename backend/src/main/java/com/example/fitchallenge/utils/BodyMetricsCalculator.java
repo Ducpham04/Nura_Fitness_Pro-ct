@@ -77,38 +77,11 @@ public class BodyMetricsCalculator {
             return BigDecimal.ZERO;
         }
 
-        BigDecimal multiplier;
-        String levelLower = activityLevel.toLowerCase().trim();
-
-        switch (levelLower) {
-            case "sedentary":
-            case "ít vận động":
-            case "1":
-                multiplier = new BigDecimal("1.2");
-                break;
-            case "lightly active":
-            case "vận động nhẹ":
-            case "2":
-                multiplier = new BigDecimal("1.375");
-                break;
-            case "moderately active":
-            case "vận động vừa":
-            case "3":
-                multiplier = new BigDecimal("1.55");
-                break;
-            case "very active":
-            case "vận động nhiều":
-            case "4":
-                multiplier = new BigDecimal("1.725");
-                break;
-            case "extra active":
-            case "vận động rất nhiều":
-            case "5":
-                multiplier = new BigDecimal("1.9");
-                break;
-            default:
-                multiplier = new BigDecimal("1.2"); // Mặc định sedentary
-        }
+        // Hệ số qua ActivityLevelUtil — nhận MỌI biến thể ("light", "lightly_active",
+        // "lightly active", "vận động nhẹ"...). Switch cũ chỉ khớp bản có dấu cách
+        // trong khi FE gửi "light|moderate|very" → mọi user không-sedentary từng
+        // bị tính hệ số 1.2 (TDEE thấp hơn thực 13-37%).
+        BigDecimal multiplier = ActivityLevelUtil.factor(activityLevel);
 
         return bmr.multiply(multiplier).setScale(0, RoundingMode.HALF_UP);
     }

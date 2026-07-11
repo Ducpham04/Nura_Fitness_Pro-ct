@@ -99,14 +99,21 @@ class BodyAnalyzer:
         multiplier = cls.ACTIVITY_MULTIPLIERS.get(user_profile.activity_level, 1.55)
         return bmr * multiplier
     
+    # Sàn calo an toàn (NIH/AND): dưới mức này cần giám sát y tế — app tuyệt đối
+    # không tự kê. Nữ nhỏ con sedentary giảm cân từng bị kê 889 kcal/ngày.
+    MIN_CALORIES_FEMALE = 1200
+    MIN_CALORIES_MALE = 1500
+
     @classmethod
     def calculate_target_calories(cls, user_profile: UserProfile) -> int:
         """
-        Calculate daily calorie target based on TDEE and goal
+        Calculate daily calorie target based on TDEE and goal.
+        Never returns below the safety floor (1200 kcal female / 1500 kcal male).
         """
         tdee = cls.calculate_tdee(user_profile)
         adjustment = cls.GOAL_ADJUSTMENTS.get(user_profile.goal, 0)
-        return int(tdee + adjustment)
+        floor = cls.MIN_CALORIES_FEMALE if user_profile.gender == "female" else cls.MIN_CALORIES_MALE
+        return max(int(tdee + adjustment), floor)
     
     @classmethod
     def calculate_macros(

@@ -186,12 +186,13 @@ public class WorkoutWeekGenerationService {
                 int reps = parseReps(item.get("reps"), valueOrDefault(exercise.getDefaultReps(), 10));
                 // Bài time-based (plank...): reps = SỐ GIÂY. AI có thể trả nhầm rep nhỏ
                 // (vd 12) — nếu dưới 15s thì dùng default của master data (đơn vị giây).
-                if (com.example.fitchallenge.utils.ExerciseFormatUtil.isTimeBased(exercise) && reps < 15) {
+                boolean timeBased = com.example.fitchallenge.utils.ExerciseFormatUtil.isTimeBased(exercise);
+                if (timeBased && reps < 15) {
                     reps = Math.max(15, valueOrDefault(exercise.getDefaultReps(), 30));
                 }
                 int restSeconds = toInt(item.get("rest_seconds"), valueOrDefault(exercise.getDefaultRestSeconds(), 60));
                 int estimatedExerciseMinutes = com.example.fitchallenge.utils.CaloriesCalculator
-                        .estimateDurationMinutes(sets, reps, restSeconds);
+                        .estimateDurationMinutes(sets, reps, restSeconds, timeBased);
                 int perExerciseCalories = com.example.fitchallenge.utils.CaloriesCalculator.calculateCalories(
                         exercise.getExerciseType(),
                         exercise.getExerciseName(),

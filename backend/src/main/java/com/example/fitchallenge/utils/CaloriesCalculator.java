@@ -73,7 +73,15 @@ public class CaloriesCalculator {
      *   total  = 180s = 3 phút
      */
     public static int estimateDurationMinutes(int sets, int reps, int restSeconds) {
-        int activeSeconds = sets * reps * 2;
+        return estimateDurationMinutes(sets, reps, restSeconds, false);
+    }
+
+    /**
+     * @param timeBased true = bài giữ tư thế (plank...): reps đã LÀ số giây giữ,
+     *                  không nhân 2s/rep (nếu nhân sẽ đếm gấp đôi thời gian thật).
+     */
+    public static int estimateDurationMinutes(int sets, int reps, int restSeconds, boolean timeBased) {
+        int activeSeconds = timeBased ? sets * reps : sets * reps * 2;
         int restTotal = Math.max(0, sets - 1) * restSeconds;
         int totalSeconds = activeSeconds + restTotal;
         return Math.max(1, (int) Math.round(totalSeconds / 60.0));

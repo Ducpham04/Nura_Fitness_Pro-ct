@@ -535,7 +535,10 @@ public class PersonalizationServiceImpl implements PersonalizationService {
     private double readinessVolumeFactor(HealthProfile healthProfile) {
         double factor = 1.0;
 
-        String activity = normalize(healthProfile.getDailyActivityLevel());
+        // Chuẩn hoá trước khi so — DB chứa cả "light"/"very" (onboarding mới)
+        // lẫn "lightly_active"/"very_active" (giá trị cũ).
+        String activity = com.example.fitchallenge.utils.ActivityLevelUtil
+                .normalize(healthProfile.getDailyActivityLevel());
         if (activity.equals("sedentary")) {
             factor *= 0.75;
         } else if (activity.equals("lightly_active")) {
