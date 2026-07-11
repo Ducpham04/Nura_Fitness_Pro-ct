@@ -54,6 +54,8 @@ export interface PersonalizedWorkoutExercise {
   notes?: string;
   /** Số tạ gợi ý (null = bodyweight). Ví dụ: "~15kg dumbbell" */
   recommendedWeight?: string;
+  /** true = bài giữ tư thế (plank...) — reps mang nghĩa SỐ GIÂY, không phải số lần. */
+  timeBased?: boolean;
   exercise?: {
     imageUrl?: string;
     videoUrl?: string;

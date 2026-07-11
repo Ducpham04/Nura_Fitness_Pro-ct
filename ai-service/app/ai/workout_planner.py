@@ -34,7 +34,9 @@ class WorkoutPlanner:
         "foundation": {"sets": 3, "rep_range": "12-15", "rest": 75,  "intensity_pct": 65},
         "volume":     {"sets": 4, "rep_range": "10-12", "rest": 75,  "intensity_pct": 70},
         "intensity":  {"sets": 4, "rep_range": "6-8",   "rest": 90,  "intensity_pct": 80},
-        "deload":     {"sets": 2, "rep_range": "12-15", "rest": 60,  "intensity_pct": 55},
+        # Deload giữ sàn 3 hiệp (chuẩn 3-5) — giảm volume qua intensity/reps;
+        # sets=2 cũ làm plan hiển thị "2 hiệp/bài" gây cảm giác sai chuyên môn.
+        "deload":     {"sets": 3, "rep_range": "12-15", "rest": 60,  "intensity_pct": 55},
         "build":      {"sets": 4, "rep_range": "8-10",  "rest": 90,  "intensity_pct": 75},
         "overload":   {"sets": 5, "rep_range": "4-6",   "rest": 120, "intensity_pct": 85},
     }

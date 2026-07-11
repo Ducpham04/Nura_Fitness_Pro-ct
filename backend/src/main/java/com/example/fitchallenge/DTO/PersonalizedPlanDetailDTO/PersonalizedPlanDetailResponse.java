@@ -49,9 +49,15 @@ public class PersonalizedPlanDetailResponse {
     private Integer sets;
     
     /**
-     * Số lần lặp (reps)
+     * Số lần lặp (reps). Với bài time-based (timeBased=true), giá trị này là SỐ GIÂY giữ tư thế.
      */
     private Integer reps;
+
+    /**
+     * true = bài đo bằng thời gian (plank, wall sit, hold...) — reps mang nghĩa giây.
+     * FE dựa vào cờ này để hiển thị "N giây" và dùng đồng hồ đếm thay vì đếm rep.
+     */
+    private Boolean timeBased;
     private Integer restTime;
     
     /**
@@ -109,6 +115,8 @@ public class PersonalizedPlanDetailResponse {
     public void setSets(Integer sets) { this.sets = sets; }
     public Integer getReps() { return reps; }
     public void setReps(Integer reps) { this.reps = reps; }
+    public Boolean getTimeBased() { return timeBased; }
+    public void setTimeBased(Boolean timeBased) { this.timeBased = timeBased; }
     public Integer getRestTime() { return restTime; }
     public void setRestTime(Integer restTime) { this.restTime = restTime; }
     public String getDifficulty() { return difficulty; }

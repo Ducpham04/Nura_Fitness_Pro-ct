@@ -37,6 +37,11 @@ class Exercise(BaseModel):
     tempo: str = "3-0-1"
     notes: Optional[str] = None
 
+    @validator("sets")
+    def clamp_sets(cls, v):
+        """Chuẩn tập luyện 3-5 hiệp — clamp thay vì reject để không fail cả plan."""
+        return max(3, min(5, v))
+
 class CardioBlock(BaseModel):
     type: str
     duration_minutes: int
@@ -84,6 +89,11 @@ class ProgramTemplate(BaseModel):
     weekly_pattern: List[str] = Field(..., min_items=7, max_items=7)
     exercise_pool: Dict[str, List[int]]
     base_sets: int = Field(default=3, ge=1, le=6)
+
+    @validator("base_sets")
+    def clamp_base_sets(cls, v):
+        """Sàn 3 hiệp — deload/AI trả 1-2 sẽ được nâng lên 3 thay vì fail plan."""
+        return max(3, min(5, v))
     base_reps: int = Field(default=12, ge=1, le=30)
     base_rest_seconds: int = Field(default=75, ge=15, le=300)
     progression_rate: float = Field(default=0.10, ge=0, le=0.30)

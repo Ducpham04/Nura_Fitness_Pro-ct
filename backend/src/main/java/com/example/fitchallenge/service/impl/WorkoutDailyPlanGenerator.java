@@ -186,9 +186,14 @@ public class WorkoutDailyPlanGenerator {
     }
 
     private Volume volumeForWeek(int weekNumber, int baseSets, int baseReps, int baseRest) {
+        // Sàn 3 hiệp mọi tuần: chuẩn tập luyện 3-5 hiệp. Deload giảm volume qua
+        // reps/intensity chứ không rớt xuống 1-2 hiệp (trước đây AI deload phase
+        // gửi base_sets=2, trừ 1 nữa = 1 hiệp/bài — user thấy plan "chỉ 1-2 set").
+        baseSets = Math.max(3, Math.min(5, baseSets));
+
         // Every 4th week is a deload: reduce sets, maintain reps for recovery
         if (weekNumber % 4 == 0) {
-            return new Volume("deload", Math.max(1, baseSets - 1), baseReps, baseRest);
+            return new Volume("deload", Math.max(3, baseSets - 1), baseReps, baseRest);
         }
 
         // Position within the current 4-week block (0 = first, 1 = second, 2 = third active week)
@@ -482,6 +487,13 @@ public class WorkoutDailyPlanGenerator {
      *   Cardio / dynamic:                                         use volume reps as-is
      */
     private int exerciseReps(Exercise exercise, int volumeReps) {
+        // Bài giữ tư thế (plank, wall sit...): reps mang nghĩa SỐ GIÂY theo quy ước
+        // master data (tempo 0-0-0, default_reps = giây). Không áp rep range thường.
+        if (com.example.fitchallenge.utils.ExerciseFormatUtil.isTimeBased(exercise)) {
+            Integer holdSeconds = exercise.getDefaultReps();
+            return Math.max(15, Math.min(120, holdSeconds != null && holdSeconds > 0 ? holdSeconds : 30));
+        }
+
         String category = exercise.getExerciseCategory() != null ? exercise.getExerciseCategory().toUpperCase() : "";
         String movPat   = exercise.getMovementPattern()  != null ? exercise.getMovementPattern().toLowerCase()  : "";
         String exType   = exercise.getExerciseType()     != null ? exercise.getExerciseType().toLowerCase()     : "";

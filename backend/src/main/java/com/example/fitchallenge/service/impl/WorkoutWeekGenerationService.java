@@ -180,8 +180,15 @@ public class WorkoutWeekGenerationService {
                 // Per-exercise calorie estimate using MET formula from CaloriesCalculator.
                 // This is more accurate than dividing session calories by exercise count
                 // because each exercise has a different MET value (e.g. push-up 8 MET vs plank 3.5 MET).
-                int sets = toInt(item.get("sets"), valueOrDefault(exercise.getDefaultSets(), 3));
+                // Chuẩn tập luyện: 3-5 hiệp. AI đôi khi trả 1-2 sets (deload/lỗi) — clamp lại.
+                int sets = Math.max(3, Math.min(5,
+                        toInt(item.get("sets"), valueOrDefault(exercise.getDefaultSets(), 3))));
                 int reps = parseReps(item.get("reps"), valueOrDefault(exercise.getDefaultReps(), 10));
+                // Bài time-based (plank...): reps = SỐ GIÂY. AI có thể trả nhầm rep nhỏ
+                // (vd 12) — nếu dưới 15s thì dùng default của master data (đơn vị giây).
+                if (com.example.fitchallenge.utils.ExerciseFormatUtil.isTimeBased(exercise) && reps < 15) {
+                    reps = Math.max(15, valueOrDefault(exercise.getDefaultReps(), 30));
+                }
                 int restSeconds = toInt(item.get("rest_seconds"), valueOrDefault(exercise.getDefaultRestSeconds(), 60));
                 int estimatedExerciseMinutes = com.example.fitchallenge.utils.CaloriesCalculator
                         .estimateDurationMinutes(sets, reps, restSeconds);

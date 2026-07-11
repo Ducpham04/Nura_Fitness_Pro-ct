@@ -140,13 +140,16 @@ public class PersonalizedTrainingController {
             @PathVariable Long newExerciseId,
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            if (userDetails != null) {
-                Long userId = userService.getUserByEmail(userDetails.getUsername()).getId();
-                swapLimitService.ensureAndConsume(userId, SwapLimitService.SwapType.EXERCISE);
+            if (userDetails == null) {
+                return ResponseEntity.status(401).body(new NotificationResponse(false, "Unauthorized"));
             }
-            return ResponseEntity.ok(personalizationService.swapExercise(ppdId, newExerciseId));
+            Long userId = userService.getUserByEmail(userDetails.getUsername()).getId();
+            swapLimitService.ensureAndConsume(userId, SwapLimitService.SwapType.EXERCISE);
+            return ResponseEntity.ok(personalizationService.swapExercise(ppdId, newExerciseId, userId));
         } catch (QuotaExceededException e) {
             return ResponseEntity.status(429).body(new NotificationResponse(false, e.getMessage()));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(new NotificationResponse(false, e.getMessage()));
         } catch (Exception e) {
             log.error("Error swapping exercise", e);
             return ResponseEntity.ok(new NotificationResponse(false, "Error: " + e.getMessage()));

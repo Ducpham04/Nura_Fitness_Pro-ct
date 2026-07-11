@@ -40,10 +40,11 @@ public interface PersonalizationService {
 
     /**
      * Đổi bài tập trong PersonalizedPlanDetail sang bài mới.
-     * @param ppdId         ID của PersonalizedPlanDetail
-     * @param newExerciseId ID của Exercise master mới
+     * @param ppdId               ID của PersonalizedPlanDetail
+     * @param newExerciseId       ID của Exercise master mới
+     * @param authenticatedUserId userId từ JWT — bắt buộc để check ownership
      */
-    NotificationResponse swapExercise(Long ppdId, Long newExerciseId);
+    NotificationResponse swapExercise(Long ppdId, Long newExerciseId, Long authenticatedUserId);
 }
 
 

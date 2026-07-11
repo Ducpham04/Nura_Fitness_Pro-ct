@@ -495,8 +495,20 @@ public class PersonalizationServiceImpl implements PersonalizationService {
             volumeFactor = Math.max(volumeFactor, 0.90);
         }
 
-        int sets = clamp((int) Math.round(baseSets * volumeFactor), mobility ? 1 : 1, mobility ? 3 : 5);
-        int reps = clamp((int) Math.round(baseReps * volumeFactor), mobility ? 5 : 3, mobility ? 15 : 20);
+        boolean timeBased = com.example.fitchallenge.utils.ExerciseFormatUtil.isTimeBased(exercise);
+
+        // Sets tối thiểu 3 cho bài strength/isometric (chuẩn tập luyện 3-5 hiệp).
+        // Giảm volume cho người readiness thấp được dồn vào reps/rest, KHÔNG cắt sets
+        // xuống 1-2 (trước đây volumeFactor 0.5-0.75 làm plan chỉ còn 1-2 hiệp).
+        int sets = clamp((int) Math.round(baseSets * volumeFactor), mobility ? 1 : 3, mobility ? 3 : 5);
+        int reps;
+        if (timeBased) {
+            // Bài giữ tư thế: reps = SỐ GIÂY (quy ước master data). Clamp 15-120s,
+            // làm tròn bội 5 — trước đây bị clamp [3,20] nên plank 30s thành "20 rep".
+            reps = clamp(roundToNearest((int) Math.round(baseReps * volumeFactor), 5), 15, 120);
+        } else {
+            reps = clamp((int) Math.round(baseReps * volumeFactor), mobility ? 5 : 3, mobility ? 15 : 20);
+        }
         int rest = prescribeRestSeconds(baseRest, exercise, healthProfile, mobility, highLoad);
 
         log.debug("{}", "📊 [PersonalizationService] Medical prescription:"
@@ -1090,6 +1102,9 @@ public class PersonalizationServiceImpl implements PersonalizationService {
         }
         response.setSets(ppd.getSets());
         response.setReps(ppd.getReps());
+        response.setTimeBased(ppd.getExercise() != null
+                ? com.example.fitchallenge.utils.ExerciseFormatUtil.isTimeBased(ppd.getExercise())
+                : com.example.fitchallenge.utils.ExerciseFormatUtil.isTimeBased(ppd.getExerciseName(), null, null));
         response.setRestTime(ppd.getRestTime());
         response.setDifficulty(ppd.getDifficulty());
         response.setTargetMuscle(ppd.getTargetMuscle());
@@ -1301,7 +1316,7 @@ public class PersonalizationServiceImpl implements PersonalizationService {
      */
     @Override
     @Transactional
-    public NotificationResponse swapExercise(Long ppdId, Long newExerciseId) {
+    public NotificationResponse swapExercise(Long ppdId, Long newExerciseId, Long authenticatedUserId) {
         try {
             PersonalizedPlanDetail ppd = personalizedPlanDetailRepository.findById(ppdId)
                     .orElse(null);
@@ -1309,10 +1324,19 @@ public class PersonalizationServiceImpl implements PersonalizationService {
                 return new NotificationResponse(false, "Không tìm thấy bài tập trong kế hoạch");
             }
 
+            // Ownership check: chỉ chủ kế hoạch mới được đổi bài (chống IDOR theo ppdId)
+            if (ppd.getUser() == null || authenticatedUserId == null
+                    || !ppd.getUser().getId().equals(authenticatedUserId)) {
+                throw new SecurityException("Forbidden: Plan detail does not belong to user");
+            }
+
             Exercise newExercise = exerciseRepository.findById(newExerciseId).orElse(null);
             if (newExercise == null) {
                 return new NotificationResponse(false, "Không tìm thấy bài tập mới");
             }
+
+            boolean oldTimeBased = com.example.fitchallenge.utils.ExerciseFormatUtil.isTimeBased(ppd.getExercise());
+            boolean newTimeBased = com.example.fitchallenge.utils.ExerciseFormatUtil.isTimeBased(newExercise);
 
             // Cập nhật dữ liệu
             ppd.setExercise(newExercise);
@@ -1322,7 +1346,14 @@ public class PersonalizationServiceImpl implements PersonalizationService {
             ppd.setDifficulty(newExercise.getDifficultyLevel() != null
                     ? newExercise.getDifficultyLevel().name() : ppd.getDifficulty());
 
-            // Giữ nguyên sets/reps/restTime từ kế hoạch cũ (không override)
+            // Giữ nguyên sets/reps/restTime từ kế hoạch cũ — TRỪ KHI đổi giữa bài
+            // đếm rep ↔ bài giữ tư thế (đơn vị reps đổi nghĩa: lần ↔ giây)
+            if (oldTimeBased != newTimeBased) {
+                Integer defaultReps = newExercise.getDefaultReps();
+                ppd.setReps(defaultReps != null && defaultReps > 0
+                        ? defaultReps
+                        : (newTimeBased ? 30 : 10));
+            }
             // Rebuild notes cơ bản cho bài mới
             String muscle = newExercise.getPrimaryMuscle() != null ? newExercise.getPrimaryMuscle() : "Full Body";
             String tempo = inferTempo(newExercise);

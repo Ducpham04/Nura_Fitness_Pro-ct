@@ -4,6 +4,7 @@ Adjusts macros based on workout intensity
 """
 import os
 import json
+import re
 from typing import List, Dict
 from ..schemas.nutrition import UserProfile, NutritionPlanRequest
 from ..schemas.workout import WorkoutSession, SessionType
@@ -11,6 +12,19 @@ from ..schemas.full_plan import FullPlanRequest, FullPlanResponse, IntegratedDai
 from ..core.analyzer import BodyAnalyzer
 from .planner import AIPlanner
 from .workout_planner import WorkoutPlanner
+
+
+# Bài giữ tư thế (đo bằng GIÂY, không đếm rep) — mirror ExerciseFormatUtil.java.
+# Word-boundary để "hanging leg raise" không dính "hang"; loại biến thể động
+# (plank jack, plank shoulder tap...) vì chúng vẫn đếm rep.
+_TIME_BASED_RE = re.compile(r"\b(plank|wall sit|hold|l-sit|isometric|dead hang|superman)\b", re.I)
+_DYNAMIC_VARIANT_RE = re.compile(r"\b(tap|jack|up-down|up down|walk|twist|rotation|reach|row|knee|crunch|to push)\b", re.I)
+
+
+def _is_time_based(name: str) -> bool:
+    if not name:
+        return False
+    return bool(_TIME_BASED_RE.search(name)) and not _DYNAMIC_VARIANT_RE.search(name)
 
 
 class IntegratedPlanner:
@@ -166,16 +180,21 @@ class IntegratedPlanner:
                 item = catalog.get(exercise_id)
                 if item is None:
                     continue
+                time_based = _is_time_based(item.exercise_name)
+                # Bài giữ tư thế: reps = SỐ GIÂY (default_reps của master data đã là giây),
+                # tempo 0-0-0 đánh dấu isometric. Bài thường: rep theo template.
+                hold_seconds = max(15, min(120, item.default_reps or 30))
                 exercises.append(Exercise(
                     exercise_id=item.exercise_id,
                     name=item.exercise_name,
                     muscle_group=item.primary_muscle or "Full Body",
                     sets=template.base_sets,
-                    reps=str(template.base_reps),
+                    reps=str(hold_seconds) if time_based else str(template.base_reps),
                     rest_seconds=template.base_rest_seconds,
                     equipment=item.required_equipment,
-                    tempo="3-0-1",
-                    notes="Generated from ProgramTemplate for integrated planning."
+                    tempo="0-0-0" if time_based else "3-0-1",
+                    notes="Giữ tư thế đủ số giây mỗi hiệp." if time_based
+                          else "Generated from ProgramTemplate for integrated planning."
                 ))
 
             workout_session_type = SessionType.FULL_BODY

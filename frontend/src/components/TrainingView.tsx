@@ -58,6 +58,8 @@ interface TrainingExercise {
   notes?: string;
   /** Số tạ gợi ý, e.g. "~15kg dumbbell". Null = bodyweight. */
   recommendedWeight?: string;
+  /** true = bài giữ tư thế (plank...) — targetReps là SỐ GIÂY giữ, không phải số lần. */
+  timeBased?: boolean;
 }
 
 const mapPersonalizedExercise = (
@@ -76,7 +78,9 @@ const mapPersonalizedExercise = (
   return {
     id: exercise.id,
     name: displayName,
-    sets: `${targetSets}x${targetReps}`,
+    // Bài giữ tư thế: reps là số GIÂY — hiển thị "3x30 giây" (giữ 'x' ASCII để
+    // các chỗ fallback parse split('x') vẫn hoạt động).
+    sets: exercise.timeBased ? `${targetSets}x${targetReps} giây` : `${targetSets}x${targetReps}`,
     muscle: exercise.targetMuscle || exercise.exercise?.primaryMuscle || exercise.difficulty || 'Training',
     videoUrl: exercise.videoUrl || exercise.exercise?.videoUrl,
     done: completedExerciseKeys.has(`${exercise.dayNumber}:${exercise.exerciseId}`),
@@ -90,6 +94,7 @@ const mapPersonalizedExercise = (
     equipment: exercise.exercise?.requiredEquipment,
     exerciseType: exercise.exercise?.exerciseType,
     estimatedCalories: exercise.estimatedCalories,
+    timeBased: exercise.timeBased,
     imageUrl: exercise.exercise?.imageUrl,
     secondaryMuscles: exercise.exercise?.secondaryMuscles
       ? exercise.exercise.secondaryMuscles.split(',').map(s => s.trim()).filter(Boolean)
@@ -184,6 +189,26 @@ const displayPlanName = (name?: string): string => {
   if (/neural protocol/i.test(name)) return 'Kế hoạch tập cá nhân hóa';
   const cleaned = name.replace(/\s*[-–]\s*User\s*\d+\s*$/i, '').trim();
   return cleaned || 'Kế hoạch tập cá nhân hóa';
+};
+
+/**
+ * Trích YouTube video ID từ mọi dạng URL (embed / watch?v= / youtu.be).
+ * Trả null nếu không phải link YouTube hợp lệ.
+ */
+const youtubeId = (url?: string): string | null => {
+  if (!url) return null;
+  const m = url.match(/(?:youtube\.com\/(?:embed\/|watch\?v=)|youtu\.be\/)([\w-]{11})/);
+  return m ? m[1] : null;
+};
+
+/**
+ * URL embed để dùng làm "ảnh động" minh họa động tác trong màn hình đang tập:
+ * tự chạy, tắt tiếng, lặp lại, ẩn control — thay cho ảnh tĩnh.
+ */
+const loopingDemoEmbed = (url?: string): string | null => {
+  const id = youtubeId(url);
+  if (!id) return null;
+  return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&modestbranding=1&rel=0&playsinline=1&disablekb=1`;
 };
 
 /** Parse notes thô từ backend → { phase, benefit, tempo } */
@@ -309,6 +334,9 @@ function TrainingView() {
   const [restCountdown, setRestCountdown] = useState(0);
   // Rep input per current set
   const [currentRepInput, setCurrentRepInput] = useState(0);
+  // Đồng hồ đếm ngược cho bài giữ tư thế (plank...): đang giữ + số giây còn lại
+  const [isHolding, setIsHolding] = useState(false);
+  const [holdCountdown, setHoldCountdown] = useState(0);
   const [activePlan, setActivePlan] = useState<any>(null);
   const [generatingNextWeek, setGeneratingNextWeek] = useState(false);
   const [adaptingNextWeek, setAdaptingNextWeek] = useState(false);
@@ -501,6 +529,25 @@ function TrainingView() {
     return () => clearTimeout(t);
   }, [isResting, restCountdown, playCue]);
 
+  // Hold countdown timer — bài giữ tư thế: đếm ngược số giây mục tiêu,
+  // hết giờ thì beep và tự điền số giây đã giữ vào input của hiệp.
+  useEffect(() => {
+    if (!isHolding || holdCountdown <= 0) return;
+    if (holdCountdown <= 3) playCue('tick');
+    const t = setTimeout(() => {
+      setHoldCountdown(c => {
+        if (c <= 1) {
+          setIsHolding(false);
+          playCue('rest-done');
+          setCurrentRepInput(activeExercise?.targetReps || 0);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [isHolding, holdCountdown, playCue, activeExercise]);
+
   const startSession = (ex: TrainingExercise, opts?: { keepTotals?: boolean }) => {
     setActiveExercise(ex);
     setCameraActive(true);
@@ -511,6 +558,8 @@ function TrainingView() {
     setIsResting(false);
     setRestCountdown(0);
     setCurrentRepInput(ex.targetReps || 0);
+    setIsHolding(false);
+    setHoldCountdown(0);
     setTransition(null);
     completingRef.current = false;
     // Bắt đầu buổi mới (không phải auto-advance) → reset tích luỹ + ẩn báo cáo tổng
@@ -844,6 +893,8 @@ function TrainingView() {
     const formatTime = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
     const targetSets   = activeExercise.targetSets || parseInt(activeExercise.sets.split('x')[0]) || 3;
     const targetReps   = activeExercise.targetReps || parseInt(activeExercise.sets.split('x')[1]) || 10;
+    // Bài giữ tư thế: targetReps = SỐ GIÂY, UI dùng đồng hồ thay vì đếm rep
+    const isHold       = !!activeExercise.timeBased;
     const allSetsDone  = currentSet >= targetSets;
     const restPct      = activeExercise.restTime ? Math.round((restCountdown / activeExercise.restTime) * 100) : 0;
     const exerciseName = i18n.language === 'vi' ? (activeExercise as any).nameVi || activeExercise.name : activeExercise.name;
@@ -1060,13 +1111,34 @@ function TrainingView() {
 
           <div id="active-workout-stage" className="relative overflow-hidden rounded-[22px] border border-slate-200 bg-slate-900 shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
             <div className="relative aspect-[1.02] min-h-[330px]">
-              {activeExercise.imageUrl ? (
-                <img src={activeExercise.imageUrl} alt={exerciseName} className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#0f766e,#f97316)]">
-                  <Dumbbell className="h-16 w-16 text-white/80" />
-                </div>
-              )}
+              {(() => {
+                const demoUrl = loopingDemoEmbed(activeExercise.videoUrl);
+                if (demoUrl) {
+                  // Khung gần vuông + video 16:9 → phóng chiều rộng để "cover"
+                  // (crop 2 bên) thay vì để viền đen. pointer-events-none để các
+                  // lớp overlay đếm hiệp bên trên vẫn hoạt động bình thường.
+                  return (
+                    <div className="absolute inset-0 overflow-hidden bg-black">
+                      <iframe
+                        src={demoUrl}
+                        title={exerciseName}
+                        className="pointer-events-none absolute left-1/2 top-1/2 h-full w-[178%] -translate-x-1/2 -translate-y-1/2"
+                        style={{ border: 0 }}
+                        allow="autoplay; encrypted-media"
+                        allowFullScreen
+                      />
+                    </div>
+                  );
+                }
+                if (activeExercise.imageUrl) {
+                  return <img src={activeExercise.imageUrl} alt={exerciseName} className="h-full w-full object-cover" />;
+                }
+                return (
+                  <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#0f766e,#f97316)]">
+                    <Dumbbell className="h-16 w-16 text-white/80" />
+                  </div>
+                );
+              })()}
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,6,23,0.05)_0%,rgba(2,6,23,0.16)_42%,rgba(2,6,23,0.82)_100%)]" />
 
               <div className="absolute left-4 top-4 rounded-full bg-teal-600 px-3 py-1.5 text-xs font-bold text-white shadow-lg">
@@ -1100,8 +1172,10 @@ function TrainingView() {
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="font-grotesk text-3xl font-bold tabular-nums">{currentRepInput} / {targetReps}</p>
-                    <p className="text-xs font-semibold text-white/78">Lần lặp</p>
+                    <p className="font-grotesk text-3xl font-bold tabular-nums">
+                      {isHold && isHolding ? holdCountdown : currentRepInput} / {targetReps}
+                    </p>
+                    <p className="text-xs font-semibold text-white/78">{isHold ? 'Giây giữ' : 'Lần lặp'}</p>
                   </div>
                 </div>
                 <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/24">
@@ -1260,43 +1334,74 @@ function TrainingView() {
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.08em] text-slate-600">Set {currentSet + 1}</p>
-                <h4 className="font-grotesk text-lg font-bold text-slate-950">Số rep thực hiện</h4>
+                <h4 className="font-grotesk text-lg font-bold text-slate-950">{isHold ? 'Thời gian giữ tư thế' : 'Số rep thực hiện'}</h4>
               </div>
-              <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700 ring-1 ring-teal-100">Mục tiêu {targetReps}</span>
+              <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700 ring-1 ring-teal-100">
+                Mục tiêu {targetReps}{isHold ? ' giây' : ''}
+              </span>
             </div>
-            <div className="flex items-center justify-center gap-5">
-              <button
-                onClick={() => setCurrentRepInput(r => Math.max(0, r - 1))}
-                className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-2xl font-bold text-slate-900 transition active:scale-95"
-              >
-                -
-              </button>
-              <div className="min-w-24 text-center">
-                <p className="font-grotesk text-6xl font-bold leading-none text-slate-950">{currentRepInput}</p>
-                <p className="mt-1 text-xs font-bold uppercase tracking-[0.08em] text-slate-500">rep</p>
-              </div>
-              <button
-                onClick={() => setCurrentRepInput(r => r + 1)}
-                className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-2xl font-bold text-slate-900 transition active:scale-95"
-              >
-                +
-              </button>
-            </div>
-            <div className="mt-4 flex justify-center gap-2">
-              {[targetReps - 2, targetReps, targetReps + 2].filter(n => n > 0).map(n => (
+            {isHold && isHolding ? (
+              // Đang giữ tư thế: đồng hồ đếm ngược to, hết giờ tự điền số giây
+              <div className="flex flex-col items-center gap-3">
+                <p className="font-grotesk text-7xl font-bold leading-none tabular-nums text-teal-700">{holdCountdown}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.08em] text-slate-500">giây còn lại — giữ vững!</p>
                 <button
-                  key={n}
-                  onClick={() => setCurrentRepInput(n)}
-                  className={`rounded-xl border px-4 py-2 text-xs font-bold ${
-                    currentRepInput === n
-                      ? 'border-teal-200 bg-teal-50 text-teal-700'
-                      : 'border-slate-200 bg-slate-50 text-slate-700'
-                  }`}
+                  onClick={() => {
+                    // Dừng sớm: ghi nhận số giây đã giữ được
+                    setCurrentRepInput(Math.max(0, targetReps - holdCountdown));
+                    setIsHolding(false);
+                    setHoldCountdown(0);
+                  }}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-700"
                 >
-                  {n}
+                  Dừng sớm
                 </button>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-center gap-5">
+                  <button
+                    onClick={() => setCurrentRepInput(r => Math.max(0, r - (isHold ? 5 : 1)))}
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-2xl font-bold text-slate-900 transition active:scale-95"
+                  >
+                    -
+                  </button>
+                  <div className="min-w-24 text-center">
+                    <p className="font-grotesk text-6xl font-bold leading-none text-slate-950">{currentRepInput}</p>
+                    <p className="mt-1 text-xs font-bold uppercase tracking-[0.08em] text-slate-500">{isHold ? 'giây' : 'rep'}</p>
+                  </div>
+                  <button
+                    onClick={() => setCurrentRepInput(r => r + (isHold ? 5 : 1))}
+                    className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-2xl font-bold text-slate-900 transition active:scale-95"
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="mt-4 flex justify-center gap-2">
+                  {(isHold ? [targetReps - 10, targetReps, targetReps + 10] : [targetReps - 2, targetReps, targetReps + 2]).filter(n => n > 0).map(n => (
+                    <button
+                      key={n}
+                      onClick={() => setCurrentRepInput(n)}
+                      className={`rounded-xl border px-4 py-2 text-xs font-bold ${
+                        currentRepInput === n
+                          ? 'border-teal-200 bg-teal-50 text-teal-700'
+                          : 'border-slate-200 bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      {n}{isHold ? 's' : ''}
+                    </button>
+                  ))}
+                </div>
+                {isHold && !isResting && (
+                  <button
+                    onClick={() => { setHoldCountdown(targetReps); setIsHolding(true); }}
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-teal-200 bg-teal-50 py-3 text-sm font-bold text-teal-800 transition active:scale-[0.99]"
+                  >
+                    ⏱ Bấm giờ giữ {targetReps} giây
+                  </button>
+                )}
+              </>
+            )}
           </section>
 
           <div className="mt-auto grid grid-cols-[1fr_1fr_1.5fr] gap-3 pt-5">
