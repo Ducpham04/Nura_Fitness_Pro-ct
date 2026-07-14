@@ -41,6 +41,7 @@ export default function AICoachPage() {
   const [goalText, setGoalText] = useState<string>('');
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastMsgRef = useRef<HTMLDivElement>(null);
   const greetedRef = useRef(false);
   const { usage, packages: aiPackages, refresh: refreshUsage } = useAiUsage(user?.id ?? null);
 
@@ -96,11 +97,24 @@ export default function AICoachPage() {
 
   // Lưu lịch sử + auto scroll
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const el = scrollRef.current;
+    const last = messages[messages.length - 1];
+    if (el) {
+      if (last?.role === 'ai' && lastMsgRef.current) {
+        // Tin AI có thể rất dài → đưa ĐẦU tin nhắn vào tầm nhìn (không nhảy xuống đáy
+        // để khỏi che mất phần trên, nhất là trên màn hình mobile thấp)
+        const cRect = el.getBoundingClientRect();
+        const mRect = lastMsgRef.current.getBoundingClientRect();
+        el.scrollTop += (mRect.top - cRect.top) - 12;
+      } else {
+        // Tin của user / typing → cuộn xuống đáy như thường
+        el.scrollTop = el.scrollHeight;
+      }
+    }
     if (user?.id && messages.length > 0) {
       try { localStorage.setItem(storageKey, JSON.stringify(messages)); } catch { /* ignore */ }
     }
-  }, [messages, user?.id, storageKey]);
+  }, [messages, isTyping, user?.id, storageKey]);
 
   const send = async (text?: string) => {
     const content = (text ?? input).trim();
@@ -190,10 +204,10 @@ export default function AICoachPage() {
 
       <div className="flex-1 flex flex-col lg:flex-row gap-5 min-h-0 lg:overflow-hidden">
         {/* Khu chat */}
-        <div className="rounded-[18px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)] flex flex-col overflow-hidden flex-1 min-h-0 h-[60vh] lg:h-auto">
+        <div className="rounded-[18px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)] flex flex-col overflow-hidden min-h-0 h-[calc(100dvh-14rem)] lg:flex-1 lg:h-auto">
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-hide min-h-0">
-            {messages.map((msg) => (
-              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            {messages.map((msg, i) => (
+              <div key={msg.id} ref={i === messages.length - 1 ? lastMsgRef : undefined} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[82%] rounded-2xl px-5 py-4 ${
                   msg.role === 'user'
                     ? 'bg-teal-700 text-white font-medium'

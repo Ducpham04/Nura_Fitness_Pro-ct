@@ -28,6 +28,52 @@ function handleUnauthorized() {
   _onUnauthorized?.();
 }
 
+// ── Silent token refresh ─────────────────────────────────────────────────────
+// When the access token expires (24h) but the refresh token is still valid
+// (7 days), we transparently mint a new access token instead of logging the
+// user out. A single in-flight promise is shared so concurrent 401s trigger
+// only ONE refresh call.
+let _refreshPromise: Promise<boolean> | null = null;
+
+async function refreshAccessToken(): Promise<boolean> {
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) return false;
+
+  try {
+    const res = await fetch(
+      `${API_CONFIG.BASE_URL}${API_CONFIG.API_PREFIX}/auth/refresh`,
+      {
+        method: 'POST',
+        headers: { ...API_CONFIG.HEADERS },
+        body: JSON.stringify({ refreshToken }),
+        credentials: 'include',
+      }
+    );
+    if (!res.ok) return false;
+    const body = await res.json();
+    // BE trả { token, refreshToken, user } (BEAuthResponse)
+    if (body?.token) {
+      localStorage.setItem('accessToken', body.token);
+      if (body.refreshToken) localStorage.setItem('refreshToken', body.refreshToken);
+      if (body.user) localStorage.setItem('user', JSON.stringify(body.user));
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/** Dedupe concurrent refreshes: all callers await the same promise. */
+function ensureRefreshed(): Promise<boolean> {
+  if (!_refreshPromise) {
+    _refreshPromise = refreshAccessToken().finally(() => {
+      _refreshPromise = null;
+    });
+  }
+  return _refreshPromise;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -70,13 +116,21 @@ class ApiClient {
       // where getCurrentUser's `cached` local variable survives the
       // localStorage.clear() and returns a ghost user.
       if (response.status === 401 && !skipAuth && !_isRetry) {
-        const isAuthPlumbing = endpoint.includes('/auth/login') ||
-                               endpoint.includes('/auth/register') ||
-                               endpoint.includes('/auth/refresh') ||
-                               endpoint.includes('/auth/logout') ||
-                               endpoint.includes('/auth/me') ||
-                               endpoint.includes('/auth/user');
-        if (!isAuthPlumbing) {
+        // /auth/refresh và /auth/login|register|logout tự xử lý 401, không
+        // được refresh-retry (tránh vòng lặp). Các endpoint còn lại — kể cả
+        // /auth/me — sẽ thử refresh access token bằng refresh token trước khi
+        // bắt đăng nhập lại.
+        const isRefreshExempt = endpoint.includes('/auth/login') ||
+                                endpoint.includes('/auth/register') ||
+                                endpoint.includes('/auth/refresh') ||
+                                endpoint.includes('/auth/logout');
+        if (!isRefreshExempt) {
+          const refreshed = await ensureRefreshed();
+          if (refreshed) {
+            // Thử lại đúng request đó với access token mới
+            return this.request<T>(endpoint, { ...options, _isRetry: true });
+          }
+          // Refresh thất bại (refresh token hết hạn / bị thu hồi) → đăng xuất
           handleUnauthorized();
           return {
             success: false,

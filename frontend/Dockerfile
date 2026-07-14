@@ -3,16 +3,21 @@
 # =====================================================================
 
 # ── Stage 1: build ───────────────────────────────────────────────────
-FROM node:20-alpine AS build
+# Debian slim (không phải alpine): bước prerender SEO (scripts/prerender.mjs)
+# cần Chromium của Playwright, vốn không hỗ trợ musl/alpine.
+FROM node:20-bookworm-slim AS build
 WORKDIR /app
 
 # Cài deps (tận dụng cache layer)
 COPY package.json package-lock.json ./
 RUN npm ci
+# Chromium headless cho bước prerender (cache theo layer package.json)
+RUN npx playwright install --with-deps chromium
 
 # Copy source (bao gồm .env.production) rồi build
 # Vite đọc VITE_* từ .env.production tại build-time
 COPY . .
+# build = vite build + postbuild (prerender các trang công khai thành HTML tĩnh)
 RUN npm run build
 
 # ── Stage 2: serve ───────────────────────────────────────────────────

@@ -1,12 +1,10 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider, useAuthContext } from './context/AuthContext';
 
 // Lazy-load tất cả pages để giảm initial bundle (~724KB → chunk riêng per-route)
 const Landing = lazy(() => import('./pages/Landing'));
-const Login = lazy(() => import('./pages/Login'));
-const Register = lazy(() => import('./pages/Register'));
 const DashboardLayout = lazy(() => import('./pages/DashboardLayout'));
 const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
@@ -26,6 +24,13 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
+
+// /login và /register giờ dùng AuthModal trên Landing — redirect về "/" và
+// nhờ Landing mở đúng tab. Giữ state cũ (vd sessionExpired từ useAuth).
+function AuthRedirect({ tab }: { tab: 'login' | 'register' }) {
+  const location = useLocation();
+  return <Navigate to="/" replace state={{ ...(location.state ?? {}), authModal: tab }} />;
+}
 
 function PageSpinner() {
   return (
@@ -70,11 +75,11 @@ function AppContent() {
         {/* Public routes */}
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={
-          !user ? <Login /> :
+          !user ? <AuthRedirect tab="login" /> :
           isStaff ? <Navigate to="/admin" replace /> :
           <Navigate to="/dashboard" replace />
         } />
-        <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <Register />} />
+        <Route path="/register" element={user ? <Navigate to="/dashboard" replace /> : <AuthRedirect tab="register" />} />
 
         {/* Auth-required pre-dashboard routes */}
         <Route path="/onboarding" element={user ? <Onboarding /> : <Navigate to="/login" replace />} />

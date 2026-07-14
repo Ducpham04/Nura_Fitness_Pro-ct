@@ -15,7 +15,7 @@ import {
   Zap,
   Flame,
 } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Lenis from 'lenis';
 import LanguageSelector from '../components/LanguageSelector';
@@ -66,7 +66,18 @@ export default function Landing() {
   const { user } = useAuthContext();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [authModal, setAuthModal] = useState<'login' | 'register' | null>(null);
+  const location = useLocation();
+  // Mở sẵn modal khi được redirect từ /login hoặc /register (AuthRedirect
+  // trong App.tsx đặt state.authModal), rồi xoá state để refresh không mở lại.
+  const [authModal, setAuthModal] = useState<'login' | 'register' | null>(
+    () => (location.state as { authModal?: 'login' | 'register' } | null)?.authModal ?? null,
+  );
+  useEffect(() => {
+    if ((location.state as { authModal?: string } | null)?.authModal) {
+      navigate('/', { replace: true, state: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useReveal();
 
