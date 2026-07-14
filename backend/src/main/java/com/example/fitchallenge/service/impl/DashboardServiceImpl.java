@@ -1029,6 +1029,18 @@ public class DashboardServiceImpl implements DashboardService {
                     if (ts != null) lastAiCall.put(uid, ts.toString());
                 });
 
+        // Ngày tập / ngày log ăn gần nhất theo user
+        Map<Long, String> lastWorkout = new java.util.HashMap<>();
+        Map<Long, String> lastMealLog = new java.util.HashMap<>();
+        dailyTrainingLogRepository.lastDateByUserWithStatus(DailyTrainingLog.DailyTrainingStatus.COMPLETED)
+                .forEach(row -> {
+                    if (row[1] != null) lastWorkout.put((Long) row[0], row[1].toString());
+                });
+        dailyNutritionLogRepository.lastLogDateByUser()
+                .forEach(row -> {
+                    if (row[1] != null) lastMealLog.put((Long) row[0], row[1].toString());
+                });
+
         List<User> allUsers = userRepository.findAll();
 
         return allUsers.stream()
@@ -1063,6 +1075,8 @@ public class DashboardServiceImpl implements DashboardService {
                             .aiPackageCode(pkg)
                             .lastLoginAt(u.getLastLoginAt() != null ? u.getLastLoginAt().toString() : null)
                             .lastAiCallAt(lastAiCall.get(u.getId()))
+                            .lastWorkoutAt(lastWorkout.get(u.getId()))
+                            .lastMealLogAt(lastMealLog.get(u.getId()))
                             .aiCallsThisMonth(cMonth)
                             .aiTokensThisMonth(tMonth)
                             .aiCallsAllTime(0L) // omit for now — avoid extra query
@@ -1071,6 +1085,115 @@ public class DashboardServiceImpl implements DashboardService {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DashboardDTO.GrowthStatsResponse getGrowthStats(int days) {
+        int chartDays = Math.max(7, Math.min(days, 365));
+        LocalDate today = LocalDate.now();
+
+        // 1 query nhẹ: [createdAt, signupSource, referredById], gom nhóm trong Java
+        List<Object[]> signups = userRepository.findSignupAttribution();
+        Map<LocalDate, Long> byDay = signups.stream()
+                .collect(Collectors.groupingBy(
+                        row -> ((ZonedDateTime) row[0]).withZoneSameInstant(ZonedDateTime.now().getZone()).toLocalDate(),
+                        Collectors.counting()));
+
+        // Nguồn đăng ký trong khoảng biểu đồ: signupSource > referral > unknown
+        LocalDate windowStart = today.minusDays(chartDays - 1L);
+        Map<String, Long> bySource = signups.stream()
+                .filter(row -> {
+                    LocalDate d = ((ZonedDateTime) row[0]).withZoneSameInstant(ZonedDateTime.now().getZone()).toLocalDate();
+                    return !d.isBefore(windowStart);
+                })
+                .collect(Collectors.groupingBy(
+                        row -> row[1] != null ? (String) row[1] : (row[2] != null ? "referral" : "unknown"),
+                        Collectors.counting()));
+        List<DashboardDTO.SourceCount> sources = bySource.entrySet().stream()
+                .map(e -> DashboardDTO.SourceCount.builder().source(e.getKey()).count(e.getValue()).build())
+                .sorted((a, b) -> Long.compare(b.getCount(), a.getCount()))
+                .collect(Collectors.toList());
+
+        // Đếm đăng ký trong [from, to] (bao gồm 2 đầu)
+        java.util.function.BiFunction<LocalDate, LocalDate, Long> countRange = (from, to) ->
+                byDay.entrySet().stream()
+                        .filter(e -> !e.getKey().isBefore(from) && !e.getKey().isAfter(to))
+                        .mapToLong(Map.Entry::getValue).sum();
+
+        // Chuỗi ngày cho biểu đồ — fill 0 các ngày không có đăng ký
+        List<DashboardDTO.DailyUserCount> daily = new ArrayList<>();
+        for (int i = chartDays - 1; i >= 0; i--) {
+            LocalDate d = today.minusDays(i);
+            DashboardDTO.DailyUserCount point = new DashboardDTO.DailyUserCount();
+            point.setDate(d.toString());
+            point.setCount(byDay.getOrDefault(d, 0L));
+            daily.add(point);
+        }
+
+        return DashboardDTO.GrowthStatsResponse.builder()
+                .totalUsers(signups.size())
+                .today(byDay.getOrDefault(today, 0L))
+                .yesterday(byDay.getOrDefault(today.minusDays(1), 0L))
+                .last7Days(countRange.apply(today.minusDays(6), today))
+                .prev7Days(countRange.apply(today.minusDays(13), today.minusDays(7)))
+                .last30Days(countRange.apply(today.minusDays(29), today))
+                .prev30Days(countRange.apply(today.minusDays(59), today.minusDays(30)))
+                .daily(daily)
+                .sources(sources)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DashboardDTO.FunnelStatsResponse getFunnelStats(int days) {
+        // 1. Cohort: user đăng ký trong N ngày gần nhất, hoặc toàn bộ nếu days <= 0
+        List<Object[]> allUsers = userRepository.findAllIdsAndCreatedAt();
+        java.time.ZoneId zone = ZonedDateTime.now().getZone();
+        LocalDate cutoff = days > 0 ? LocalDate.now().minusDays(days - 1L) : null;
+
+        java.util.Set<Long> cohort = allUsers.stream()
+                .filter(row -> cutoff == null || !((ZonedDateTime) row[1]).withZoneSameInstant(zone).toLocalDate().isBefore(cutoff))
+                .map(row -> (Long) row[0])
+                .collect(Collectors.toSet());
+
+        // 2. Mỗi milestone → tập userId đã đạt được (batch, tránh N+1), rồi intersect với cohort
+        java.util.function.Function<java.util.Collection<Long>, Long> countIn = ids -> {
+            java.util.Set<Long> set = ids instanceof java.util.Set ? (java.util.Set<Long>) ids : new java.util.HashSet<>(ids);
+            return cohort.stream().filter(set::contains).count();
+        };
+
+        long withProfile = countIn.apply(userBodyProfileRepository.findAllUserIdsWithProfile());
+
+        java.util.Set<Long> withPlan = new java.util.HashSet<>();
+        userTrainingRepository.countGroupByUser().forEach(row -> withPlan.add((Long) row[0]));
+        personalizedNutritionPlanRepository.countGroupByUser().forEach(row -> withPlan.add((Long) row[0]));
+        long withPlanCount = countIn.apply(withPlan);
+
+        java.util.Set<Long> withWorkout = new java.util.HashSet<>();
+        dailyTrainingLogRepository.lastDateByUserWithStatus(DailyTrainingLog.DailyTrainingStatus.COMPLETED)
+                .forEach(row -> withWorkout.add((Long) row[0]));
+        long withWorkoutCount = countIn.apply(withWorkout);
+
+        long paidCount = countIn.apply(userRepository.findAllPaidUserIds());
+
+        long cohortSize = cohort.size();
+        java.util.function.BiFunction<String, Long, Double> pct = (label, count) ->
+                cohortSize == 0 ? 0.0 : Math.round((count * 1000.0) / cohortSize) / 10.0;
+
+        List<DashboardDTO.FunnelStep> steps = List.of(
+                DashboardDTO.FunnelStep.builder().key("registered").label("Đăng ký").count(cohortSize).pctOfCohort(100.0).build(),
+                DashboardDTO.FunnelStep.builder().key("profile").label("Hoàn thành hồ sơ").count(withProfile).pctOfCohort(pct.apply("profile", withProfile)).build(),
+                DashboardDTO.FunnelStep.builder().key("plan").label("Sinh kế hoạch (tập/ăn)").count(withPlanCount).pctOfCohort(pct.apply("plan", withPlanCount)).build(),
+                DashboardDTO.FunnelStep.builder().key("firstWorkout").label("Tập buổi đầu").count(withWorkoutCount).pctOfCohort(pct.apply("workout", withWorkoutCount)).build(),
+                DashboardDTO.FunnelStep.builder().key("paid").label("Nâng cấp trả phí").count(paidCount).pctOfCohort(pct.apply("paid", paidCount)).build()
+        );
+
+        return DashboardDTO.FunnelStatsResponse.builder()
+                .cohortSize(cohortSize)
+                .windowLabel(days > 0 ? days + " ngày gần nhất" : "Toàn bộ")
+                .steps(steps)
+                .build();
     }
 
     /**

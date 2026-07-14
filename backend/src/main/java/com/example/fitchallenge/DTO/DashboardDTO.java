@@ -469,6 +469,43 @@ public class DashboardDTO {
         private List<AiCallLog> recentLogs;
     }
 
+    /** Báo cáo tăng trưởng đăng ký — tab "Tăng trưởng" của Admin */
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class GrowthStatsResponse {
+        private long totalUsers;
+        private long today;            // đăng ký hôm nay
+        private long yesterday;
+        private long last7Days;        // 7 ngày gần nhất (gồm hôm nay)
+        private long prev7Days;        // 7 ngày liền trước đó — để tính % thay đổi
+        private long last30Days;
+        private long prev30Days;
+        private List<DailyUserCount> daily; // đăng ký theo ngày, fill 0 ngày trống
+        private List<SourceCount> sources;  // nguồn đăng ký trong khoảng biểu đồ, sort desc
+    }
+
+    /** Funnel activation: đăng ký → hồ sơ → sinh plan → tập buổi đầu → paid */
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class FunnelStatsResponse {
+        private long cohortSize;         // số user trong cohort (theo khoảng ngày đăng ký đã chọn)
+        private String windowLabel;      // "30 ngày gần nhất" / "Toàn bộ"
+        private List<FunnelStep> steps;
+    }
+
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class FunnelStep {
+        private String key;    // registered | profile | plan | firstWorkout | paid
+        private String label;
+        private long count;
+        private double pctOfCohort; // % so với tổng cohort (bước đầu tiên)
+    }
+
+    /** Số đăng ký theo nguồn (utm_source / referral / direct / unknown) */
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class SourceCount {
+        private String source;
+        private long count;
+    }
+
     /** Một dòng trong bảng "Hoạt động người dùng" của Admin */
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class UserActivityRow {
@@ -479,6 +516,8 @@ public class DashboardDTO {
         private String aiPackageCode;
         private String lastLoginAt;      // ISO string
         private String lastAiCallAt;     // ISO string, null nếu chưa dùng AI
+        private String lastWorkoutAt;    // ISO date (yyyy-MM-dd), null nếu chưa hoàn thành buổi tập nào
+        private String lastMealLogAt;    // ISO date (yyyy-MM-dd), null nếu chưa log bữa ăn
         private long aiCallsThisMonth;
         private long aiTokensThisMonth;
         private long aiCallsAllTime;

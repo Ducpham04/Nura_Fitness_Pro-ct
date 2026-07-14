@@ -25,6 +25,8 @@ export interface RegisterRequest {
   fullName: string;
   avatarUrl?: string;
   referralCode?: string;
+  signupSource?: string;    // tự gắn từ attribution util — UI không cần truyền
+  signupCampaign?: string;
 }
 
 // BE Response format

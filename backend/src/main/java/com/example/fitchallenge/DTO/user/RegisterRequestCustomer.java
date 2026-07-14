@@ -23,4 +23,12 @@ public class RegisterRequestCustomer {
 
     /** Mã giới thiệu của người mời (tuỳ chọn). */
     private String referralCode;
+
+    /** Nguồn đăng ký — utm_source hoặc referrer host, FE tự capture (tuỳ chọn). */
+    @Size(max = 60, message = "signupSource must not exceed 60 characters")
+    private String signupSource;
+
+    /** Chiến dịch — utm_campaign (tuỳ chọn). */
+    @Size(max = 80, message = "signupCampaign must not exceed 80 characters")
+    private String signupCampaign;
 }

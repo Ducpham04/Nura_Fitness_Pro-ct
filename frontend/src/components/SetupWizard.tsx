@@ -166,17 +166,21 @@ export default function SetupWizard({ userId, userName, onComplete }: Props) {
             </div>
             <div>
               <h2 className="font-grotesk font-bold text-white text-2xl">Kho thực phẩm</h2>
-              <p className="text-neutral-400">Tìm trong bảng foods, chọn món và nhập số gram đang có</p>
+              <p className="text-neutral-400">Tuỳ chọn — thêm món có sẵn để AI ưu tiên dùng, hoặc bỏ qua để AI tự chọn</p>
             </div>
           </div>
 
-          <div className="mb-10">
+          <div className="mb-6">
             <FoodInventoryPicker items={items} onChange={setItems} />
           </div>
 
           <button onClick={handleSaveNutrition} disabled={isSaving}
             className="btn-lime w-full py-4 font-grotesk font-bold text-lg flex items-center justify-center gap-2 disabled:opacity-50">
-            {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Hoàn tất Dinh dưỡng <Check className="w-5 h-5" /></>}
+            {isSaving
+              ? <Loader2 className="w-6 h-6 animate-spin" />
+              : items.length > 0
+                ? <>Hoàn tất Dinh dưỡng <Check className="w-5 h-5" /></>
+                : <>Bỏ qua, tạo thực đơn ngay <ArrowRight className="w-5 h-5" /></>}
           </button>
         </div>
       </div>

@@ -82,6 +82,27 @@ public class DashboardController {
         return ResponseEntity.ok(dashboardService.getUserActivity());
     }
 
+    /**
+     * GET /api/admin/dashboard/growth-stats?days=30
+     * Báo cáo tăng trưởng đăng ký: theo ngày + so sánh kỳ trước
+     */
+    @GetMapping("/growth-stats")
+    public ResponseEntity<DashboardDTO.GrowthStatsResponse> getGrowthStats(
+            @RequestParam(required = false, defaultValue = "30") int days) {
+        return ResponseEntity.ok(dashboardService.getGrowthStats(days));
+    }
+
+    /**
+     * GET /api/admin/dashboard/funnel-stats?days=0
+     * Funnel activation: đăng ký → hồ sơ → sinh plan → tập buổi đầu → paid.
+     * days<=0 = toàn bộ user; days=30/90 = cohort đăng ký trong N ngày gần nhất.
+     */
+    @GetMapping("/funnel-stats")
+    public ResponseEntity<DashboardDTO.FunnelStatsResponse> getFunnelStats(
+            @RequestParam(required = false, defaultValue = "0") int days) {
+        return ResponseEntity.ok(dashboardService.getFunnelStats(days));
+    }
+
 }
 
 

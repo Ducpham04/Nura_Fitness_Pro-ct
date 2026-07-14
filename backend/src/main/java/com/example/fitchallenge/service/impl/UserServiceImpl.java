@@ -155,6 +155,8 @@ public class UserServiceImpl implements UserService {
         newUser.setPoints(0);
         newUser.setLevelPoints(0);
         newUser.setReferralCode(generateReferralCode());
+        newUser.setSignupSource(sanitizeAttribution(registerRequestCustomer.getSignupSource(), 60));
+        newUser.setSignupCampaign(sanitizeAttribution(registerRequestCustomer.getSignupCampaign(), 80));
 
         ZonedDateTime now = ZonedDateTime.now();
         newUser.setCreatedAt(now);
@@ -280,6 +282,14 @@ public class UserServiceImpl implements UserService {
         }
         // fallback: timestamp-based, guaranteed unique
         return "R" + Long.toString(System.currentTimeMillis(), 36).toUpperCase().substring(0, 7);
+    }
+
+    /** Làm sạch giá trị attribution từ FE: bỏ ký tự lạ, lowercase, cắt độ dài. */
+    private String sanitizeAttribution(String value, int maxLen) {
+        if (value == null) return null;
+        String cleaned = value.trim().toLowerCase().replaceAll("[^a-z0-9._\\-/ ]", "");
+        if (cleaned.isEmpty()) return null;
+        return cleaned.length() > maxLen ? cleaned.substring(0, maxLen) : cleaned;
     }
 
 

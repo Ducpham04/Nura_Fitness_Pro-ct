@@ -2,6 +2,8 @@ package com.example.fitchallenge.repository;
 
 import com.example.fitchallenge.Entity.DailyTrainingLog;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -68,4 +70,11 @@ public interface DailyTrainingLogRepository extends JpaRepository<DailyTrainingL
      * Đếm số daily training logs đã completed của một user trong một training plan
      */
     long countByUser_IdAndTrainingPlan_TpIdAndStatus(Long userId, Long trainingPlanId, String status);
+
+    /**
+     * Ngày tập COMPLETED gần nhất theo từng user (batch, tránh N+1): [userId, maxTrainingDate]
+     */
+    @Query("SELECT l.user.id, MAX(l.trainingDate) FROM DailyTrainingLog l " +
+           "WHERE l.status = :status GROUP BY l.user.id")
+    List<Object[]> lastDateByUserWithStatus(@Param("status") DailyTrainingLog.DailyTrainingStatus status);
 }

@@ -287,6 +287,18 @@ export default function HomePage() {
 
   const isSetupIncomplete = !hasActiveMealPlan && (!data || stats.budgetLimit === 80000 || todayWorkouts.length === 0);
 
+  // Tự mở SetupWizard đúng 1 lần/tài khoản khi hồ sơ đã xong nhưng chưa có kế hoạch nào.
+  // Trước đây bước này chỉ là banner tự bấm → nhiều user bỏ qua (funnel: 91% xong hồ sơ,
+  // chỉ 51% sinh kế hoạch). Đánh dấu đã nhắc ngay cả khi user đóng modal mà không hoàn tất,
+  // để không làm phiền lặp lại — banner vẫn còn đó cho họ tự mở lại sau.
+  useEffect(() => {
+    if (isLoading || !user?.id || !isSetupIncomplete) return;
+    const key = `setupWizardAutoPrompted:${user.id}`;
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+    setShowSetupWizard(true);
+  }, [isLoading, isSetupIncomplete, user?.id]);
+
   if (isLoading) return <HomeSkeleton />;
 
   if (error) return (

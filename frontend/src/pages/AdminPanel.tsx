@@ -34,7 +34,7 @@ import {
 } from '../services/adminService';
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-type AdminTab = 'dashboard' | 'dataSeeder' | 'aiStats' | 'aiPackages' | 'userActivity' | 'feedback' | AdminModuleKey;
+type AdminTab = 'dashboard' | 'dataSeeder' | 'aiStats' | 'aiPackages' | 'userActivity' | 'feedback' | 'growth' | AdminModuleKey;
 
 /* ─── AI Stats types (mirrors backend DashboardDTO) ─────────────────────── */
 interface UserAiUsage { userId: number; fullName: string; email: string; totalCalls: number; realTokensThisMonth?: number; realTokensAllTime?: number; }
@@ -51,11 +51,51 @@ interface AiStatsData {
   topUsers: UserAiUsage[]; recentLogs: AiCallLog[];
 }
 
+/** Số ngày từ mốc ISO (date hoặc datetime) đến hôm nay; null nếu không có dữ liệu */
+function daysAgo(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000));
+}
+
 interface RecentUserSummary {
   userId: number; fullName: string; email: string;
   aiPackageCode: string; createdAt: string | null; lastLoginAt: string | null; role: string;
 }
 interface DailyPoint { date: string; count: number; }
+/* Báo cáo tăng trưởng đăng ký (mirrors backend GrowthStatsResponse) */
+interface GrowthStatsData {
+  totalUsers: number;
+  today: number; yesterday: number;
+  last7Days: number; prev7Days: number;
+  last30Days: number; prev30Days: number;
+  daily: DailyPoint[];
+  sources: { source: string; count: number }[];
+}
+/* Funnel activation (mirrors backend FunnelStatsResponse) */
+interface FunnelStep { key: string; label: string; count: number; pctOfCohort: number; }
+interface FunnelStatsData { cohortSize: number; windowLabel: string; steps: FunnelStep[]; }
+/* 4 nhóm stats còn lại của getDashboard (mirrors backend DashboardDTO) */
+interface ChallengeStatsData {
+  totalChallenges?: number; activeChallenges?: number;
+  totalSubmissions?: number; completedSubmissions?: number;
+  pendingSubmissions?: number; failedSubmissions?: number;
+  averageScore?: number | null; averageConfidence?: number | null;
+}
+interface TrainingStatsData {
+  totalPlans?: number; activePlans?: number;
+  totalParticipants?: number; completedParticipants?: number;
+  averageCompletionRate?: number | null;
+}
+interface NutritionStatsData {
+  totalPlans?: number; activePlans?: number; totalParticipants?: number;
+  averageDailyCalories?: number | null; totalMealsCompleted?: number;
+}
+interface RewardStatsData {
+  totalRewards?: number; activeRewards?: number;
+  totalRedemptions?: number; pendingRedemptions?: number; fulfilledRedemptions?: number;
+}
 interface UserStatsData {
   totalUsers: number; activeUsers: number; inactiveUsers: number; bannedUsers: number;
   loggedInToday?: number; loggedInThisWeek?: number; loggedInThisMonth?: number;
@@ -78,6 +118,7 @@ const NAV: {
   {
     id: 'analytics', label: 'Phân tích', icon: TrendingUp, accent: 'text-emerald-400',
     children: [
+      { id: 'growth',       label: 'Tăng trưởng' },
       { id: 'userActivity', label: 'Hoạt động người dùng' },
       { id: 'feedback',     label: 'Phản hồi người dùng' },
     ],
@@ -148,6 +189,7 @@ const TAB_META: Record<string, { title: string; subtitle: string; icon: typeof B
   challengeSubmissions: { title: 'Bài nộp thử thách',     subtitle: 'Bài nộp của người dùng cho từng thử thách', icon: ClipboardList },
   userChallenges:       { title: 'Tham gia thử thách',    subtitle: 'Theo dõi người dùng tham gia thử thách',  icon: Trophy },
   leaderboard:          { title: 'Bảng xếp hạng',         subtitle: 'Xếp hạng người dùng theo điểm & streak', icon: BarChart3 },
+  growth:               { title: 'Tăng trưởng',          subtitle: 'Đăng ký theo ngày, so sánh kỳ trước', icon: TrendingUp },
   userActivity:         { title: 'Hoạt động người dùng', subtitle: 'Last login, DAU/WAU/MAU, AI calls per user', icon: TrendingUp },
   aiStats:              { title: 'Thống kê AI / Token',  subtitle: 'Lượt gọi Groq, ước tính token & log người dùng', icon: Bot },
   aiPackages:           { title: 'Gói AI & Thanh toán',  subtitle: 'Gói Free/Plus/Pro, mã khuyến mãi, gán gói cho user', icon: Banknote },
@@ -725,25 +767,6 @@ function StatCard({ title, subtitle, primary, details, colorIdx }: {
   );
 }
 
-function dashboardMetric(value: unknown) {
-  const data = (value && typeof value === 'object' && 'data' in (value as any)) ? (value as any).data : value;
-  if (!data || typeof data !== 'object') return { primary: '—', details: [] as string[] };
-  const entries = Object.entries(data as Record<string, unknown>).filter(([, v]) => typeof v === 'number' || typeof v === 'string');
-  const primary = entries.find(([, v]) => typeof v === 'number') || entries[0];
-  return {
-    primary: primary ? unwrapDisplay(primary[1]) : '—',
-    details: entries.filter(([k]) => k !== primary?.[0]).slice(0, 4).map(([k, v]) => `${labelize(k)}: ${unwrapDisplay(v)}`),
-  };
-}
-
-const DASH_COPY: Record<string, { title: string; subtitle: string }> = {
-  userStats:      { title: 'Users',      subtitle: 'Tăng trưởng tài khoản' },
-  challengeStats: { title: 'Challenges', subtitle: 'Hoạt động & submissions' },
-  trainingStats:  { title: 'Training',   subtitle: 'Kế hoạch & tiến độ' },
-  nutritionStats: { title: 'Nutrition',  subtitle: 'Meal plans & usage' },
-  rewardStats:    { title: 'Rewards',    subtitle: 'Phần thưởng & đổi thưởng' },
-};
-
 /* ─── Delete confirm modal ───────────────────────────────────────────────── */
 function DeleteConfirm({ label, onConfirm, onCancel }: {
   label: string; onConfirm: () => void; onCancel: () => void;
@@ -894,6 +917,15 @@ export default function AdminPanel() {
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackTypeFilter, setFeedbackTypeFilter] = useState('');
   const [userActivitySearch, setUserActivitySearch] = useState('');
+  // Filter "im lặng N+ ngày" (theo lastLoginAt); 0 = tất cả
+  const [userActivitySilentDays, setUserActivitySilentDays] = useState(0);
+  const [growth, setGrowth] = useState<GrowthStatsData|null>(null);
+  const [growthLoading, setGrowthLoading] = useState(false);
+  const [growthDays, setGrowthDays] = useState(30);
+  const [funnel, setFunnel] = useState<FunnelStatsData|null>(null);
+  const [funnelLoading, setFunnelLoading] = useState(false);
+  // 0 = toàn bộ user; 30/90 = cohort đăng ký trong N ngày gần nhất
+  const [funnelDays, setFunnelDays] = useState(0);
 
   const [aiUserSearch, setAiUserSearch] = useState('');
   const [aiUserResult, setAiUserResult] = useState<any|null>(null);
@@ -995,6 +1027,24 @@ export default function AdminPanel() {
   useEffect(() => {
     if (user?.role === 'ADMIN' || user?.role === 'EDITOR') void loadTab();
   }, [activeTab, user?.role]);
+
+  // Refetch báo cáo tăng trưởng khi đổi khoảng ngày (30/90)
+  useEffect(() => {
+    if (activeTab !== 'growth' || user?.role !== 'ADMIN') return;
+    setGrowthLoading(true);
+    apiClient.get(`/admin/dashboard/growth-stats?days=${growthDays}`)
+      .then(res => { if (res.success) setGrowth(res.data as GrowthStatsData); })
+      .finally(() => setGrowthLoading(false));
+  }, [growthDays]);
+
+  // Refetch funnel activation khi đổi cohort (toàn bộ / 30 / 90 ngày)
+  useEffect(() => {
+    if (activeTab !== 'growth' || user?.role !== 'ADMIN') return;
+    setFunnelLoading(true);
+    apiClient.get(`/admin/dashboard/funnel-stats?days=${funnelDays}`)
+      .then(res => { if (res.success) setFunnel(res.data as FunnelStatsData); })
+      .finally(() => setFunnelLoading(false));
+  }, [funnelDays]);
 
   // Tải danh sách thực phẩm cho dropdown chọn nguyên liệu (chỉ khi vào tab Món ăn)
   useEffect(() => {
@@ -1146,6 +1196,18 @@ export default function AdminPanel() {
         ]);
         if (pkgRes.success)   setAiPkgs(pkgRes.data   as any[] ?? []);
         if (promoRes.success) setAiPromos(promoRes.data as any[] ?? []);
+        setRows([]);
+      } else if (activeTab === 'growth') {
+        setGrowthLoading(true);
+        setFunnelLoading(true);
+        try {
+          const res = await apiClient.get(`/admin/dashboard/growth-stats?days=${growthDays}`);
+          if (res.success) setGrowth(res.data as GrowthStatsData);
+        } finally { setGrowthLoading(false); }
+        try {
+          const res = await apiClient.get(`/admin/dashboard/funnel-stats?days=${funnelDays}`);
+          if (res.success) setFunnel(res.data as FunnelStatsData);
+        } finally { setFunnelLoading(false); }
         setRows([]);
       } else if (activeTab === 'userActivity') {
         setUserActivityLoading(true);
@@ -1510,6 +1572,65 @@ export default function AdminPanel() {
                           <p className="text-xs text-slate-500 mt-0.5">{c.sub}</p>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Sản phẩm & nội dung: 4 nhóm stats từ challenge/training/nutrition/reward */}
+              {!loading && (() => {
+                const ch = dashboard.challengeStats as ChallengeStatsData | undefined;
+                const tr = dashboard.trainingStats  as TrainingStatsData  | undefined;
+                const nu = dashboard.nutritionStats as NutritionStatsData | undefined;
+                const rw = dashboard.rewardStats    as RewardStatsData    | undefined;
+                if (!ch && !tr && !nu && !rw) return null;
+                const n = (v?: number | null) => (v ?? 0).toLocaleString('vi-VN');
+                const cards: { title: string; subtitle: string; primary: string; details: string[]; colorIdx: number }[] = [];
+                if (ch) cards.push({
+                  title: 'Thử thách', subtitle: 'Tổng bài nộp', colorIdx: 2,
+                  primary: n(ch.totalSubmissions),
+                  details: [
+                    `Thử thách đang mở: ${n(ch.activeChallenges)}`,
+                    `Bài nộp hoàn thành: ${n(ch.completedSubmissions)}`,
+                    `Chờ duyệt: ${n(ch.pendingSubmissions)}`,
+                    ...(ch.averageScore != null ? [`Điểm AI trung bình: ${Number(ch.averageScore).toFixed(1)}`] : []),
+                  ],
+                });
+                if (tr) cards.push({
+                  title: 'Tập luyện', subtitle: 'Người tham gia kế hoạch', colorIdx: 1,
+                  primary: n(tr.totalParticipants),
+                  details: [
+                    `Tổng kế hoạch: ${n(tr.totalPlans)}`,
+                    `Đang hoạt động: ${n(tr.activePlans)}`,
+                    `Đã hoàn thành plan: ${n(tr.completedParticipants)}`,
+                    ...(tr.averageCompletionRate != null ? [`Tỷ lệ hoàn thành TB: ${Number(tr.averageCompletionRate).toFixed(1)}%`] : []),
+                  ],
+                });
+                if (nu) cards.push({
+                  title: 'Dinh dưỡng', subtitle: 'Người dùng kế hoạch ăn', colorIdx: 3,
+                  primary: n(nu.totalParticipants),
+                  details: [
+                    `Tổng kế hoạch: ${n(nu.totalPlans)}`,
+                    `Đang hoạt động: ${n(nu.activePlans)}`,
+                    `Bữa ăn đã hoàn thành: ${n(nu.totalMealsCompleted)}`,
+                    ...(nu.averageDailyCalories != null ? [`Calo TB/ngày: ${Math.round(Number(nu.averageDailyCalories)).toLocaleString('vi-VN')}`] : []),
+                  ],
+                });
+                if (rw) cards.push({
+                  title: 'Đổi thưởng', subtitle: 'Tổng lượt đổi thưởng', colorIdx: 4,
+                  primary: n(rw.totalRedemptions),
+                  details: [
+                    `Chờ xử lý: ${n(rw.pendingRedemptions)}`,
+                    `Đã trao thưởng: ${n(rw.fulfilledRedemptions)}`,
+                    `Phần thưởng đang mở: ${n(rw.activeRewards)}`,
+                    `Tổng phần thưởng: ${n(rw.totalRewards)}`,
+                  ],
+                });
+                return (
+                  <div>
+                    <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">Sản phẩm & nội dung</h2>
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      {cards.map(c => <StatCard key={c.title} {...c} />)}
                     </div>
                   </div>
                 );
@@ -2588,6 +2709,218 @@ export default function AdminPanel() {
           )}
 
           {/* ── Hoạt động người dùng ── */}
+          {/* ── Tăng trưởng đăng ký ── */}
+          {activeTab === 'growth' && (
+            <div className="space-y-6">
+              {growthLoading && !growth && (
+                <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-emerald-400" /></div>
+              )}
+              {growth && (() => {
+                const pct = (cur: number, prev: number) => {
+                  if (prev === 0) return cur > 0 ? { label: 'mới', cls: 'text-emerald-400' } : { label: '—', cls: 'text-slate-600' };
+                  const p = ((cur - prev) / prev) * 100;
+                  if (Math.abs(p) < 0.5) return { label: '≈ kỳ trước', cls: 'text-slate-500' };
+                  return p > 0
+                    ? { label: `↑ ${p.toFixed(0)}%`, cls: 'text-emerald-400' }
+                    : { label: `↓ ${Math.abs(p).toFixed(0)}%`, cls: 'text-rose-400' };
+                };
+                const cards = [
+                  { label: 'Đăng ký hôm nay', value: growth.today, change: pct(growth.today, growth.yesterday), sub: `hôm qua: ${growth.yesterday}` },
+                  { label: '7 ngày gần nhất', value: growth.last7Days, change: pct(growth.last7Days, growth.prev7Days), sub: `7 ngày trước đó: ${growth.prev7Days}` },
+                  { label: '30 ngày gần nhất', value: growth.last30Days, change: pct(growth.last30Days, growth.prev30Days), sub: `30 ngày trước đó: ${growth.prev30Days}` },
+                  { label: 'Tổng tài khoản', value: growth.totalUsers, change: null as null | { label: string; cls: string }, sub: 'từ khi ra mắt' },
+                ];
+                const daily = growth.daily ?? [];
+                const maxVal = Math.max(...daily.map(d => d.count), 1);
+                const rangeTotal = daily.reduce((s, d) => s + d.count, 0);
+                const labelEvery = Math.max(1, Math.ceil(daily.length / 8));
+                const fmtD = (iso: string) => iso.slice(5).replace('-', '/');
+                return (
+                  <>
+                    {/* Cards so sánh kỳ trước */}
+                    <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
+                      {cards.map(c => (
+                        <div key={c.label} className="rounded-2xl border border-white/5 bg-white/3 p-4">
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-2xl font-bold text-white">{c.value.toLocaleString('vi-VN')}</p>
+                            {c.change && <span className={`text-xs font-bold ${c.change.cls}`}>{c.change.label}</span>}
+                          </div>
+                          <p className="text-sm text-slate-300 mt-1 font-semibold">{c.label}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">{c.sub}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Biểu đồ đăng ký theo ngày */}
+                    <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
+                      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                          Đăng ký theo ngày — {rangeTotal.toLocaleString('vi-VN')} tài khoản / {daily.length} ngày
+                        </h2>
+                        <div className="flex gap-1.5">
+                          {[30, 90].map(n => (
+                            <button
+                              key={n}
+                              onClick={() => setGrowthDays(n)}
+                              className={`rounded-full px-3 py-1 text-xs font-semibold border transition ${
+                                growthDays === n
+                                  ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-300'
+                                  : 'border-white/10 bg-white/5 text-slate-400 hover:text-slate-200'
+                              }`}
+                            >
+                              {n} ngày
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {growthLoading ? (
+                        <div className="flex items-center justify-center h-40"><Loader2 className="h-6 w-6 animate-spin text-emerald-400" /></div>
+                      ) : (
+                        <>
+                          <div className="flex gap-px h-40">
+                            {daily.map((d, i) => {
+                              const hPct = maxVal > 0 ? Math.max((d.count / maxVal) * 100, d.count > 0 ? 4 : 1) : 1;
+                              const isToday = i === daily.length - 1;
+                              return (
+                                <div
+                                  key={d.date}
+                                  title={`${d.date}: ${d.count} đăng ký`}
+                                  className="flex-1 h-full flex flex-col justify-end min-w-0"
+                                >
+                                  <div
+                                    className={`w-full rounded-t-sm transition-all ${isToday ? 'bg-emerald-400' : d.count > 0 ? 'bg-emerald-600/60 hover:bg-emerald-400/80' : 'bg-white/5'}`}
+                                    style={{ height: `${hPct}%` }}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="flex justify-between mt-2 text-[10px] text-slate-600">
+                            {daily.filter((_, i) => i % labelEvery === 0 || i === daily.length - 1)
+                              .map((d, i, arr) => (
+                                <span key={d.date} className={i === arr.length - 1 ? 'text-emerald-400 font-bold' : ''}>{fmtD(d.date)}</span>
+                              ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Nguồn đăng ký trong khoảng biểu đồ */}
+                    <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
+                      <h2 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-500">
+                        Nguồn đăng ký ({daily.length} ngày gần nhất)
+                      </h2>
+                      {(growth.sources ?? []).length === 0 ? (
+                        <p className="text-slate-600 text-sm py-4 text-center">Chưa có đăng ký nào trong khoảng này</p>
+                      ) : (() => {
+                        const SOURCE_LABEL: Record<string, string> = {
+                          direct: 'Trực tiếp (gõ URL / bookmark)',
+                          referral: 'Giới thiệu (referral)',
+                          unknown: 'Không rõ (đăng ký trước khi có tracking)',
+                        };
+                        const srcTotal = growth.sources.reduce((s, x) => s + x.count, 0) || 1;
+                        return (
+                          <div className="space-y-3">
+                            {growth.sources.map(s => {
+                              const p = (s.count / srcTotal) * 100;
+                              const known = s.source !== 'unknown';
+                              return (
+                                <div key={s.source}>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className={`text-xs font-semibold ${known ? 'text-slate-200' : 'text-slate-500'}`}>
+                                      {SOURCE_LABEL[s.source] ?? s.source}
+                                    </span>
+                                    <span className="text-xs text-slate-400">{s.count.toLocaleString('vi-VN')} · {p.toFixed(0)}%</span>
+                                  </div>
+                                  <div className="h-1.5 w-full rounded-full bg-white/5">
+                                    <div
+                                      className={`h-1.5 rounded-full ${known ? 'bg-emerald-500/70' : 'bg-slate-600/60'}`}
+                                      style={{ width: `${Math.max(p, 1)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            <p className="text-[11px] text-slate-600 pt-1">
+                              Gắn <code className="text-slate-500">?utm_source=facebook&amp;utm_campaign=demo-video</code> vào link khi chạy marketing để tách nguồn tại đây.
+                            </p>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </>
+                );
+              })()}
+
+              {/* Funnel activation: đăng ký → hồ sơ → sinh plan → tập buổi đầu → paid */}
+              <div className="rounded-2xl border border-white/5 bg-white/3 p-5">
+                <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                    Funnel activation{funnel ? ` — ${funnel.windowLabel} (${funnel.cohortSize.toLocaleString('vi-VN')} user)` : ''}
+                  </h2>
+                  <div className="flex gap-1.5">
+                    {([[0, 'Toàn bộ'], [30, '30 ngày'], [90, '90 ngày']] as const).map(([n, label]) => (
+                      <button
+                        key={n}
+                        onClick={() => setFunnelDays(n)}
+                        className={`rounded-full px-3 py-1 text-xs font-semibold border transition ${
+                          funnelDays === n
+                            ? 'border-violet-400/40 bg-violet-400/10 text-violet-300'
+                            : 'border-white/10 bg-white/5 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {funnelLoading && !funnel ? (
+                  <div className="flex items-center justify-center h-32"><Loader2 className="h-6 w-6 animate-spin text-violet-400" /></div>
+                ) : !funnel || funnel.cohortSize === 0 ? (
+                  <p className="text-slate-600 text-sm py-4 text-center">Chưa có đăng ký nào trong khoảng này</p>
+                ) : (() => {
+                  const steps = funnel.steps;
+                  const maxCount = steps[0]?.count || 1;
+                  return (
+                    <div className="space-y-4">
+                      {steps.map((s, i) => {
+                        const prev = i > 0 ? steps[i - 1] : null;
+                        const dropFromPrev = prev && prev.count > 0 ? ((prev.count - s.count) / prev.count) * 100 : 0;
+                        const widthPct = Math.max((s.count / maxCount) * 100, s.count > 0 ? 3 : 0.5);
+                        return (
+                          <div key={s.key}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-semibold text-slate-200">{s.label}</span>
+                              <span className="text-xs text-slate-400">
+                                {s.count.toLocaleString('vi-VN')} · {s.pctOfCohort.toFixed(1)}%
+                                {prev && (
+                                  <span className="text-rose-400/80 ml-2">
+                                    −{dropFromPrev.toFixed(0)}% từ bước trước
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                            <div className="h-3 w-full rounded-full bg-white/5">
+                              <div
+                                className={`h-3 rounded-full transition-all ${s.count > 0 ? 'bg-gradient-to-r from-violet-500 to-violet-400' : 'bg-white/10'}`}
+                                style={{ width: `${widthPct}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {funnel.steps.find(s => s.key === 'paid')?.count === 0 && (
+                        <p className="text-[11px] text-slate-600 pt-1">
+                          Chưa có user trả phí trong cohort này — bình thường nếu chưa đẩy mạnh bán gói AI.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'userActivity' && (
             <div className="space-y-4">
               {userActivityLoading && (
@@ -2610,15 +2943,34 @@ export default function AdminPanel() {
                     ))}
                   </div>
 
-                  {/* Search */}
-                  <div className="flex gap-2 items-center">
+                  {/* Search + filter im lặng */}
+                  <div className="flex flex-wrap gap-2 items-center">
                     <Search className="h-4 w-4 text-slate-500 flex-shrink-0" />
                     <input
                       value={userActivitySearch}
                       onChange={e => setUserActivitySearch(e.target.value)}
                       placeholder="Tìm theo tên, email..."
-                      className="flex-1 bg-white/5 rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-white/20"
+                      className="flex-1 min-w-48 bg-white/5 rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-white/20"
                     />
+                    {([[0, 'Tất cả'], [7, 'Im lặng 7+ ngày'], [14, '14+ ngày'], [30, '30+ ngày']] as const).map(([days, label]) => {
+                      const count = days === 0
+                        ? userActivity.length
+                        : userActivity.filter(u => { const d = daysAgo(u.lastLoginAt); return d === null || d >= days; }).length;
+                      const active = userActivitySilentDays === days;
+                      return (
+                        <button
+                          key={days}
+                          onClick={() => setUserActivitySilentDays(days)}
+                          className={`rounded-full px-3 py-1.5 text-xs font-semibold border transition ${
+                            active
+                              ? 'border-rose-400/40 bg-rose-400/10 text-rose-300'
+                              : 'border-white/10 bg-white/5 text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          {label} <span className={active ? 'text-rose-200' : 'text-slate-500'}>({count})</span>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* Table */}
@@ -2627,7 +2979,7 @@ export default function AdminPanel() {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-white/5 text-left">
-                            {['Người dùng', 'Gói AI', 'Đăng nhập gần nhất', 'AI tháng này', 'Token tháng này', 'AI lần cuối', 'Tình trạng'].map(h => (
+                            {['Người dùng', 'Gói AI', 'Đăng nhập gần nhất', 'Tập gần nhất', 'Log ăn gần nhất', 'AI tháng này', 'Token tháng này', 'AI lần cuối', 'Tình trạng'].map(h => (
                               <th key={h} className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-500">{h}</th>
                             ))}
                           </tr>
@@ -2635,6 +2987,10 @@ export default function AdminPanel() {
                         <tbody className="divide-y divide-white/3">
                           {userActivity
                             .filter(u => {
+                              if (userActivitySilentDays > 0) {
+                                const d = daysAgo(u.lastLoginAt);
+                                if (d !== null && d < userActivitySilentDays) return false;
+                              }
                               if (!userActivitySearch) return true;
                               const q = userActivitySearch.toLowerCase();
                               return u.fullName?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
@@ -2661,6 +3017,23 @@ export default function AdminPanel() {
                                     <span className={`text-xs font-semibold ${loginColor}`}>{u.daysSinceLogin}</span>
                                     {u.lastLoginAt && <p className="text-[11px] text-slate-600">{u.lastLoginAt.substring(0,10)}</p>}
                                   </td>
+                                  {([u.lastWorkoutAt, u.lastMealLogAt] as const).map((date, i) => {
+                                    const d = daysAgo(date);
+                                    const color = d === null ? 'text-slate-600'
+                                      : d <= 3 ? 'text-emerald-400'
+                                      : d <= 7 ? 'text-amber-400'
+                                      : 'text-rose-400';
+                                    return (
+                                      <td key={i} className="px-4 py-2.5">
+                                        {d === null
+                                          ? <span className="text-xs text-slate-600">—</span>
+                                          : <>
+                                              <span className={`text-xs font-semibold ${color}`}>{d === 0 ? 'Hôm nay' : `${d} ngày trước`}</span>
+                                              <p className="text-[11px] text-slate-600">{date}</p>
+                                            </>}
+                                      </td>
+                                    );
+                                  })}
                                   <td className="px-4 py-2.5 text-slate-300 text-xs">{u.aiCallsThisMonth > 0 ? u.aiCallsThisMonth.toLocaleString() : <span className="text-slate-600">—</span>}</td>
                                   <td className="px-4 py-2.5 text-slate-300 text-xs">{u.aiTokensThisMonth > 0 ? u.aiTokensThisMonth.toLocaleString() : <span className="text-slate-600">—</span>}</td>
                                   <td className="px-4 py-2.5 text-xs text-slate-500">{u.lastAiCallAt ? u.lastAiCallAt.substring(0,10) : <span className="text-slate-600">—</span>}</td>

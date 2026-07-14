@@ -129,6 +129,8 @@ export interface UserActivityRow {
   aiPackageCode: string;
   lastLoginAt: string | null;
   lastAiCallAt: string | null;
+  lastWorkoutAt: string | null;   // yyyy-MM-dd
+  lastMealLogAt: string | null;   // yyyy-MM-dd
   aiCallsThisMonth: number;
   aiTokensThisMonth: number;
   aiCallsAllTime: number;

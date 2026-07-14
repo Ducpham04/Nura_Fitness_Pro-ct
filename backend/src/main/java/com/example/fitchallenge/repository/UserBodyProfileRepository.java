@@ -16,6 +16,10 @@ public interface UserBodyProfileRepository extends JpaRepository<UserBodyProfile
     // Dashboard: tính trung bình recommended calories — tránh findAll()
     @Query("SELECT AVG(p.recommendedCalories) FROM UserBodyProfile p WHERE p.recommendedCalories > 0")
     BigDecimal avgRecommendedCalories();
+
+    /** Toàn bộ userId đã tạo hồ sơ thể chất — cho báo cáo funnel activation */
+    @Query("SELECT DISTINCT p.user.id FROM UserBodyProfile p")
+    java.util.List<Long> findAllUserIdsWithProfile();
 }
 
 

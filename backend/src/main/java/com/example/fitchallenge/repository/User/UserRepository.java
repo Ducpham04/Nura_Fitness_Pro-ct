@@ -60,6 +60,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u ORDER BY u.createdAt DESC")
     List<User> findRecentRegistrations(org.springframework.data.domain.Pageable pageable);
 
+    /** [createdAt, signupSource, referredById] toàn bộ user — báo cáo tăng trưởng + nguồn đăng ký */
+    @Query("SELECT u.createdAt, u.signupSource, r.id FROM User u LEFT JOIN u.referredBy r WHERE u.createdAt IS NOT NULL")
+    List<Object[]> findSignupAttribution();
+
+    /** [userId, createdAt] toàn bộ user — cho báo cáo funnel activation (lọc cohort theo ngày đăng ký) */
+    @Query("SELECT u.id, u.createdAt FROM User u WHERE u.createdAt IS NOT NULL")
+    List<Object[]> findAllIdsAndCreatedAt();
+
+    /** Toàn bộ userId đang có gói trả phí hiện tại (không tính lịch sử đã hết hạn) */
+    @Query("SELECT u.id FROM User u WHERE u.aiPackage IS NOT NULL AND u.aiPackage.code <> 'FREE'")
+    List<Long> findAllPaidUserIds();
+
     /** Top N user đăng nhập gần nhất */
     @Query("SELECT u FROM User u WHERE u.lastLoginAt IS NOT NULL ORDER BY u.lastLoginAt DESC")
     List<User> findRecentLogins(org.springframework.data.domain.Pageable pageable);

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Zap, X, Dumbbell, Timer, Activity, CalendarDays, Target, Check } from 'lucide-react';
+import { Zap, X, Dumbbell, Timer, Activity, CalendarDays, Target, Check, ChevronDown } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { trainingService } from '../services/trainingService';
 import { trackEvent } from '../analytics';
@@ -57,6 +57,10 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
   const [preferSplit, setPreferSplit] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // Mặc định gọn: chỉ hiện Mục tiêu + Số buổi/tuần + Thiết bị. Phần còn lại
+  // (chương trình, thời lượng, vùng cơ ưu tiên, cường độ...) đã có default hợp lý,
+  // ẩn sau "Tuỳ chỉnh thêm" để giảm số quyết định cho lần tạo plan đầu tiên.
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const toggleFocus = (label: string) =>
     setFocusLabels(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]);
@@ -149,56 +153,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
           ) : (
             <>
               <div className="space-y-6">
-                <div className="grid gap-6">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 block">
-                      Chương trình
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {programOptions.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => setProgram(option)}
-                          className={`min-h-[72px] rounded-2xl border px-3 py-3 text-left transition-all ${
-                            program.value === option.value
-                              ? 'border-lime/50 bg-teal-50 text-teal-600 shadow-lg shadow-lime/5'
-                              : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                          }`}
-                        >
-                          <span className="block font-grotesk text-base font-bold leading-tight">{option.label}</span>
-                          <span className={`mt-1 block text-[11px] font-medium ${program.value === option.value ? 'text-teal-600' : 'text-slate-500'}`}>
-                            {option.hint}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 block">
-                      Thời lượng / buổi (phút)
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {durationOptions.map((minutes) => (
-                        <button
-                          key={minutes}
-                          type="button"
-                          onClick={() => setDuration(minutes)}
-                          className={`py-3 rounded-xl font-bold font-grotesk text-xs uppercase tracking-widest transition-all ${
-                            duration === minutes ? 'bg-teal-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-50'
-                          }`}
-                        >
-                          <span className="inline-flex items-center justify-center gap-2">
-                            <Timer className="w-4 h-4" />
-                            {minutes}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
+                {/* Mục tiêu tập luyện */}
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 block">
                     Mục tiêu tập luyện
@@ -247,71 +202,7 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                   <p className="text-[10px] text-slate-400 mt-2">Hệ thống tự chọn cách chia phù hợp trình độ & số ngày của bạn.</p>
                 </div>
 
-                {/* Vùng cơ ưu tiên */}
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5">
-                    <Target className="w-3.5 h-3.5" /> Vùng cơ ưu tiên <span className="text-slate-400 normal-case tracking-normal">(tùy chọn)</span>
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {focusOptions.map((opt) => {
-                      const on = focusLabels.includes(opt.label);
-                      return (
-                        <button
-                          key={opt.label}
-                          type="button"
-                          onClick={() => toggleFocus(opt.label)}
-                          className={`py-2.5 rounded-xl font-grotesk text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 ${
-                            on ? 'bg-teal-50 border-teal-300 text-teal-600' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
-                          }`}
-                        >
-                          {on && <Check className="w-3 h-3" />}{opt.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-[10px] text-slate-400 mt-2">Ưu tiên thêm khối lượng cho vùng đã chọn — vẫn giữ cân bằng cơ.</p>
-                </div>
-
-                {/* Toggle: mỗi ngày một vùng */}
-                <button
-                  type="button"
-                  onClick={() => setPreferSplit(s => !s)}
-                  className={`w-full flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-all ${
-                    preferSplit ? 'border-teal-300 bg-teal-50' : 'border-slate-200 bg-slate-50'
-                  }`}
-                >
-                  <div className="text-left">
-                    <p className="text-sm font-semibold text-slate-900">Chia "mỗi ngày một vùng"</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Kiểu Đẩy/Kéo/Chân — cần trung cấp+ & ≥5 buổi (nếu không hệ thống sẽ tự chỉnh).</p>
-                  </div>
-                  <span className={`shrink-0 w-10 h-6 rounded-full transition-colors relative ${preferSplit ? 'bg-teal-600' : 'bg-slate-200'}`}>
-                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${preferSplit ? 'left-[18px]' : 'left-0.5'}`} />
-                  </span>
-                </button>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 block">
-                    Cường độ
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { value: 'low',      label: 'Nhẹ' },
-                      { value: 'moderate', label: 'Vừa' },
-                      { value: 'high',     label: 'Cao' },
-                    ].map(({ value: level, label: levelLabel }) => (
-                      <button
-                        key={level}
-                        onClick={() => setIntensity(level)}
-                        className={`py-3 rounded-xl font-bold font-grotesk text-xs uppercase tracking-widest transition-all ${
-                          intensity === level ? 'bg-teal-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-                        }`}
-                      >
-                        {levelLabel}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
+                {/* Thiết bị tập */}
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 block">
                     Thiết bị tập
@@ -340,6 +231,133 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
                     placeholder="tạ tay, tạ đòn, tự trọng lượng..."
                   />
                 </div>
+
+                {/* Toggle Tuỳ chỉnh thêm — ẩn bớt quyết định phụ cho lần tạo plan đầu tiên */}
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(v => !v)}
+                  className="w-full flex items-center justify-between gap-2 rounded-xl px-1 py-2 text-slate-500 hover:text-slate-700 transition-colors"
+                >
+                  <span className="text-xs font-bold uppercase tracking-widest">Tuỳ chỉnh thêm</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showAdvanced && (
+                  <div className="space-y-6 pt-1 border-t border-slate-100">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 block mt-6">
+                        Chương trình
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {programOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setProgram(option)}
+                            className={`min-h-[72px] rounded-2xl border px-3 py-3 text-left transition-all ${
+                              program.value === option.value
+                                ? 'border-lime/50 bg-teal-50 text-teal-600 shadow-lg shadow-lime/5'
+                                : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className="block font-grotesk text-base font-bold leading-tight">{option.label}</span>
+                            <span className={`mt-1 block text-[11px] font-medium ${program.value === option.value ? 'text-teal-600' : 'text-slate-500'}`}>
+                              {option.hint}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 block">
+                        Thời lượng / buổi (phút)
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {durationOptions.map((minutes) => (
+                          <button
+                            key={minutes}
+                            type="button"
+                            onClick={() => setDuration(minutes)}
+                            className={`py-3 rounded-xl font-bold font-grotesk text-xs uppercase tracking-widest transition-all ${
+                              duration === minutes ? 'bg-teal-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className="inline-flex items-center justify-center gap-2">
+                              <Timer className="w-4 h-4" />
+                              {minutes}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Vùng cơ ưu tiên */}
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5">
+                        <Target className="w-3.5 h-3.5" /> Vùng cơ ưu tiên <span className="text-slate-400 normal-case tracking-normal">(tùy chọn)</span>
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {focusOptions.map((opt) => {
+                          const on = focusLabels.includes(opt.label);
+                          return (
+                            <button
+                              key={opt.label}
+                              type="button"
+                              onClick={() => toggleFocus(opt.label)}
+                              className={`py-2.5 rounded-xl font-grotesk text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 ${
+                                on ? 'bg-teal-50 border-teal-300 text-teal-600' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+                              }`}
+                            >
+                              {on && <Check className="w-3 h-3" />}{opt.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-2">Ưu tiên thêm khối lượng cho vùng đã chọn — vẫn giữ cân bằng cơ.</p>
+                    </div>
+
+                    {/* Toggle: mỗi ngày một vùng */}
+                    <button
+                      type="button"
+                      onClick={() => setPreferSplit(s => !s)}
+                      className={`w-full flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-all ${
+                        preferSplit ? 'border-teal-300 bg-teal-50' : 'border-slate-200 bg-slate-50'
+                      }`}
+                    >
+                      <div className="text-left">
+                        <p className="text-sm font-semibold text-slate-900">Chia "mỗi ngày một vùng"</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Kiểu Đẩy/Kéo/Chân — cần trung cấp+ & ≥5 buổi (nếu không hệ thống sẽ tự chỉnh).</p>
+                      </div>
+                      <span className={`shrink-0 w-10 h-6 rounded-full transition-colors relative ${preferSplit ? 'bg-teal-600' : 'bg-slate-200'}`}>
+                        <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${preferSplit ? 'left-[18px]' : 'left-0.5'}`} />
+                      </span>
+                    </button>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-3 block">
+                        Cường độ
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { value: 'low',      label: 'Nhẹ' },
+                          { value: 'moderate', label: 'Vừa' },
+                          { value: 'high',     label: 'Cao' },
+                        ].map(({ value: level, label: levelLabel }) => (
+                          <button
+                            key={level}
+                            onClick={() => setIntensity(level)}
+                            className={`py-3 rounded-xl font-bold font-grotesk text-xs uppercase tracking-widest transition-all ${
+                              intensity === level ? 'bg-teal-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                            }`}
+                          >
+                            {levelLabel}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {error && (
                   <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-500 text-xs font-medium flex items-center gap-3">

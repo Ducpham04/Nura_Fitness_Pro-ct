@@ -48,6 +48,18 @@ public interface DashboardService {
      * Bảng hoạt động người dùng: last login, AI calls, token tháng này
      */
     List<DashboardDTO.UserActivityRow> getUserActivity();
+
+    /**
+     * Báo cáo tăng trưởng đăng ký: đăng ký theo ngày + so sánh kỳ trước
+     * @param days số ngày của biểu đồ (30/90), clamp 7-365
+     */
+    DashboardDTO.GrowthStatsResponse getGrowthStats(int days);
+
+    /**
+     * Funnel activation: đăng ký → hồ sơ → sinh plan → tập buổi đầu → paid
+     * @param days cohort đăng ký trong N ngày gần nhất; 0 hoặc âm = toàn bộ user
+     */
+    DashboardDTO.FunnelStatsResponse getFunnelStats(int days);
 }
 
 

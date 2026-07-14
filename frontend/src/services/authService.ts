@@ -1,6 +1,7 @@
 // Authentication Service - Java Backend
 import { apiClient } from './apiClient';
 import { API_ENDPOINTS } from '../config/api';
+import { getAttribution, clearAttribution } from '../utils/attribution';
 import type { 
   LoginRequest, 
   RegisterRequest, 
@@ -49,14 +50,17 @@ class AuthService {
 
   // Register
   async register(data: RegisterRequest): Promise<boolean> {
+    // Gắn nguồn đăng ký (utm/referrer đã capture ở main.tsx, fallback 'direct')
+    const payload: RegisterRequest = { ...getAttribution(), ...data };
     const response = await apiClient.post<BEAuthResponse>(
       API_ENDPOINTS.AUTH.REGISTER,
-      data
+      payload
     );
 
     if (response.success && response.data) {
       const feData = this.mapBEToFE(response.data);
       this.saveAuthData(feData);
+      clearAttribution();
       return true;
     }
     // Ném kèm message từ backend (vd "Email này đã được đăng ký!") để UI hiển thị

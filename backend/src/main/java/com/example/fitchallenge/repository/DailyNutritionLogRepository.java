@@ -12,4 +12,11 @@ import java.util.List;
 public interface DailyNutritionLogRepository extends JpaRepository<DailyNutritionLog, Long> {
     List<DailyNutritionLog> findByUserAndTrackingDate(User user, LocalDate trackingDate);
     List<DailyNutritionLog> findByUser_IdAndTrackingDateBetween(Long userId, LocalDate startDate, LocalDate endDate);
+
+    /**
+     * Ngày log bữa ăn gần nhất theo từng user (batch, tránh N+1): [userId, maxTrackingDate]
+     */
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT l.user.id, MAX(l.trackingDate) FROM DailyNutritionLog l GROUP BY l.user.id")
+    List<Object[]> lastLogDateByUser();
 }

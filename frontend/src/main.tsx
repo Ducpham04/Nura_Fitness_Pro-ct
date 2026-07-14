@@ -6,11 +6,13 @@ import ErrorBoundary from './components/ErrorBoundary.tsx';
 import { ThemeProvider } from './context/ThemeContext.tsx';
 import { initSentry } from './sentry';
 import { initAnalytics } from './analytics';
+import { captureAttribution } from './utils/attribution';
 import './i18n';
 import './index.css';
 
 initSentry(); // no-op nếu chưa cấu hình VITE_SENTRY_DSN
 initAnalytics(); // no-op nếu chưa cấu hình VITE_PLAUSIBLE_DOMAIN
+captureAttribution(); // lưu utm/referrer first-touch — trước khi router strip query
 
 // Đăng nhập Google: gác sau env. Trống → không bọc provider (zero cost), nút Google tự ẩn.
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;

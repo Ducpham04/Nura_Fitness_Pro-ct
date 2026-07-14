@@ -115,6 +115,13 @@ public class User {
     @Column(name = "referral_count")
     private Integer referralCount = 0;
 
+    // ── Attribution: nguồn đăng ký (utm_source / referrer host / 'direct') ──
+    @Column(name = "signup_source", length = 60)
+    private String signupSource;
+
+    @Column(name = "signup_campaign", length = 80)
+    private String signupCampaign;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<UserBodyProfile> userBodyProfiles;
 
