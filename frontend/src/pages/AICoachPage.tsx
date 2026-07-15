@@ -311,7 +311,7 @@ export default function AICoachPage() {
           </div>
 
           {/* Mục tiêu kế tiếp — buổi tập thật hôm nay */}
-          <div className="rounded-[18px] border border-teal-100 bg-[linear-gradient(135deg,#f0fdfa,#ffffff_62%,#fff7ed)] p-6 flex-1">
+          <div className="rounded-[18px] border border-teal-100 bg-[linear-gradient(135deg,#f0fdfa,#ffffff_62%,#fff7ed)] p-6 flex-1 dark:border-teal-400/20 dark:bg-[linear-gradient(135deg,#0f2a28,#111827_62%,#1f1a12)]">
             <h3 className="font-grotesk font-bold text-slate-950 text-base mb-3 flex items-center gap-2.5">
               <Sparkles className="w-4 h-4 text-blue-600" /> Việc cần làm
             </h3>

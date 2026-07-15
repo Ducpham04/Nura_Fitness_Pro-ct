@@ -171,6 +171,15 @@ export default function HomePage() {
   const weeklyGoals = data?.weeklyGoals ?? [];
   const hasTrendData = weeklyTrend.some(p => p.calories > 0);
   const trendMax = Math.max(...weeklyTrend.map(p => p.calories), 1);
+  // ── Toạ độ biểu đồ area mượt cho "Xu hướng tuần" (calo đốt) ──
+  const TREND_W = 320, TREND_H = 120, TREND_PAD = 10;
+  const trendN = weeklyTrend.length;
+  const trendX = (i: number) => trendN <= 1 ? TREND_W / 2 : TREND_PAD + (i * (TREND_W - 2 * TREND_PAD)) / (trendN - 1);
+  const trendY = (v: number) => TREND_H - TREND_PAD - (v / trendMax) * (TREND_H - 2 * TREND_PAD);
+  const trendLinePath = weeklyTrend.map((p, i) => `${i ? 'L' : 'M'}${trendX(i).toFixed(1)},${trendY(p.calories).toFixed(1)}`).join(' ');
+  const trendAreaPath = trendN > 0
+    ? `${trendLinePath} L${trendX(trendN - 1).toFixed(1)},${TREND_H} L${trendX(0).toFixed(1)},${TREND_H} Z`
+    : '';
 
   // Có hoạt động nào chưa? → quyết định lời chào hero (tránh khen khi user chưa làm gì)
   const hasAnyActivity = (stats.workoutsThisWeek || 0) > 0 || (stats.completedWorkoutsToday || 0) > 0
@@ -413,22 +422,75 @@ export default function HomePage() {
           <Link to="/dashboard/diet" className="pb-3.5 hover:text-teal-700">Dinh dưỡng</Link>
         </div>
 
-        <div className="mt-4 grid grid-cols-4 gap-2.5">
-          {[
-            { title: 'Buổi tập', value: `${stats.workoutsThisWeek}/${stats.workoutsWeeklyGoal || 6}`, note: `${weeklyWorkoutPct}% mục tiêu`, icon: Dumbbell, tone: 'text-teal-600', bg: 'bg-teal-50' },
-            { title: 'Protein', value: `${proteinPct}%`, note: proteinPct >= 100 ? 'Đạt mục tiêu' : 'Thấp hơn mục tiêu', icon: Beef, tone: 'text-orange-500', bg: 'bg-orange-50' },
-            { title: 'Kcal đốt', value: (stats.caloriesBurned || 0).toLocaleString('vi-VN'), note: 'Kcal', icon: Flame, tone: 'text-teal-600', bg: 'bg-teal-50' },
-            { title: 'Kcal nạp', value: (stats.caloriesConsumed || 0).toLocaleString('vi-VN'), note: 'Kcal', icon: Apple, tone: 'text-teal-600', bg: 'bg-teal-50' },
-          ].map(({ title, value, note, icon: Icon, tone, bg }) => (
-            <div key={title} className="min-w-0 rounded-[16px] bg-white p-3 shadow-[0_12px_26px_rgba(15,23,42,0.07)]">
-              <div className={`grid h-10 w-10 place-items-center rounded-[13px] ${bg} ${tone}`}>
-                <Icon className="h-[18px] w-[18px]" />
+        {/* ── Khối "Hôm nay" tổng hợp: calo nạp/đốt + macro + tuần này ──
+            Gộp các thẻ thông số rời rạc vào MỘT thẻ để dễ theo dõi. */}
+        <div className="mt-4 rounded-[20px] bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
+          <div className="flex items-center justify-between">
+            <h3 className="font-grotesk text-lg font-black text-slate-950">Hôm nay</h3>
+            <span className="text-[11px] font-semibold capitalize text-slate-400">
+              {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' })}
+            </span>
+          </div>
+
+          {/* Kcal nạp (so mục tiêu) + Kcal đốt */}
+          <div className="mt-3 grid grid-cols-2 gap-2.5">
+            <div className="rounded-2xl bg-teal-50 p-3">
+              <div className="flex items-center gap-1.5 text-teal-700">
+                <Apple className="h-4 w-4" /><span className="text-[11px] font-bold uppercase tracking-wide">Kcal nạp</span>
               </div>
-              <p className="mt-3 truncate text-[12px] font-semibold text-slate-700">{title}</p>
-              <p className={`mt-1 font-grotesk text-[22px] font-black leading-none tracking-[-0.03em] ${tone}`}>{value}</p>
-              <p className="mt-1 text-[10px] font-medium leading-3 text-slate-500">{note}</p>
+              <p className="mt-1.5 font-grotesk text-2xl font-black leading-none text-slate-950">
+                {Math.round(Number(stats.caloriesConsumed) || 0).toLocaleString('vi-VN')}
+                <span className="text-sm font-bold text-slate-400">/{Math.round(Number(stats.caloriesGoal) || 0).toLocaleString('vi-VN')}</span>
+              </p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-teal-100">
+                <div className="h-full rounded-full bg-teal-500 transition-all duration-500" style={{ width: `${Math.min(100, calorieIntakePct)}%` }} />
+              </div>
             </div>
-          ))}
+            <div className="rounded-2xl bg-orange-50 p-3">
+              <div className="flex items-center gap-1.5 text-orange-600">
+                <Flame className="h-4 w-4" /><span className="text-[11px] font-bold uppercase tracking-wide">Kcal đốt</span>
+              </div>
+              <p className="mt-1.5 font-grotesk text-2xl font-black leading-none text-slate-950">
+                {(stats.caloriesBurned || 0).toLocaleString('vi-VN')}
+              </p>
+              <p className="mt-2.5 text-[11px] font-medium text-slate-500">Calo tiêu hao hôm nay</p>
+            </div>
+          </div>
+
+          {/* Macro nạp so mục tiêu */}
+          <div className="mt-4 space-y-2.5">
+            {[
+              { label: 'Đạm', cur: stats.proteinConsumed, goal: stats.proteinGoal, pctv: proteinPct, color: 'bg-rose-500' },
+              { label: 'Tinh bột', cur: stats.carbsConsumed, goal: stats.carbsGoal, pctv: carbsPct, color: 'bg-amber-500' },
+              { label: 'Béo', cur: stats.fatConsumed, goal: stats.fatGoal, pctv: fatPct, color: 'bg-blue-500' },
+            ].map((m) => (
+              <div key={m.label} className="grid grid-cols-[62px_1fr_66px] items-center gap-2 text-[11px]">
+                <span className="font-semibold text-slate-600">{m.label}</span>
+                <span className="h-2 overflow-hidden rounded-full bg-slate-200">
+                  <span className={`block h-full rounded-full ${m.color} transition-all duration-500`} style={{ width: `${Math.min(100, m.pctv)}%` }} />
+                </span>
+                <span className="text-right font-bold text-slate-700">{Math.round(Number(m.cur) || 0)}/{Math.round(Number(m.goal) || 0)}g</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Tuần này: buổi tập + bữa đã ghi */}
+          <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3.5">
+            <div className="flex items-center gap-2.5">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-600"><Dumbbell className="h-[18px] w-[18px]" /></div>
+              <div className="min-w-0">
+                <p className="truncate text-[11px] font-semibold text-slate-500">Buổi tập / tuần</p>
+                <p className="font-grotesk text-lg font-black leading-tight text-slate-950">{stats.workoutsThisWeek}<span className="text-sm text-slate-400">/{stats.workoutsWeeklyGoal || 5}</span></p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-orange-50 text-orange-500"><Apple className="h-[18px] w-[18px]" /></div>
+              <div className="min-w-0">
+                <p className="truncate text-[11px] font-semibold text-slate-500">Bữa đã ghi / tuần</p>
+                <p className="font-grotesk text-lg font-black leading-tight text-slate-950">{mealsLogged?.total ?? 0}<span className="text-sm text-slate-400">/{mealsLogged?.goal ?? 21}</span></p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="mt-4 flex items-center gap-3 rounded-[18px] border border-orange-200 bg-orange-50 px-3.5 py-3.5">
@@ -450,23 +512,54 @@ export default function HomePage() {
             <span className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600">Calo đốt</span>
           </div>
           {hasTrendData ? (
-            <div className="flex h-[150px] items-end justify-between gap-2 px-1">
-              {weeklyTrend.map((p, i) => {
-                const h = Math.round((p.calories / trendMax) * 100);
-                const isToday = i === weeklyTrend.length - 1;
-                return (
-                  <div key={p.date} className="flex flex-1 flex-col items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-slate-500">{p.calories > 0 ? p.calories.toLocaleString('vi-VN') : ''}</span>
-                    <div className="flex w-full flex-1 items-end">
-                      <div
-                        className={`w-full rounded-t-lg ${isToday ? 'bg-teal-500' : 'bg-teal-200'}`}
-                        style={{ height: `${Math.max(4, h)}%` }}
-                      />
+            <div>
+              <style>{`@keyframes vwTrendDraw{to{stroke-dashoffset:0}}@keyframes vwTrendFade{from{opacity:0}to{opacity:1}}`}</style>
+              <svg viewBox={`0 0 ${TREND_W} ${TREND_H}`} className="h-[140px] w-full" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="vwTrendFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.30" />
+                    <stop offset="100%" stopColor="#14b8a6" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+                <path d={trendAreaPath} fill="url(#vwTrendFill)" style={{ animation: 'vwTrendFade 0.9s ease forwards' }} />
+                <path
+                  d={trendLinePath}
+                  fill="none"
+                  stroke="#0d9488"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
+                  style={{ strokeDasharray: 1200, strokeDashoffset: 1200, animation: 'vwTrendDraw 1.1s ease forwards' }}
+                />
+                {weeklyTrend.map((p, i) => {
+                  const isToday = i === trendN - 1;
+                  return (
+                    <circle
+                      key={p.date}
+                      cx={trendX(i)}
+                      cy={trendY(p.calories)}
+                      r={isToday ? 4 : 2.5}
+                      fill={isToday ? '#0d9488' : '#5eead4'}
+                      stroke="#fff"
+                      strokeWidth="1.5"
+                      vectorEffect="non-scaling-stroke"
+                      style={{ animation: 'vwTrendFade 0.6s ease forwards', animationDelay: `${0.5 + i * 0.06}s`, opacity: 0 }}
+                    />
+                  );
+                })}
+              </svg>
+              <div className="mt-1.5 flex justify-between px-0.5">
+                {weeklyTrend.map((p, i) => {
+                  const isToday = i === trendN - 1;
+                  return (
+                    <div key={p.date} className="flex flex-1 flex-col items-center gap-0.5">
+                      <span className="text-[10px] font-bold text-slate-500">{p.calories > 0 ? p.calories.toLocaleString('vi-VN') : '·'}</span>
+                      <span className={`text-[11px] ${isToday ? 'font-bold text-teal-700' : 'text-slate-500'}`}>{p.label}</span>
                     </div>
-                    <span className={`text-[11px] ${isToday ? 'font-bold text-teal-700' : 'text-slate-500'}`}>{p.label}</span>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
@@ -556,12 +649,12 @@ export default function HomePage() {
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
               <span className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2 py-1 text-rose-600"><Beef className="h-3 w-3" /> Đạm {bodyMetrics.protG}g</span>
               <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-amber-600"><Wheat className="h-3 w-3" /> Tinh bột {bodyMetrics.carbG}g</span>
-              <span className="inline-flex items-center gap-1 rounded-lg bg-yellow-50 px-2 py-1 text-yellow-700"><Droplets className="h-3 w-3" /> Béo {bodyMetrics.fatG}g</span>
+              <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1 text-blue-600"><Droplets className="h-3 w-3" /> Béo {bodyMetrics.fatG}g</span>
               <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-slate-600"><Scale className="h-3 w-3" /> Mỡ ~{bodyMetrics.bodyFat}%</span>
             </div>
 
             {/* Định hướng thời gian */}
-            <div className="mt-3 flex items-start gap-2.5 rounded-2xl border border-teal-100 bg-[linear-gradient(135deg,#f0fdfa,#ffffff_70%)] p-3">
+            <div className="mt-3 flex items-start gap-2.5 rounded-2xl border border-teal-100 bg-[linear-gradient(135deg,#f0fdfa,#ffffff_70%)] p-3 dark:border-teal-400/20 dark:bg-[linear-gradient(135deg,#0f2a28,#111827_70%)]">
               <Target className="mt-0.5 h-4 w-4 shrink-0 text-teal-700" />
               <div>
                 <p className="text-[11px] font-bold text-teal-700">{bodyMetrics.dirLabel}</p>
@@ -570,51 +663,6 @@ export default function HomePage() {
             </div>
           </div>
         )}
-
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-[20px] bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
-            <h3 className="font-grotesk text-base font-black text-slate-950">Dinh dưỡng tuần này</h3>
-            {[
-              ['Protein', proteinPct, 'bg-orange-500'],
-              ['Carb', carbsPct, 'bg-teal-400'],
-              ['Chất béo', fatPct, 'bg-teal-400'],
-            ].map(([label, value, color]) => (
-              <div key={label as string} className="mt-3 grid grid-cols-[52px_1fr_34px] items-center gap-2 text-[11px]">
-                <span className="truncate text-slate-600">{label}</span>
-                <span className="h-1.5 overflow-hidden rounded-full bg-slate-200">
-                  <span className={`block h-full rounded-full ${color}`} style={{ width: `${Math.min(100, Number(value))}%` }} />
-                </span>
-                <span className={`text-right font-bold ${Number(value) < 90 ? 'text-orange-500' : 'text-teal-600'}`}>{value}%</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="rounded-[20px] bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-grotesk text-base font-black text-slate-950">Bữa ăn đã ghi</h3>
-                <p className="mt-2 font-grotesk text-2xl font-black text-teal-700">{mealsLogged?.total ?? 0}<span className="text-slate-400">/{mealsLogged?.goal ?? 21}</span></p>
-              </div>
-              <span className="text-xs font-bold text-teal-600">{pct(mealsLogged?.total ?? 0, mealsLogged?.goal ?? 21)}%</span>
-            </div>
-            <div className="mt-4 grid grid-cols-4 gap-1.5 text-center text-[10px] font-semibold text-slate-700">
-              {(mealsLogged?.byType ?? [
-                { type: 'Sáng', done: 0, goal: 7 },
-                { type: 'Trưa', done: 0, goal: 7 },
-                { type: 'Tối', done: 0, goal: 7 },
-                { type: 'Bữa phụ', done: 0, goal: 7 },
-              ]).map(({ type, done, goal }) => (
-                <div key={type}>
-                  <div className="mx-auto mb-1.5 grid h-9 w-9 place-items-center rounded-xl bg-teal-50 text-teal-600">
-                    <Apple className="h-4 w-4" />
-                  </div>
-                  <p className="truncate">{type}</p>
-                  <p className="mt-0.5 text-sm font-black text-slate-950">{done}/{goal}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-[20px] bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
@@ -652,7 +700,7 @@ export default function HomePage() {
                   const color = a.icon === 'flame' ? 'bg-orange-50 text-orange-500'
                     : a.icon === 'meal' ? 'bg-green-50 text-green-600'
                     : a.icon === 'check' ? 'bg-teal-50 text-teal-600'
-                    : 'bg-emerald-50 text-emerald-600';
+                    : 'bg-amber-50 text-amber-600';
                   return (
                     <div key={a.title} className="rounded-xl bg-slate-50 p-2">
                       <div className={`mx-auto grid h-9 w-9 place-items-center rounded-xl ${color}`}>

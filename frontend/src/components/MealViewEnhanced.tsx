@@ -1,4 +1,4 @@
-import { useState, useEffect, memo, useCallback, type ComponentType } from 'react';
+import { useState, useEffect, useRef, memo, useCallback, type ComponentType } from 'react';
 import {
   Brain, Loader2, Camera, Utensils, ShoppingCart, X,
   Check, Flame, Wallet, ChevronLeft, ChevronRight,
@@ -32,6 +32,56 @@ const resolveMealImg = (url?: string): string | undefined => {
   const clean = url.startsWith('/') ? url.slice(1) : url;
   return `${API_CONFIG.BASE_URL}/${clean}`;
 };
+/**
+ * Map một PersonalizedMealDetail (từ API day-plan hoặc swap-dish) → Meal cho UI.
+ * Tách riêng để tái dùng khi đổi món (cập nhật tại chỗ, không refetch cả tuần).
+ */
+const mapMealDetailToMeal = (m: any, type: string): Meal => {
+  let ingredients: MealIngredient[] = [];
+  try {
+    if (Array.isArray(m.mealItems) && m.mealItems.length > 0) {
+      ingredients = m.mealItems.map((mi: any): MealIngredient => ({
+        id: mi.pmiId ?? mi.foodId ?? Math.random(),
+        foodId: mi.foodId,
+        name: mi.foodName ?? 'Nguyên liệu',
+        quantity: Number(mi.quantityGrams ?? 0),
+        unit: 'g',
+        calories: Math.round(mi.lineCalories ?? 0),
+        protein: Math.round((mi.lineProtein ?? 0) * 10) / 10,
+        carbs: Math.round((mi.lineCarbs ?? 0) * 10) / 10,
+        fat: Math.round((mi.lineFat ?? 0) * 10) / 10,
+        price: mi.lineEstimatedCost ?? 0,
+        fromInventory: !!mi.fromInventory,
+      }));
+    } else {
+      const items = typeof m.mealItemsJson === 'string' ? JSON.parse(m.mealItemsJson) : m.mealItemsJson;
+      if (Array.isArray(items)) {
+        ingredients = items.map((item: any, i: number): MealIngredient => ({
+          id: item.food_id ?? i, foodId: item.food_id,
+          name: item.name, quantity: parseFloat(item.amount || '0') || 0, unit: 'g',
+          calories: item.calories || 0, protein: item.protein || 0,
+          carbs: item.carb || item.carbs || 0, fat: item.fat || 0,
+          price: item.estimated_cost || 0, fromInventory: item.estimated_cost === 0,
+        }));
+      }
+    }
+  } catch {}
+  const fallback = ingredients.map(i => i.name).filter(Boolean).slice(0, 2).join(' + ') || 'Món ăn';
+  return {
+    id: m.pmdId, mealDetailId: m.pmdId,
+    name: m.mealName || fallback, ingredients,
+    calories: Math.round(m.totalCalories ?? 0),
+    protein: Math.round((m.totalProtein ?? 0) * 10) / 10,
+    carbs: Math.round((m.totalCarbs ?? 0) * 10) / 10,
+    fat: Math.round((m.totalFat ?? 0) * 10) / 10,
+    price: m.estimatedCost ?? 0,
+    imageUrl: resolveMealImg(m.imageUrl) ?? MEAL_IMG_FALLBACK,
+    mealType: type.toLowerCase() as any,
+    isEaten: m.wasEaten || false,
+    isInStock: ingredients.some(i => i.fromInventory),
+  };
+};
+
 const VI_DAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const VI_DAYS_FULL = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
 
@@ -83,7 +133,7 @@ const MealCard = ({
   isSwapping: boolean;
 }) => (
   <div className={`rounded-[16px] border p-3 transition-all ${
-    meal.isEaten ? 'border-teal-100 bg-teal-50/60' : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+    meal.isEaten ? 'border-teal-100 bg-teal-50' : 'border-slate-200 bg-slate-50 hover:border-slate-300'
   }`}>
     <div className="flex items-center gap-3">
       {/* Ảnh */}
@@ -251,10 +301,14 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
   const [naturalLogError, setNaturalLogError] = useState<string | null>(null);
   const [medicalDisclaimer, setMedicalDisclaimer] = useState<string | null>(null);
 
-  // Hôm nay là ngày mấy trong plan?
-  const todayPlanDay = planMeta?.startDate
-    ? Math.max(1, Math.round((Date.now() - new Date(planMeta.startDate).getTime()) / 86400000) + 1)
-    : 1;
+  // Hôm nay là ngày mấy trong plan? Plan lặp theo chu kỳ độ dài `durationDays`
+  // nên "hôm nay" luôn nằm trong 1..durationDays (đồng bộ với Dashboard).
+  const todayPlanDay = (() => {
+    if (!planMeta?.startDate) return 1;
+    const dur = planMeta.durationDays && planMeta.durationDays > 0 ? planMeta.durationDays : 7;
+    const diff = Math.floor((Date.now() - new Date(planMeta.startDate).getTime()) / 86400000);
+    return (((diff % dur) + dur) % dur) + 1;
+  })();
 
   // Map plan day → real date
   const getDayDate = (dayNum: number): Date | null => {
@@ -264,8 +318,13 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
     return d;
   };
 
+  const fetchSeqRef = useRef(0);
   const fetchActivePlan = useCallback(async (dayNumber: number) => {
     if (!user?.id) return;
+    // Chống race: khi đổi ngày nhanh (vd auto-nhảy sang "hôm nay"), 2 fetch chạy
+    // song song — chỉ nhận kết quả của lần gọi MỚI NHẤT, tránh response cũ ghi đè
+    // (làm ngày đang chọn hiển thị rỗng "Không có món").
+    const seq = ++fetchSeqRef.current;
     setLoading(true);
     setActivePlanLoaded(false);
     try {
@@ -284,52 +343,7 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
       if (!mealsRes.success || !Array.isArray(dayMeals)) { setWeeklyPlan(null); return; }
 
       const mapMeals = (type: string) =>
-        dayMeals.filter((m: any) => m.mealType === type).map((m: any): Meal => {
-          let ingredients: MealIngredient[] = [];
-          try {
-            if (Array.isArray(m.mealItems) && m.mealItems.length > 0) {
-              ingredients = m.mealItems.map((mi: any): MealIngredient => ({
-                id: mi.pmiId ?? mi.foodId ?? Math.random(),
-                foodId: mi.foodId,
-                name: mi.foodName ?? 'Nguyên liệu',
-                quantity: Number(mi.quantityGrams ?? 0),
-                unit: 'g',
-                calories: Math.round(mi.lineCalories ?? 0),
-                protein: Math.round((mi.lineProtein ?? 0) * 10) / 10,
-                carbs: Math.round((mi.lineCarbs ?? 0) * 10) / 10,
-                fat: Math.round((mi.lineFat ?? 0) * 10) / 10,
-                price: mi.lineEstimatedCost ?? 0,
-                fromInventory: !!mi.fromInventory,
-              }));
-            } else {
-              const items = typeof m.mealItemsJson === 'string' ? JSON.parse(m.mealItemsJson) : m.mealItemsJson;
-              if (Array.isArray(items)) {
-                ingredients = items.map((item: any, i: number): MealIngredient => ({
-                  id: item.food_id ?? i, foodId: item.food_id,
-                  name: item.name, quantity: parseFloat(item.amount || '0') || 0, unit: 'g',
-                  calories: item.calories || 0, protein: item.protein || 0,
-                  carbs: item.carb || item.carbs || 0, fat: item.fat || 0,
-                  price: item.estimated_cost || 0, fromInventory: item.estimated_cost === 0,
-                }));
-              }
-            }
-          } catch {}
-          const fallback = ingredients.map(i => i.name).filter(Boolean).slice(0, 2).join(' + ') || 'Món ăn';
-          return {
-            id: m.pmdId, mealDetailId: m.pmdId,
-            name: m.mealName || fallback, ingredients,
-            calories: Math.round(m.totalCalories ?? 0),
-            protein: Math.round((m.totalProtein ?? 0) * 10) / 10,
-            carbs: Math.round((m.totalCarbs ?? 0) * 10) / 10,
-            fat: Math.round((m.totalFat ?? 0) * 10) / 10,
-            price: m.estimatedCost ?? 0,
-            // Ảnh thật từ dish/food trong data backend; chỉ fallback khi không có
-            imageUrl: resolveMealImg(m.imageUrl) ?? MEAL_IMG_FALLBACK,
-            mealType: type.toLowerCase() as any,
-            isEaten: m.wasEaten || false,
-            isInStock: ingredients.some(i => i.fromInventory),
-          };
-        });
+        dayMeals.filter((m: any) => m.mealType === type).map((m: any): Meal => mapMealDetailToMeal(m, type));
 
       const dayCalories = Math.round(dayMeals.reduce((s: number, m: any) => s + (m.totalCalories || 0), 0));
       const dayCost = dayMeals.reduce((s: number, m: any) => s + (m.estimatedCost || 0), 0);
@@ -346,6 +360,9 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
         dinner: mapMeals('DINNER'),
         snacks: mapMeals('SNACK'),
       };
+
+      // Bỏ qua nếu đã có fetch mới hơn (ngày khác) được yêu cầu trong lúc chờ.
+      if (seq !== fetchSeqRef.current) return;
 
       setWeeklyPlan({
         weeklyBudget: (plan.targetBudgetPerDay || budget) * (plan.durationDays || 7),
@@ -374,6 +391,16 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
 
   useEffect(() => { fetchActivePlan(selectedDay); }, [fetchActivePlan, selectedDay]);
 
+  // Lần đầu có plan → tự mở đúng "hôm nay" (thay vì luôn mở Ngày 1), để số liệu
+  // khớp với Dashboard. Chỉ nhảy một lần, sau đó user tự chọn ngày tuỳ ý.
+  const jumpedToTodayRef = useRef(false);
+  useEffect(() => {
+    if (!jumpedToTodayRef.current && planMeta?.startDate && todayPlanDay !== selectedDay) {
+      jumpedToTodayRef.current = true;
+      setSelectedDay(todayPlanDay);
+    }
+  }, [planMeta, todayPlanDay, selectedDay]);
+
   useEffect(() => {
     if (searchParams.get('openAiModal') === 'true' && activePlanLoaded) {
       setCyberpunkModalOpen(true);
@@ -398,7 +425,33 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
     setSwappingMealId(meal.mealDetailId);
     try {
       const res = await nutritionService.swapMealDish(meal.mealDetailId);
-      if (res.success) {
+      if (res.success && res.data) {
+        // Cập nhật TẠI CHỖ món vừa đổi thay vì refetch cả tuần — tránh remount list
+        // khiến trang nhảy về đầu. Tính lại tổng calo/chi phí của ngày chứa món đó.
+        const updated = mapMealDetailToMeal(res.data, (meal.mealType || 'lunch').toUpperCase());
+        setWeeklyPlan(prev => {
+          if (!prev) return prev;
+          const swap = (ms: Meal[]) => ms.map(m => m.mealDetailId === meal.mealDetailId ? updated : m);
+          const recalcDay = (d: DailyMealPlan): DailyMealPlan => {
+            const all = [...(d.breakfast || []), ...(d.lunch || []), ...(d.dinner || []), ...(d.snacks || [])];
+            return {
+              ...d,
+              totalCalories: Math.round(all.reduce((s, m) => s + (m.calories || 0), 0)),
+              totalPrice: all.reduce((s, m) => s + (m.price || 0), 0),
+            };
+          };
+          return {
+            ...prev,
+            days: prev.days.map(d => recalcDay({
+              ...d,
+              breakfast: swap(d.breakfast || []), lunch: swap(d.lunch || []),
+              dinner: swap(d.dinner || []), snacks: swap(d.snacks || []),
+            })),
+          };
+        });
+        window.dispatchEvent(new CustomEvent('meal-logged'));
+      } else if (!res.success) {
+        // Lỗi (vd hết lượt đổi món) → refetch để đồng bộ lại trạng thái thật
         await fetchActivePlan(selectedDay);
       }
     } finally {

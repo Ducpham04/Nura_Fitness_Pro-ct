@@ -306,6 +306,10 @@ public class DailyTrainingLogServiceImpl implements DailyTrainingLogService {
                 }
             } else {
                 // Update existing log
+                // Ghi đè ngày tập về HÔM NAY: mỗi content-day chỉ có 1 log (upsert theo
+                // dayNumber+exerciseId), nên tập lại ở chu kỳ/tuần mới phải cập nhật
+                // trainingDate để FE nhận biết đây là lần tập của chu kỳ hiện tại.
+                trainingLog.setTrainingDate(LocalDate.now());
                 trainingLog.setStatus(DailyTrainingLog.DailyTrainingStatus.valueOf(status.toUpperCase()));
                 if (repsCompleted != null) {
                     trainingLog.setRepsCompleted(repsCompleted);
@@ -335,7 +339,7 @@ public class DailyTrainingLogServiceImpl implements DailyTrainingLogService {
                 if (calculatedCalories != null) {
                     trainingLog.setCaloriesBurned(calculatedCalories);
                 }
-                if ("completed".equals(status)) {
+                if ("completed".equalsIgnoreCase(status)) {
                     trainingLog.setCompletedAt(java.time.ZonedDateTime.now());
                 }
             }

@@ -462,11 +462,15 @@ public class DashboardServiceImpl implements DashboardService {
 
         if (activePlanOpt.isPresent()) {
             PersonalizedNutritionPlan activePlan = activePlanOpt.get();
-            // Tính dayNumber của hôm nay trong plan
+            // Tính dayNumber của hôm nay trong plan.
+            // Plan lặp theo chu kỳ `durationDays` → "hôm nay" luôn nằm trong 1..dur,
+            // đồng bộ với tab Dinh dưỡng (trước đây diff+1 vượt phạm vi → 0 kcal nạp).
             int dayNumber = 1;
             if (activePlan.getStartDate() != null) {
                 long diff = today.toEpochDay() - activePlan.getStartDate().toEpochDay();
-                dayNumber = (int) Math.max(1, diff + 1);
+                int dur = (activePlan.getDurationDays() != null && activePlan.getDurationDays() > 0)
+                        ? activePlan.getDurationDays() : 7;
+                dayNumber = (int) (((diff % dur) + dur) % dur) + 1;
             }
             // Lấy các bữa đã ăn hôm nay
             List<PersonalizedMealDetail> eatenToday = personalizedMealDetailRepository
@@ -577,12 +581,14 @@ public class DashboardServiceImpl implements DashboardService {
                     .collect(Collectors.toList());
 
             // Workouts done this week (7 ngày gần nhất)
+            // "Buổi tập" = số NGÀY có tập (distinct trainingDate), KHÔNG phải số bài.
+            // Trước đây đếm distinct (ngày+bài) → 1 buổi 3 bài bị tính thành 3 → ra "6/5".
             LocalDate weekStart = today.minusDays(6);
             workoutsThisWeek = (int) dailyTrainingLogRepository.findByUser_Id(userId).stream()
                     .filter(l -> l.getTrainingDate() != null
                             && !l.getTrainingDate().isBefore(weekStart)
                             && DailyTrainingLog.DailyTrainingStatus.COMPLETED.equals(l.getStatus()))
-                    .map(l -> l.getTrainingDate().toString() + "-" + (l.getExercise() != null ? l.getExercise().getId() : ""))
+                    .map(l -> l.getTrainingDate().toString())
                     .distinct()
                     .count();
 

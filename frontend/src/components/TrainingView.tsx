@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Play,
   X,
@@ -328,6 +329,9 @@ function TrainingView() {
   const [activeExercise, setActiveExercise] = useState<TrainingExercise | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [currentSet, setCurrentSet] = useState(0);
+  // Số hiệp THỰC SỰ hoàn thành (không tính hiệp bấm "Bỏ qua") — dùng để tính kcal
+  // đốt cho đúng: bỏ qua hiệp thì không cộng calo (currentSet vẫn tăng để đẩy tiến độ).
+  const [completedSets, setCompletedSets] = useState(0);
   const [sessionTime, setSessionTime] = useState(0);
   // Resting state — countdown sau mỗi set
   const [isResting, setIsResting] = useState(false);
@@ -392,9 +396,29 @@ function TrainingView() {
         trainingService.getPersonalizedSchedule(user.id),
         trainingService.getDailyLogsByPlan(Number(planId), user.id),
       ]);
+      // Kế hoạch lặp theo chu kỳ (content-day 1..N lặp lại mỗi chu kỳ). Backend chỉ
+      // giữ 1 log/ (dayNumber, exerciseId) nên hoàn thành ở CHU KỲ TRƯỚC sẽ dính sang
+      // chu kỳ này. Chỉ coi là "đã xong" nếu log thuộc chu kỳ hiện tại (trainingDate
+      // >= ngày bắt đầu chu kỳ) — nhờ vậy mỗi tuần/chu kỳ mới bắt đầu lại từ đầu.
+      const maxLogDay = Math.max(
+        1,
+        ...schedule.map((e: any) => e.dayNumber || 1),
+        ...logs.map((l: DailyTrainingLog) => l.dayNumber || 1),
+      );
+      const cycleIndex = Math.max(0, Math.floor((dayNumber - 1) / maxLogDay));
+      const cycleStart = startDate ? new Date(startDate) : new Date();
+      cycleStart.setHours(0, 0, 0, 0);
+      cycleStart.setDate(cycleStart.getDate() + cycleIndex * maxLogDay);
+      const inCurrentCycle = (log: DailyTrainingLog): boolean => {
+        if (!log.trainingDate) return true; // không rõ ngày → giữ nguyên hành vi cũ
+        const d = new Date(log.trainingDate);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() >= cycleStart.getTime();
+      };
       const completedExerciseKeys = new Set(
         logs
-          .filter((log: DailyTrainingLog) => log.status === 'COMPLETED' || log.status === 'completed')
+          .filter((log: DailyTrainingLog) => (log.status === 'COMPLETED' || log.status === 'completed'))
+          .filter(inCurrentCycle)
           .map((log: DailyTrainingLog) => `${log.dayNumber}:${log.exerciseId}`)
       );
 
@@ -554,6 +578,7 @@ function TrainingView() {
     setSessionData({ reps: 0, caloriesBurned: 0, avgRepTime: 0 });
     setSaveError(null);
     setCurrentSet(0);
+    setCompletedSets(0);
     setSessionTime(0);
     setIsResting(false);
     setRestCountdown(0);
@@ -577,6 +602,19 @@ function TrainingView() {
     setCameraActive(false);
     setIsResting(false);
     setRestCountdown(0);
+  };
+
+  /**
+   * Kcal đốt của một bài = calo ước tính × tỉ lệ hiệp THỰC SỰ hoàn thành.
+   * Không có hiệp nào tập thật (vd bỏ qua toàn bộ) → 0 kcal.
+   */
+  const burnedForSets = (ex: TrainingExercise | null, doneSets: number): number => {
+    if (!ex) return 0;
+    const base = ex.estimatedCalories || 0;
+    const target = ex.targetSets || parseInt(ex.sets?.split('x')[0] || '3') || 3;
+    return base > 0 && doneSets > 0
+      ? Math.max(1, Math.round(base * Math.min(1, doneSets / target)))
+      : 0;
   };
 
   /**
@@ -622,13 +660,9 @@ function TrainingView() {
       status: markDone ? 'COMPLETED' : 'IN_PROGRESS',
       analysisData: {
         repsCompleted: sessionData.reps,
-        setsCompleted: currentSet,
+        setsCompleted: completedSets,
         actualDurationMinutes: Math.max(1, Math.round(sessionTime / 60)),
-        caloriesBurned: (() => {
-          const base = activeExercise.estimatedCalories || 0;
-          const target = activeExercise.targetSets || parseInt(activeExercise.sets?.split('x')[0] || '3') || 3;
-          return base > 0 ? Math.max(1, Math.round(base * Math.min(1, currentSet / target))) : 0;
-        })(),
+        caloriesBurned: burnedForSets(activeExercise, completedSets),
         ...(extra?.fatigueLevel ? { fatigueLevel: extra.fatigueLevel } : {}),
         ...(extra?.perceivedDifficulty ? { perceivedDifficulty: extra.perceivedDifficulty } : {}),
         ...(extra?.sleepHours != null ? { sleepHours: extra.sleepHours } : {}),
@@ -650,9 +684,9 @@ function TrainingView() {
     window.dispatchEvent(new CustomEvent('workout-completed', {
       detail: {
         exerciseId: activeExercise.exerciseId,
-        setsCompleted: currentSet,
+        setsCompleted: completedSets,
         repsCompleted: sessionData.reps,
-        caloriesBurned: activeExercise.estimatedCalories || 0,
+        caloriesBurned: burnedForSets(activeExercise, completedSets),
         durationMinutes: Math.max(1, Math.round(sessionTime / 60)),
         markDone,
       }
@@ -711,9 +745,8 @@ function TrainingView() {
    */
   const handleExerciseComplete = async () => {
     if (!activeExercise) return;
-    const thisCalories = activeExercise.estimatedCalories && activeExercise.estimatedCalories > 0
-      ? Math.max(1, Math.round(activeExercise.estimatedCalories))
-      : 0;
+    // Chỉ cộng kcal theo số hiệp thực sự tập — bỏ qua hiệp thì không tính.
+    const thisCalories = burnedForSets(activeExercise, completedSets);
     const thisTime = sessionTime;
     const thisReps = sessionData.reps;
     const dayNum = activeExercise.dayNumber || 1;
@@ -782,6 +815,8 @@ function TrainingView() {
     const targetSets = activeExercise.targetSets || 1;
     const nextSet = Math.min(targetSets, currentSet + 1);
     setCurrentSet(nextSet);
+    // Chỉ hiệp thực sự tập (cue==='set') mới được tính vào calo; bỏ qua thì không.
+    if (cue === 'set') setCompletedSets(s => s + 1);
     setSessionData(prev => ({
       ...prev,
       reps: prev.reps + repsThisSet,
@@ -904,10 +939,7 @@ function TrainingView() {
     const activeDayExercises = scheduleExercises.filter(ex => (ex.dayNumber || 1) === (activeExercise.dayNumber || 1));
     const completedInDay = activeDayExercises.filter(ex => ex.done).length + (allSetsDone && !activeExercise.done ? 1 : 0);
     const exerciseNumber = Math.max(1, activeDayExercises.findIndex(ex => ex.id === activeExercise.id) + 1);
-    const sessionCalories = (() => {
-      const base = activeExercise.estimatedCalories || 0;
-      return base > 0 ? Math.max(1, Math.round(base * Math.min(1, currentSet / targetSets))) : 0;
-    })();
+    const sessionCalories = burnedForSets(activeExercise, completedSets);
     const setProgress = Math.round((currentSet / Math.max(1, targetSets)) * 100);
     const reportScore = Math.min(100, Math.max(72, Math.round(78 + setProgress / 5)));
     const reportStreak = dashboardData?.userSummary?.streakDays ?? 0;
@@ -917,7 +949,7 @@ function TrainingView() {
 
     if (showSessionReport) {
       return (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#f7faf8] animate-fade-in dark:bg-[#080b10]">
+        <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#f7faf8] animate-fade-in dark:bg-[#080b10]">
           <div className="mx-auto flex min-h-full w-full max-w-[430px] lg:max-w-3xl flex-col px-4 pb-6 pt-4">
             <div className="mb-4 flex items-center justify-between">
               <button
@@ -940,7 +972,7 @@ function TrainingView() {
                 {activeExercise.imageUrl ? (
                   <img src={activeExercise.imageUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#ccfbf1,#fff7ed)]">
+                  <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#ccfbf1,#fff7ed)] dark:bg-[linear-gradient(135deg,#0f2a28,#1f1a12)]">
                     <Dumbbell className="h-16 w-16 text-teal-700" />
                   </div>
                 )}
@@ -1069,7 +1101,7 @@ function TrainingView() {
     }
 
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#f7faf8] animate-fade-in dark:bg-[#080b10]">
+        <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#f7faf8] animate-fade-in dark:bg-[#080b10]">
         {/* Overlay chuyển bài nhẹ giữa các bài trong buổi */}
         {transition && (
           <div className="fixed inset-0 z-[55] flex items-center justify-center bg-slate-900/45 backdrop-blur-sm animate-fade-in">
@@ -1635,6 +1667,12 @@ function TrainingView() {
   ));
   const caloriesGoalToday = Math.round(Number(dashboardData?.stats?.caloriesGoal ?? 0));
   const caloriesBurnedToday = Math.round(Number(dashboardData?.stats?.caloriesBurned ?? totalCalories ?? 0));
+  // Mục tiêu đốt kcal hôm nay = tổng calo dự kiến của buổi tập ngày đang xem.
+  // Thực tế = số kcal đã đốt (KHÔNG fallback về mục tiêu, để so chênh lệch cho đúng).
+  const burnTargetToday = Math.round(Number(totalCalories || 0));
+  const burnActualToday = Math.round(Number(dashboardData?.stats?.caloriesBurned ?? 0));
+  const burnDelta = burnActualToday - burnTargetToday;
+  const burnPct = burnTargetToday > 0 ? Math.min(100, Math.round((burnActualToday / burnTargetToday) * 100)) : 0;
   const calorieAverage = Math.round(
     nutritionSeries.reduce((sum, point) => sum + point.calories, 0) / Math.max(1, nutritionSeries.length)
   );
@@ -1665,9 +1703,11 @@ function TrainingView() {
         />
       )}
 
-      {/* ── Modal check-in sau buổi tập (overlay toàn màn, độc lập với session) ── */}
-      {showCheckIn && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+      {/* ── Modal check-in sau buổi tập (overlay toàn màn, độc lập với session) ──
+          Portal ra document.body để thoát stacking-context `isolate` của root
+          (nếu không, thanh nav dưới z-50 sẽ che modal). */}
+      {showCheckIn && createPortal(
+        <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 animate-fade-in">
             <div className="text-center mb-5">
               <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center mx-auto mb-3">
@@ -1744,7 +1784,8 @@ function TrainingView() {
               Bỏ qua bước này
             </button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* ── Adaptation feedback banner (sau AI thích ứng hoặc check-in) ── */}
@@ -1859,7 +1900,7 @@ function TrainingView() {
                 {focusExercise?.imageUrl ? (
                   <img src={focusExercise.imageUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#ccfbf1,#fff7ed)]">
+                  <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#ccfbf1,#fff7ed)] dark:bg-[linear-gradient(135deg,#0f2a28,#1f1a12)]">
                     <Dumbbell className="h-10 w-10 text-teal-700" />
                   </div>
                 )}
@@ -2454,9 +2495,34 @@ function TrainingView() {
                   </div>
                   <div className="rounded-xl border border-teal-100 bg-white/72 px-3 py-2">
                     <p className="text-[11px] font-semibold text-slate-700">Kcal đốt</p>
-                    <p className="mt-1 font-grotesk text-xl font-bold text-slate-950">{caloriesBurnedToday.toLocaleString('vi-VN')}</p>
+                    <p className="mt-1 font-grotesk text-xl font-bold text-slate-950">
+                      {caloriesBurnedToday.toLocaleString('vi-VN')}
+                      {burnTargetToday > 0 && (
+                        <span className="ml-1 text-xs font-semibold text-slate-500">/ {burnTargetToday.toLocaleString('vi-VN')}</span>
+                      )}
+                    </p>
                   </div>
                 </div>
+
+                {/* Chênh lệch kcal đốt: mục tiêu buổi tập vs thực tế đã đốt */}
+                {burnTargetToday > 0 && (
+                  <div className="mt-4">
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-700">Kcal đốt vs mục tiêu</span>
+                      <span className="font-bold text-slate-950">{burnPct}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-teal-100">
+                      <div className="h-full rounded-full bg-teal-500" style={{ width: `${burnPct}%` }} />
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-slate-700">
+                      {burnDelta >= 0
+                        ? burnDelta === 0
+                          ? `Đã đạt mục tiêu đốt ${burnTargetToday.toLocaleString('vi-VN')} kcal hôm nay. 🎯`
+                          : `Vượt mục tiêu ${burnDelta.toLocaleString('vi-VN')} kcal. 🔥`
+                        : `Còn thiếu ${Math.abs(burnDelta).toLocaleString('vi-VN')} kcal so với mục tiêu ${burnTargetToday.toLocaleString('vi-VN')} kcal.`}
+                    </p>
+                  </div>
+                )}
 
                 <div className="mt-4">
                   <div className="mb-1 flex items-center justify-between text-xs">

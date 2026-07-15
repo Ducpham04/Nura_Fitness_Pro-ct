@@ -114,35 +114,40 @@ public class PersonalizationResolver {
             focus.add("glutes"); focus.add("quadriceps"); focus.add("hamstrings"); focus.add("core");
         }
 
-        // ── Chọn split + sinh lịch tuần (logic ③ — lan can theo trình độ/tầng) ──────
+        // ── Chọn split + sinh lịch tuần (logic ③ — lan can theo TẦNG AN TOÀN) ──────
         boolean advanced = containsAny(exp, "inter", "trung", "adv", "cao");
         boolean older = archetype.startsWith("older");
         boolean preferPerArea = preferSplit != null && containsAny(norm(preferSplit), "per_area", "split", "vung");
         int reqDays = daysPerWeek > 0 ? daysPerWeek : (advanced ? 4 : 3);
 
-        // Lan can: người mới/thận trọng/lớn tuổi tối đa 4 buổi/tuần
-        boolean conservative = !advanced || older || tier == TrainingPrescription.RiskTier.B;
-        int effectiveDays = Math.max(2, Math.min(reqDays, conservative ? 4 : 6));
+        // Trần buổi/tuần đặt theo TẦNG AN TOÀN, KHÔNG cắt theo trình độ → tôn trọng
+        // lựa chọn của user: người mới khỏe mạnh (tầng A) vẫn được tập tới 6 buổi.
+        // Chỉ nhóm bệnh lý (C) / cần thận trọng (B) / lớn tuổi mới bị giới hạn thấp.
+        int maxDays;
+        if (tier == TrainingPrescription.RiskTier.C)               maxDays = 3;
+        else if (tier == TrainingPrescription.RiskTier.B || older) maxDays = 4;
+        else                                                       maxDays = 6;
+        int effectiveDays = Math.max(2, Math.min(reqDays, maxDays));
 
         List<String> weeklyPattern;
         String split;
         if (tier == TrainingPrescription.RiskTier.C) {
             weeklyPattern = List.of("full_body", "rest", "cardio_core", "rest", "full_body", "rest", "rest");
             split = "light_general";
-        } else if (conservative || effectiveDays <= 3) {
+        } else if (effectiveDays <= 3) {
             weeklyPattern = fullBodySpread(effectiveDays);
             split = "full_body";
-        } else if (preferPerArea && effectiveDays == 6) {
-            // "Mỗi ngày một vùng" kiểu Push/Pull/Legs ×2 → mỗi nhóm vẫn 2 lần/tuần (chuẩn KH)
-            weeklyPattern = List.of("push", "pull", "lower", "push", "pull", "lower", "rest");
-            split = "push_pull_legs";
         } else if (effectiveDays == 4) {
             weeklyPattern = List.of("upper", "lower", "rest", "upper", "lower", "rest", "rest");
             split = "upper_lower";
         } else if (effectiveDays == 5) {
             weeklyPattern = List.of("upper", "lower", "rest", "upper", "lower", "full_body", "rest");
             split = "upper_lower";
-        } else { // 6 ngày — đúng kiểu 2-4-6 / 3-5-7
+        } else if (preferPerArea) {
+            // 6 buổi + "mỗi ngày một vùng" kiểu Push/Pull/Legs ×2 → mỗi nhóm 2 lần/tuần
+            weeklyPattern = List.of("push", "pull", "lower", "push", "pull", "lower", "rest");
+            split = "push_pull_legs";
+        } else { // 6 buổi — thân trên/thân dưới ×3 (mỗi nhóm 3 lần/tuần)
             weeklyPattern = List.of("upper", "lower", "upper", "lower", "upper", "lower", "rest");
             split = "upper_lower_6";
         }

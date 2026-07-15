@@ -580,6 +580,11 @@ public class AIGatewayServiceImpl implements AIGatewayService {
 
             validateProgramTemplateOrThrow(programTemplate, safeExercises);
 
+            // Ép lịch tuần theo ĐƠN TẬP backend — AI chỉ được quyết pool bài, KHÔNG
+            // được tự giảm/đổi số buổi (fix: user chọn 6 buổi nhưng AI trả về 3).
+            // Bổ sung pool cho session type còn thiếu từ full_body để generator dựng đủ.
+            enforcePrescriptionPattern(programTemplate, rx.getWeeklyPattern());
+
             Map<Long, Exercise> allowedById = safeExercises.stream()
                     .collect(Collectors.toMap(Exercise::getId, exercise -> exercise, (a, b) -> a));
             List<Map<String, Object>> sessions = workoutDailyPlanGenerator.generate(
@@ -940,6 +945,48 @@ public class AIGatewayServiceImpl implements AIGatewayService {
             return raw.stream().map(Objects::toString).toList();
         }
         throw new IllegalStateException("Program template " + fieldName + " must be an array");
+    }
+
+    /**
+     * Ép {@code weekly_pattern} của template AI = lịch tuần backend đã kê (prescription).
+     * AI (LLM) hay bỏ qua gợi ý pattern và trả về mẫu mặc định ít buổi hơn (vd full_body
+     * 3 buổi cho người mới), khiến user chọn 6 buổi nhưng lịch ra 3. Đây là chốt chặn cứng:
+     * nguồn sự thật về SỐ BUỔI là backend, AI chỉ đóng góp pool bài.
+     * Nếu type trong pattern chưa có pool → bổ sung từ full_body (hoặc hợp nhất mọi id);
+     * generator sau đó tự lọc lại theo nhóm cơ đúng cho từng session.
+     */
+    @SuppressWarnings("unchecked")
+    private void enforcePrescriptionPattern(Map<String, Object> template, List<String> prescribedPattern) {
+        if (prescribedPattern == null || prescribedPattern.size() != 7) return; // đơn tập bất thường → giữ nguyên
+
+        List<String> aiPattern = readStringList(template.get("weekly_pattern"), "weekly_pattern");
+        if (prescribedPattern.equals(aiPattern)) return; // AI đã tuân thủ → không cần đụng vào
+
+        Map<String, Object> pool = template.get("exercise_pool") instanceof Map<?, ?> m
+                ? new LinkedHashMap<>((Map<String, Object>) m)
+                : new LinkedHashMap<>();
+
+        // Nguồn dự phòng: full_body nếu có, nếu không thì hợp nhất mọi id trong pool (khử trùng).
+        List<Object> fallbackIds = new ArrayList<>();
+        if (pool.get("full_body") instanceof List<?> fbl && !fbl.isEmpty()) {
+            fallbackIds.addAll((List<Object>) fbl);
+        } else {
+            for (Object v : pool.values()) {
+                if (v instanceof List<?> l) fallbackIds.addAll((List<Object>) l);
+            }
+            fallbackIds = new ArrayList<>(new LinkedHashSet<>(fallbackIds));
+        }
+
+        for (String type : prescribedPattern) {
+            if ("rest".equals(type) || "rest_day".equals(type)) continue;
+            boolean empty = !(pool.get(type) instanceof List<?> l) || l.isEmpty();
+            if (empty && !fallbackIds.isEmpty()) {
+                pool.put(type, new ArrayList<>(fallbackIds));
+            }
+        }
+
+        template.put("weekly_pattern", new ArrayList<>(prescribedPattern));
+        template.put("exercise_pool", pool);
     }
 
     private Map<String, List<Long>> readExercisePool(Object value) {
