@@ -78,7 +78,7 @@ public class TransactionServiceImpl implements TransactionService {
         if (!userRepository.existsById(userId)) {
             return new NotificationResponse(false, "User not found");
         }
-        List<TransactionResponse> list = transactionRepository.findByUserId(userId)
+        List<TransactionResponse> list = transactionRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());

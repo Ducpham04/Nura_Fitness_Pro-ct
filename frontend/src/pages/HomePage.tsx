@@ -12,13 +12,20 @@ import { useDashboard } from '../hooks/useDashboard';
 import { useAuthContext } from '../context/AuthContext';
 import SetupWizard from '../components/SetupWizard';
 import BodyCheckInModal from '../components/BodyCheckInModal';
+import { AiUpgradeModal } from '../components/AiUpgradeModal';
 import { nutritionService } from '../services/nutritionService';
 import { userService } from '../services/userService';
 import { trainingService } from '../services/trainingService';
+import { aiUsageService, type AiTransaction } from '../services/aiUsageService';
+import { useAiUsage } from '../hooks/useAiUsage';
 import { computeBodyMetrics, type BodyMetrics } from '../lib/bodyMetrics';
 import { containerStagger, fadeScale } from '../lib/motion';
 
 function pct(v: number, goal: number) { return goal ? Math.min(100, Math.round((v / goal) * 100)) : 0; }
+function formatVnd(value?: number | null) {
+  if (value == null) return '';
+  return `${Number(value).toLocaleString('vi-VN')}đ`;
+}
 
 type WorkoutItem = {
   id?: string | number;
@@ -109,12 +116,15 @@ export default function HomePage() {
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [hasActiveMealPlan, setHasActiveMealPlan] = useState(false);
   const [showCheckIn, setShowCheckIn] = useState(false);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [recentAiTx, setRecentAiTx] = useState<AiTransaction | null>(null);
   const [metric, setMetric] = useState<{ days: number | null; previousWeight?: number }>({ days: null });
   // ── Mục tiêu + phân tích thể trạng thật (từ onboarding) ──
   const [bodyMetrics, setBodyMetrics] = useState<BodyMetrics | null>(null);
   const [activePlanInfo, setActivePlanInfo] = useState<{ startDate?: string; totalWeeks?: number; weekNumber?: number } | null>(null);
   const { user } = useAuthContext();
   const { data, isLoading, error, refresh } = useDashboard();
+  const { usage, packages: aiPackages, loading: aiUsageLoading, refresh: refreshAiUsage } = useAiUsage(user?.id ?? null);
   const navigate = useNavigate();
 
   const dashboardStats = data?.stats || {
@@ -274,6 +284,25 @@ export default function HomePage() {
     return () => { mounted = false; };
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    let mounted = true;
+    const loadTransactions = async () => {
+      const res = await aiUsageService.getMyTransactions(user.id);
+      if (!mounted) return;
+      const tx = (res.data || []).find(item =>
+        item.type === 'ai_package' || item.reference?.startsWith('SEPAY:') || item.reference?.startsWith('PAYREQ:')
+      ) ?? null;
+      setRecentAiTx(tx);
+    };
+    void loadTransactions();
+    window.addEventListener('ai-package-updated', loadTransactions);
+    return () => {
+      mounted = false;
+      window.removeEventListener('ai-package-updated', loadTransactions);
+    };
+  }, [user?.id]);
+
   // Lần đo thể trạng gần nhất → nhắc check-in + prefill cân nặng cho modal
   useEffect(() => {
     if (!user?.id) return;
@@ -415,6 +444,87 @@ export default function HomePage() {
             </button>
           </div>
         )}
+
+        <div className="mt-4 rounded-[20px] border border-teal-100 bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-teal-600">Gói AI của bạn</p>
+              <h3 className="mt-1 font-grotesk text-lg font-black text-slate-950">
+                {aiUsageLoading ? 'Đang tải...' : usage?.packageName || 'Chưa có dữ liệu'}
+              </h3>
+            </div>
+            <button
+              onClick={() => setUpgradeModalOpen(true)}
+              className="rounded-xl bg-teal-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-teal-700"
+            >
+              {usage?.packageCode === 'PRO' ? 'Quản lý' : 'Nâng cấp'}
+            </button>
+          </div>
+
+          {usage && (
+            <>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="rounded-2xl bg-slate-50 p-3">
+                  <p className="text-[10px] font-semibold text-slate-500">Gói hiện tại</p>
+                  <p className={`mt-1 font-grotesk text-lg font-black ${
+                    usage.packageCode === 'PRO' ? 'text-violet-600' : usage.packageCode === 'PLUS' ? 'text-blue-600' : 'text-slate-700'
+                  }`}>
+                    {usage.packageCode}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-teal-50 p-3">
+                  <p className="text-[10px] font-semibold text-slate-500">Credit còn</p>
+                  <p className="mt-1 font-grotesk text-lg font-black text-teal-700">
+                    {usage.isUnlimited ? '∞' : usage.remaining}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-orange-50 p-3">
+                  <p className="text-[10px] font-semibold text-slate-500">Hạn gói</p>
+                  <p className="mt-1 text-[12px] font-bold leading-5 text-orange-700">
+                    {usage.packageExpiresAt ? new Date(usage.packageExpiresAt).toLocaleDateString('vi-VN') : 'Theo tháng'}
+                  </p>
+                </div>
+              </div>
+
+              {!usage.isUnlimited && (
+                <div className="mt-3">
+                  <div className="mb-1.5 flex items-center justify-between text-[11px] text-slate-500">
+                    <span>Đã dùng {usage.used}/{usage.quota} credit</span>
+                    <span className="font-semibold text-slate-700">{Math.max(0, Math.round((usage.remaining / Math.max(usage.quota, 1)) * 100))}% còn lại</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className="h-full rounded-full bg-teal-500 transition-all duration-500"
+                      style={{ width: `${Math.min(100, (usage.used / Math.max(usage.quota, 1)) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {recentAiTx ? (
+            <div className="mt-3 rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-bold text-slate-800">{recentAiTx.description || 'Thanh toán gói AI'}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-slate-500">
+                    {recentAiTx.createdAt ? new Date(recentAiTx.createdAt).toLocaleString('vi-VN') : ''}
+                    {recentAiTx.reference ? ` · ${recentAiTx.reference}` : ''}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-xs font-black text-teal-700">{formatVnd(recentAiTx.amount)}</p>
+                  <p className="text-[10px] font-semibold text-emerald-600">{recentAiTx.status}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-3 rounded-2xl bg-slate-50 px-3 py-2.5 text-xs leading-5 text-slate-500">
+              Khi bạn thanh toán Plus/Pro, giao dịch gần nhất sẽ hiện ở đây để dễ kiểm tra.
+            </p>
+          )}
+        </div>
 
         <div className="mt-4 grid grid-cols-3 border-b border-slate-200 text-center text-[15px] font-semibold text-slate-500">
           <span className="border-b-[3px] border-teal-500 pb-3.5 text-teal-700">Tổng quan</span>
@@ -756,6 +866,21 @@ export default function HomePage() {
             if (targetTab === 'diet') navigate('/dashboard/diet');
             else if (targetTab === 'workout') navigate('/dashboard/workout');
             else window.location.reload();
+          }}
+        />
+      )}
+
+      {user?.id && (
+        <AiUpgradeModal
+          isOpen={upgradeModalOpen}
+          userId={user.id}
+          usage={usage ?? null}
+          packages={aiPackages}
+          onClose={() => setUpgradeModalOpen(false)}
+          onUpgradeSuccess={() => {
+            refreshAiUsage();
+            window.dispatchEvent(new Event('ai-package-updated'));
+            setUpgradeModalOpen(false);
           }}
         />
       )}

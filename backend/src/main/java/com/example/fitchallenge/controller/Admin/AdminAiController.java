@@ -1,7 +1,9 @@
 package com.example.fitchallenge.controller.Admin;
 
 import com.example.fitchallenge.Entity.PaymentRequest;
+import com.example.fitchallenge.Entity.Transaction;
 import com.example.fitchallenge.repository.PaymentRequestRepository;
+import com.example.fitchallenge.repository.TransactionRepository;
 import com.example.fitchallenge.repository.User.UserRepository;
 import com.example.fitchallenge.service.AiPackageService;
 import com.example.fitchallenge.service.AiUsageService;
@@ -15,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -36,6 +39,7 @@ public class AdminAiController {
     private final UserRepository userRepository;
     private final PaymentConfigService paymentConfigService;
     private final PaymentRequestRepository paymentRequestRepository;
+    private final TransactionRepository transactionRepository;
     private final FileStorageService fileStorageService;
 
     // ── Packages CRUD ─────────────────────────────────────────────────────────
@@ -329,6 +333,9 @@ public class AdminAiController {
         req.setProcessedAt(ZonedDateTime.now());
         if (body != null && body.containsKey("note")) req.setProcessedNote(String.valueOf(body.get("note")));
         paymentRequestRepository.save(req);
+        ensurePaymentTransaction(req, body != null && body.containsKey("note")
+                ? String.valueOf(body.get("note"))
+                : "Admin approved payment request");
 
         return ResponseEntity.ok(Map.of(
             "success", true,
@@ -356,5 +363,34 @@ public class AdminAiController {
         paymentRequestRepository.save(req);
 
         return ResponseEntity.ok(Map.of("success", true, "message", "Đã từ chối yêu cầu"));
+    }
+
+    private void ensurePaymentTransaction(PaymentRequest req, String sourceNote) {
+        String reference = req.getGatewayRef() != null && !req.getGatewayRef().isBlank()
+                ? "SEPAY:" + req.getGatewayRef()
+                : "PAYREQ:" + req.getId();
+        if (transactionRepository.findFirstByReferenceOrderByCreatedAtDesc(reference).isPresent()) {
+            return;
+        }
+
+        Transaction tx = new Transaction();
+        tx.setUser(req.getUser());
+        tx.setType("ai_package");
+        tx.setAmount(BigDecimal.valueOf(req.getPriceVnd()));
+        tx.setReference(reference);
+        tx.setStatus(Transaction.TransactionStatus.COMPLETED);
+        tx.setDescription(limit("Gói AI " + safe(req.getPackageCode(), req.getPackageName()) + " - " + sourceNote, 255));
+        tx.setCreatedAt(ZonedDateTime.now());
+        transactionRepository.save(tx);
+    }
+
+    private String safe(String primary, String fallback) {
+        if (primary != null && !primary.isBlank()) return primary;
+        return fallback != null ? fallback : "";
+    }
+
+    private String limit(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) return value;
+        return value.substring(0, maxLength);
     }
 }

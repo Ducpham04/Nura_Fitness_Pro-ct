@@ -30,6 +30,19 @@ export interface AiPackage {
   sortOrder: number;
 }
 
+export interface AiTransaction {
+  id: number;
+  userId: number;
+  userName?: string;
+  type: string;
+  amount: number;
+  points?: number | null;
+  reference?: string | null;
+  status: string;
+  description?: string | null;
+  createdAt: string;
+}
+
 export interface PromoValidation {
   valid: boolean;
   discountPercent: number;
@@ -63,4 +76,19 @@ export const aiUsageService = {
       { code, packageId },
       { headers: { userId: userId.toString() } }
     ),
+
+  /** Lịch sử giao dịch của user hiện tại, mới nhất trước */
+  getMyTransactions: async (userId: number) => {
+    const res = await apiClient.get<{ success: boolean; data?: AiTransaction[]; message?: string }>(
+      '/my/transactions',
+      { headers: { userId: userId.toString() } }
+    );
+    if (!res.success) return { success: false, data: [] as AiTransaction[], error: res.error };
+    const body = res.data;
+    return {
+      success: body?.success !== false,
+      data: Array.isArray(body?.data) ? body.data : [],
+      message: body?.message,
+    };
+  },
 };

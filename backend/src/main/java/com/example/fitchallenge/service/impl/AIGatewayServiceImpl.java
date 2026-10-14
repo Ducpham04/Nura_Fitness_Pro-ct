@@ -578,7 +578,7 @@ public class AIGatewayServiceImpl implements AIGatewayService {
                 throw new IllegalStateException("AI workout template response is empty");
             }
 
-            validateProgramTemplateOrThrow(programTemplate, safeExercises);
+            validateProgramTemplateOrThrow(programTemplate, safeExercises, rx.getWeeklyPattern());
 
             // Ép lịch tuần theo ĐƠN TẬP backend — AI chỉ được quyết pool bài, KHÔNG
             // được tự giảm/đổi số buổi (fix: user chọn 6 buổi nhưng AI trả về 3).
@@ -851,14 +851,30 @@ public class AIGatewayServiceImpl implements AIGatewayService {
         }
     }
 
-    private void validateProgramTemplateOrThrow(Map<String, Object> template, List<Exercise> safeExercises) {
+    /**
+     * @param prescribedPattern lịch tuần backend đã kê (đơn tập). Sàn ngày nghỉ lấy đúng
+     *        theo đơn này thay vì cố định 2: user tầng A chọn 6 buổi thì lịch chỉ còn
+     *        1 ngày nghỉ và đó là hợp lệ (xem PersonalizationResolver). Không suy từ
+     *        daysPerWeek vì tầng C dùng pattern cố định, không khớp số buổi user chọn.
+     *        Giữ sàn tối thiểu 1 để chặn AI trả về lịch tập 7/7.
+     */
+    private void validateProgramTemplateOrThrow(Map<String, Object> template, List<Exercise> safeExercises,
+                                                List<String> prescribedPattern) {
         List<String> weeklyPattern = readStringList(template.get("weekly_pattern"), "weekly_pattern");
         if (weeklyPattern.size() != 7) {
             throw new IllegalStateException("Program template weekly_pattern must contain exactly 7 entries");
         }
-        long restDays = weeklyPattern.stream().filter(type -> "rest".equals(type) || "rest_day".equals(type)).count();
-        if (restDays < 2) {
-            throw new IllegalStateException("Program template weekly_pattern must include at least 2 rest days");
+        // Chỉ NỚI sàn xuống khi đơn tập thật sự ít ngày nghỉ hơn 2 (lịch 6 buổi/tuần),
+        // không siết lên theo đơn — AI hay lệch pattern và enforcePrescriptionPattern
+        // đằng nào cũng ghi đè lại lịch tuần theo đơn ở bước sau.
+        int minRestDays = 2;
+        if (prescribedPattern != null && prescribedPattern.size() == 7) {
+            minRestDays = Math.max(1, Math.min(2, (int) countRestDays(prescribedPattern)));
+        }
+        long restDays = countRestDays(weeklyPattern);
+        if (restDays < minRestDays) {
+            throw new IllegalStateException(
+                    "Program template weekly_pattern must include at least " + minRestDays + " rest days");
         }
 
         Map<String, List<Long>> exercisePool = readExercisePool(template.get("exercise_pool"));
@@ -987,6 +1003,10 @@ public class AIGatewayServiceImpl implements AIGatewayService {
 
         template.put("weekly_pattern", new ArrayList<>(prescribedPattern));
         template.put("exercise_pool", pool);
+    }
+
+    private static long countRestDays(List<String> weeklyPattern) {
+        return weeklyPattern.stream().filter(type -> "rest".equals(type) || "rest_day".equals(type)).count();
     }
 
     private Map<String, List<Long>> readExercisePool(Object value) {

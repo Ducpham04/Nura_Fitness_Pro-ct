@@ -10,6 +10,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
     List<Transaction> findByUserId(Long userId);
+    List<Transaction> findByUserIdOrderByCreatedAtDesc(Long userId);
     Optional<Transaction> findByReference(String reference);
+    Optional<Transaction> findFirstByReferenceOrderByCreatedAtDesc(String reference);
     Optional<Transaction> findByReferenceAndStatus(String reference, Transaction.TransactionStatus status);
 }

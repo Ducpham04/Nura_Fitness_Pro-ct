@@ -65,6 +65,8 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
   const [notifySent, setNotifySent] = useState(false);
   const [notifyLoading, setNotifyLoading] = useState(false);
   const [notifyError, setNotifyError] = useState('');
+  const [paymentPhase, setPaymentPhase] = useState<'idle' | 'waiting' | 'activated' | 'manual'>('idle');
+  const [paymentStatusText, setPaymentStatusText] = useState('');
 
   // Auto-select PLUS khi mở
   useEffect(() => {
@@ -90,23 +92,62 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
     const pkg = packages.find(p => p.id === selectedId);
     if (!pkg || pkg.priceVnd <= 0) { setQrInfo(null); return; }
     setNotifySent(false);
+    setNotifyError('');
+    setPaymentPhase('idle');
+    setPaymentStatusText('');
     apiClient.get(`/ai-packages/${selectedId}/payment-qr`, { headers: { userId: userId.toString() } })
       .then(res => { if (res.success && res.data) setQrInfo(res.data as any); })
       .catch(() => setQrInfo(null));
   }, [isOpen, selectedId]);
 
-  if (!isOpen) return null;
-
   const selectedPkg = packages.find(p => p.id === selectedId);
   const currentCode = usage?.packageCode ?? 'FREE';
+
+  useEffect(() => {
+    if (!isOpen || paymentPhase !== 'waiting' || !selectedPkg || selectedPkg.priceVnd <= 0) return;
+    if (usage?.packageCode === selectedPkg.code) {
+      setPaymentPhase('activated');
+      setPaymentStatusText(`Gói ${selectedPkg.code} đã được kích hoạt.`);
+      window.dispatchEvent(new Event('ai-package-updated'));
+      const timer = window.setTimeout(() => onUpgradeSuccess?.(), 900);
+      return () => window.clearTimeout(timer);
+    }
+
+    let stopped = false;
+    let attempts = 0;
+    const maxAttempts = 24; // khoảng 2 phút
+
+    const checkPayment = async () => {
+      attempts += 1;
+      const res = await aiUsageService.getMyUsage(userId);
+      if (stopped) return;
+      if (res.success && res.data?.packageCode === selectedPkg.code) {
+        setPaymentPhase('activated');
+        setPaymentStatusText(`Gói ${selectedPkg.code} đã được kích hoạt.`);
+        window.dispatchEvent(new Event('ai-package-updated'));
+        window.setTimeout(() => onUpgradeSuccess?.(), 900);
+        return;
+      }
+      if (attempts >= maxAttempts) {
+        setPaymentPhase('manual');
+        setPaymentStatusText('Chưa thấy giao dịch khớp tự động. Thông báo đã được gửi để admin kiểm tra thủ công.');
+      }
+    };
+
+    const interval = window.setInterval(checkPayment, 5000);
+    void checkPayment();
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+    };
+  }, [isOpen, onUpgradeSuccess, paymentPhase, selectedPkg?.code, selectedPkg?.priceVnd, usage?.packageCode, userId]);
+
+  if (!isOpen) return null;
 
   // QR + nội dung CK: ưu tiên QR động theo gói (auto-fill), fallback QR tĩnh admin cấu hình
   const qrUrl = qrInfo?.qrUrl || paymentCfg?.qrUrl || '';
   const ckContent = qrInfo?.content || `SEVQR VIWAY ${selectedPkg?.code ?? ''} ${userId}`;
   const ckBankInfo = qrInfo?.bankInfo || paymentCfg?.bankInfo || '';
-
-  const formatPrice = (vnd: number) =>
-    vnd === 0 ? 'Miễn phí' : `${vnd.toLocaleString('vi-VN')}đ/tháng`;
 
   const discountedPrice = (pkg: AiPackage) => {
     if (!promoValidated || promoValidated.discountPercent === 0) return pkg.priceVnd;
@@ -124,7 +165,9 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
       );
       if ((res as any)?.success || res.success) {
         setNotifySent(true);
-        trackEvent('PaymentNotified', { package: selectedPkg?.code });
+        setPaymentPhase('waiting');
+        setPaymentStatusText('Đang chờ SePay ghi nhận giao dịch và tự kích hoạt gói.');
+        trackEvent('PaymentNotified', { package: selectedPkg?.code ?? 'UNKNOWN' });
       } else {
         setNotifyError('Không gửi được thông báo. Vui lòng liên hệ trực tiếp.');
       }
@@ -365,9 +408,33 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
                       {notifyError && <p className="text-xs text-red-400">{notifyError}</p>}
                     </div>
                   ) : (
-                    <div className="rounded-xl bg-lime-500/15 border border-lime-500/30 p-3 text-center">
-                      <p className="text-lime-400 font-bold text-sm">Đã gửi thông báo!</p>
-                      <p className="text-zinc-400 text-xs mt-1">Admin sẽ kích hoạt gói trong vòng 24h. Kiểm tra email để xác nhận.</p>
+                    <div className={`rounded-xl border p-3 ${
+                      paymentPhase === 'activated'
+                        ? 'bg-lime-500/15 border-lime-500/30'
+                        : paymentPhase === 'manual'
+                        ? 'bg-amber-500/10 border-amber-500/30'
+                        : 'bg-blue-500/10 border-blue-500/25'
+                    }`}>
+                      <div className="flex items-center justify-center gap-2">
+                        {paymentPhase === 'waiting' && <Loader2 className="w-4 h-4 animate-spin text-blue-300" />}
+                        {paymentPhase === 'activated' && <CheckCheck className="w-4 h-4 text-lime-300" />}
+                        <p className={`font-bold text-sm ${
+                          paymentPhase === 'activated'
+                            ? 'text-lime-300'
+                            : paymentPhase === 'manual'
+                            ? 'text-amber-300'
+                            : 'text-blue-300'
+                        }`}>
+                          {paymentPhase === 'activated'
+                            ? 'Đã kích hoạt gói!'
+                            : paymentPhase === 'manual'
+                            ? 'Đang chờ kiểm tra thủ công'
+                            : 'Đang kiểm tra giao dịch'}
+                        </p>
+                      </div>
+                      <p className="text-zinc-400 text-xs mt-1 text-center">
+                        {paymentStatusText || 'Ứng dụng sẽ tự refresh khi gói được kích hoạt.'}
+                      </p>
                     </div>
                   )}
                 </div>

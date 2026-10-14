@@ -1,0 +1,91 @@
+services:
+  - type: web
+    name: fitnit-backend
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: JAVA_TOOL_OPTIONS
+        value: -XX:MaxRAMPercentage=55 -XX:InitialRAMPercentage=20
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: POSE_SIGNING_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: APP_PUBLIC_BASE_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: AI_SERVICE_URL
+        value: https://fitnit-ai-service.onrender.com
+      - key: STORAGE_PROVIDER
+        value: local
+      - key: UPLOAD_PATH
+        value: /tmp/uploads/
+      - key: SENTRY_DSN
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: VNPAY_TMN_CODE
+        sync: false
+      - key: VNPAY_HASH_SECRET
+        sync: false
+      - key: SEPAY_WEBHOOK_SECRET
+        sync: false
+      - key: SEPAY_API_KEY
+        sync: false
+
+  - type: web
+    name: fitnit-ai-service
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: ai-service
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+      - key: GROQ_SMART_MEAL_MODEL
+        value: llama-3.1-8b-instant
+
+  - type: web
+    name: fitnit-fitness-ai
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: fitness-ai-service
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: POSE_SIGNING_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: MEDIAPIPE_MODEL_COMPLEXITY
+        value: "0"

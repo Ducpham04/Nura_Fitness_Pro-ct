@@ -1,0 +1,29 @@
+# =====================================================================
+# Caddyfile — GIAI ĐOẠN THỬ (Phase 3), trước khi cutover.
+#
+# Chỉ khai hostname tạm ec2.viway.id.vn (đã trỏ A về Elastic IP của EC2).
+# CỐ TÌNH không khai app.viway.id.vn ở đây: lúc này app.* vẫn trỏ về ALB,
+# Caddy xin cert cho nó sẽ thất bại liên tục và có thể chạm rate-limit của
+# Let's Encrypt — làm hỏng luôn lần xin cert thật lúc cutover.
+#
+#   cp deploy/ec2/Caddyfile.staging deploy/ec2/Caddyfile
+#   docker compose -p fitnit-prod -f deploy/ec2/docker-compose.yml \
+#     restart caddy
+# =====================================================================
+
+ec2.viway.id.vn {
+    encode gzip
+
+    # ⚠️ CHẶN GOOGLE INDEX hostname tạm này.
+    # Nội dung ở đây y hệt app.viway.id.vn -> nếu bị index sẽ thành nội dung
+    # trùng lặp và chia loãng thứ hạng của app.*. Trang có canonical trỏ về
+    # app.* rồi, nhưng canonical chỉ là gợi ý; X-Robots-Tag là chỉ thị cứng.
+    #
+    # TUYỆT ĐỐI KHÔNG copy dòng header này sang khối app.viway.id.vn —
+    # làm thế là gỡ toàn bộ site khỏi Google.
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+
+    # `frontend` = tên service trong mạng docker. reverse_proxy tự xử lý
+    # nâng cấp WebSocket (/pose/ws/...) — không cần cấu hình thêm.
+    reverse_proxy frontend:80
+}

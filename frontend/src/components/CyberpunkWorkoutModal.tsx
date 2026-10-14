@@ -94,8 +94,16 @@ export default function CyberpunkWorkoutModal({ onClose, onSuccess, onQuotaExcee
       });
 
       if (response.success) {
+        // response.success chỉ là mức HTTP. Backend trả 200 kèm NotificationResponse
+        // {success,message,data} — phải bóc thêm lớp này, nếu không lỗi sinh plan
+        // sẽ bị nuốt (modal đóng như thành công nhưng lịch tập không đổi).
+        const notif = response.data as any;
+        if (notif && typeof notif.success === 'boolean' && !notif.success) {
+          setError(notif.message || 'Tạo kế hoạch tập thất bại');
+          return;
+        }
         trackEvent('PlanGenerated', { type: 'workout' }); // activation aha-moment
-        onSuccess(response.data);
+        onSuccess(notif?.data ?? notif ?? {});
       } else {
         if (response.error?.code === 'QUOTA_EXCEEDED') {
           onClose();

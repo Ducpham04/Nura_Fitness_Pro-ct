@@ -1,0 +1,1088 @@
+{
+  "overall": [
+    {
+      "metricName": "DeadClickCount",
+      "information": [
+        {
+          "sessionsCount": "37",
+          "sessionsWithMetricPercentage": 13.51,
+          "sessionsWithoutMetricPercentage": 86.49,
+          "pagesViews": "10",
+          "subTotal": "15"
+        }
+      ]
+    },
+    {
+      "metricName": "ExcessiveScroll",
+      "information": [
+        {
+          "sessionsCount": "37",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0"
+        }
+      ]
+    },
+    {
+      "metricName": "RageClickCount",
+      "information": [
+        {
+          "sessionsCount": "37",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0"
+        }
+      ]
+    },
+    {
+      "metricName": "QuickbackClick",
+      "information": [
+        {
+          "sessionsCount": "37",
+          "sessionsWithMetricPercentage": 13.51,
+          "sessionsWithoutMetricPercentage": 86.49,
+          "pagesViews": "15",
+          "subTotal": "15"
+        }
+      ]
+    },
+    {
+      "metricName": "ScriptErrorCount",
+      "information": [
+        {
+          "sessionsCount": "37",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0"
+        }
+      ]
+    },
+    {
+      "metricName": "ErrorClickCount",
+      "information": [
+        {
+          "sessionsCount": "37",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0"
+        }
+      ]
+    },
+    {
+      "metricName": "ScrollDepth",
+      "information": [
+        {
+          "averageScrollDepth": 78.45
+        }
+      ]
+    },
+    {
+      "metricName": "Traffic",
+      "information": [
+        {
+          "totalSessionCount": "37",
+          "totalBotSessionCount": "5",
+          "distinctUserCount": "26",
+          "pagesPerSessionPercentage": 3.0681818181818183
+        }
+      ]
+    },
+    {
+      "metricName": "EngagementTime",
+      "information": [
+        {
+          "totalTime": "338",
+          "activeTime": "112"
+        }
+      ]
+    },
+    {
+      "metricName": "Browser",
+      "information": [
+        {
+          "name": "Chrome",
+          "sessionsCount": "23"
+        },
+        {
+          "name": "MobileSafari",
+          "sessionsCount": "7"
+        },
+        {
+          "name": "ChromeMobile",
+          "sessionsCount": "3"
+        },
+        {
+          "name": "Edge",
+          "sessionsCount": "3"
+        },
+        {
+          "name": "GoogleApp",
+          "sessionsCount": "1"
+        }
+      ]
+    },
+    {
+      "metricName": "Device",
+      "information": [
+        {
+          "name": "PC",
+          "sessionsCount": "26"
+        },
+        {
+          "name": "Mobile",
+          "sessionsCount": "10"
+        },
+        {
+          "name": "Tablet",
+          "sessionsCount": "1"
+        }
+      ]
+    },
+    {
+      "metricName": "OS",
+      "information": [
+        {
+          "name": "Windows",
+          "sessionsCount": "16"
+        },
+        {
+          "name": "MacOSX",
+          "sessionsCount": "10"
+        },
+        {
+          "name": "IOS",
+          "sessionsCount": "9"
+        },
+        {
+          "name": "Android",
+          "sessionsCount": "2"
+        }
+      ]
+    },
+    {
+      "metricName": "Country",
+      "information": [
+        {
+          "name": "Viet Nam",
+          "sessionsCount": "36"
+        },
+        {
+          "name": "Netherlands",
+          "sessionsCount": "1"
+        }
+      ]
+    },
+    {
+      "metricName": "PageTitle",
+      "information": [
+        {
+          "name": "Viway — AI lập kế hoạch ăn & tập theo ngân sách của bạn",
+          "sessionsCount": "37"
+        }
+      ]
+    },
+    {
+      "metricName": "ReferrerUrl",
+      "information": [
+        {
+          "name": null,
+          "sessionsCount": "31"
+        },
+        {
+          "name": "https://app.viway.id.vn/dashboard",
+          "sessionsCount": "7"
+        },
+        {
+          "name": "https://jp.zaloapp.com/",
+          "sessionsCount": "1"
+        },
+        {
+          "name": "https://www.google.com/",
+          "sessionsCount": "1"
+        },
+        {
+          "name": "android-app://com.google.android.gm/",
+          "sessionsCount": "1"
+        }
+      ]
+    },
+    {
+      "metricName": "PopularPages",
+      "information": [
+        {
+          "url": "https://app.viway.id.vn/",
+          "visitsCount": "33"
+        },
+        {
+          "url": "https://app.viway.id.vn/dashboard",
+          "visitsCount": "9"
+        },
+        {
+          "url": "https://app.viway.id.vn/dashboard/workout",
+          "visitsCount": "8"
+        },
+        {
+          "url": "https://app.viway.id.vn/dashboard/diet",
+          "visitsCount": "6"
+        },
+        {
+          "url": "https://app.viway.id.vn/dashboard/profile",
+          "visitsCount": "6"
+        },
+        {
+          "url": "https://app.viway.id.vn/admin",
+          "visitsCount": "5"
+        },
+        {
+          "url": "https://app.viway.id.vn/assessment",
+          "visitsCount": "5"
+        },
+        {
+          "url": "https://app.viway.id.vn/dashboard/coach",
+          "visitsCount": "4"
+        },
+        {
+          "url": "https://app.viway.id.vn/onboarding",
+          "visitsCount": "4"
+        },
+        {
+          "url": "https://app.viway.id.vn/welcome",
+          "visitsCount": "3"
+        }
+      ]
+    }
+  ],
+  "byUrl": [
+    {
+      "metricName": "DeadClickCount",
+      "information": [
+        {
+          "sessionsCount": "30",
+          "sessionsWithMetricPercentage": 6.67,
+          "sessionsWithoutMetricPercentage": 93.33,
+          "pagesViews": "2",
+          "subTotal": "3",
+          "Url": "https://app.viway.id.vn/"
+        },
+        {
+          "sessionsCount": "1",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://52.76.111.7/"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/admin"
+        },
+        {
+          "sessionsCount": "7",
+          "sessionsWithMetricPercentage": 14.29,
+          "sessionsWithoutMetricPercentage": 85.71000000000001,
+          "pagesViews": "2",
+          "subTotal": "2",
+          "Url": "https://app.viway.id.vn/dashboard/workout"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 40,
+          "sessionsWithoutMetricPercentage": 60,
+          "pagesViews": "2",
+          "subTotal": "4",
+          "Url": "https://app.viway.id.vn/dashboard/profile"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 20,
+          "sessionsWithoutMetricPercentage": 80,
+          "pagesViews": "1",
+          "subTotal": "1",
+          "Url": "https://app.viway.id.vn/assessment"
+        },
+        {
+          "sessionsCount": "1",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/profile/edit"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 20,
+          "sessionsWithoutMetricPercentage": 80,
+          "pagesViews": "1",
+          "subTotal": "3",
+          "Url": "https://app.viway.id.vn/dashboard/diet"
+        },
+        {
+          "sessionsCount": "3",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/coach"
+        },
+        {
+          "sessionsCount": "9",
+          "sessionsWithMetricPercentage": 22.22,
+          "sessionsWithoutMetricPercentage": 77.78,
+          "pagesViews": "2",
+          "subTotal": "2",
+          "Url": "https://app.viway.id.vn/dashboard"
+        },
+        {
+          "sessionsCount": "3",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/welcome"
+        },
+        {
+          "sessionsCount": "4",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/onboarding"
+        }
+      ]
+    },
+    {
+      "metricName": "ExcessiveScroll",
+      "information": [
+        {
+          "sessionsCount": "30",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/"
+        },
+        {
+          "sessionsCount": "1",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://52.76.111.7/"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/admin"
+        },
+        {
+          "sessionsCount": "7",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/workout"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/profile"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/assessment"
+        },
+        {
+          "sessionsCount": "1",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/profile/edit"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/diet"
+        },
+        {
+          "sessionsCount": "3",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/coach"
+        },
+        {
+          "sessionsCount": "9",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard"
+        },
+        {
+          "sessionsCount": "3",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/welcome"
+        },
+        {
+          "sessionsCount": "4",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/onboarding"
+        }
+      ]
+    },
+    {
+      "metricName": "RageClickCount",
+      "information": [
+        {
+          "sessionsCount": "30",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/"
+        },
+        {
+          "sessionsCount": "1",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://52.76.111.7/"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/admin"
+        },
+        {
+          "sessionsCount": "7",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/workout"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/profile"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/assessment"
+        },
+        {
+          "sessionsCount": "1",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/profile/edit"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/diet"
+        },
+        {
+          "sessionsCount": "3",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/coach"
+        },
+        {
+          "sessionsCount": "9",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard"
+        },
+        {
+          "sessionsCount": "3",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/welcome"
+        },
+        {
+          "sessionsCount": "4",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/onboarding"
+        }
+      ]
+    },
+    {
+      "metricName": "QuickbackClick",
+      "information": [
+        {
+          "sessionsCount": "30",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/"
+        },
+        {
+          "sessionsCount": "1",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://52.76.111.7/"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/admin"
+        },
+        {
+          "sessionsCount": "7",
+          "sessionsWithMetricPercentage": 42.86,
+          "sessionsWithoutMetricPercentage": 57.14,
+          "pagesViews": "3",
+          "subTotal": "3",
+          "Url": "https://app.viway.id.vn/dashboard/workout"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 40,
+          "sessionsWithoutMetricPercentage": 60,
+          "pagesViews": "2",
+          "subTotal": "2",
+          "Url": "https://app.viway.id.vn/dashboard/profile"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/assessment"
+        },
+        {
+          "sessionsCount": "1",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/profile/edit"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 60,
+          "sessionsWithoutMetricPercentage": 40,
+          "pagesViews": "5",
+          "subTotal": "5",
+          "Url": "https://app.viway.id.vn/dashboard/diet"
+        },
+        {
+          "sessionsCount": "3",
+          "sessionsWithMetricPercentage": 66.67,
+          "sessionsWithoutMetricPercentage": 33.33,
+          "pagesViews": "2",
+          "subTotal": "2",
+          "Url": "https://app.viway.id.vn/dashboard/coach"
+        },
+        {
+          "sessionsCount": "9",
+          "sessionsWithMetricPercentage": 33.33,
+          "sessionsWithoutMetricPercentage": 66.67,
+          "pagesViews": "3",
+          "subTotal": "3",
+          "Url": "https://app.viway.id.vn/dashboard"
+        },
+        {
+          "sessionsCount": "3",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/welcome"
+        },
+        {
+          "sessionsCount": "4",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/onboarding"
+        }
+      ]
+    },
+    {
+      "metricName": "ScriptErrorCount",
+      "information": [
+        {
+          "sessionsCount": "30",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/"
+        },
+        {
+          "sessionsCount": "1",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://52.76.111.7/"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/admin"
+        },
+        {
+          "sessionsCount": "7",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/workout"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/profile"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/assessment"
+        },
+        {
+          "sessionsCount": "1",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/profile/edit"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/diet"
+        },
+        {
+          "sessionsCount": "3",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/coach"
+        },
+        {
+          "sessionsCount": "9",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard"
+        },
+        {
+          "sessionsCount": "3",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/welcome"
+        },
+        {
+          "sessionsCount": "4",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/onboarding"
+        }
+      ]
+    },
+    {
+      "metricName": "ErrorClickCount",
+      "information": [
+        {
+          "sessionsCount": "30",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/"
+        },
+        {
+          "sessionsCount": "1",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://52.76.111.7/"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/admin"
+        },
+        {
+          "sessionsCount": "7",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/workout"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/profile"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/assessment"
+        },
+        {
+          "sessionsCount": "1",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/profile/edit"
+        },
+        {
+          "sessionsCount": "5",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/diet"
+        },
+        {
+          "sessionsCount": "3",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard/coach"
+        },
+        {
+          "sessionsCount": "9",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/dashboard"
+        },
+        {
+          "sessionsCount": "3",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/welcome"
+        },
+        {
+          "sessionsCount": "4",
+          "sessionsWithMetricPercentage": 0,
+          "sessionsWithoutMetricPercentage": 100,
+          "pagesViews": "0",
+          "subTotal": "0",
+          "Url": "https://app.viway.id.vn/onboarding"
+        }
+      ]
+    },
+    {
+      "metricName": "ScrollDepth",
+      "information": [
+        {
+          "averageScrollDepth": 51.77,
+          "Url": "https://app.viway.id.vn/"
+        },
+        {
+          "averageScrollDepth": 100,
+          "Url": "https://52.76.111.7/"
+        },
+        {
+          "averageScrollDepth": 89,
+          "Url": "https://app.viway.id.vn/admin"
+        },
+        {
+          "averageScrollDepth": 87,
+          "Url": "https://app.viway.id.vn/dashboard/workout"
+        },
+        {
+          "averageScrollDepth": 86.2,
+          "Url": "https://app.viway.id.vn/dashboard/profile"
+        },
+        {
+          "averageScrollDepth": 95.5,
+          "Url": "https://app.viway.id.vn/assessment"
+        },
+        {
+          "averageScrollDepth": 100,
+          "Url": "https://app.viway.id.vn/dashboard/profile/edit"
+        },
+        {
+          "averageScrollDepth": 90.12,
+          "Url": "https://app.viway.id.vn/dashboard/diet"
+        },
+        {
+          "averageScrollDepth": 100,
+          "Url": "https://app.viway.id.vn/dashboard/coach"
+        },
+        {
+          "averageScrollDepth": 92.5,
+          "Url": "https://app.viway.id.vn/dashboard"
+        },
+        {
+          "averageScrollDepth": 98.33,
+          "Url": "https://app.viway.id.vn/welcome"
+        },
+        {
+          "averageScrollDepth": 100,
+          "Url": "https://app.viway.id.vn/onboarding"
+        }
+      ]
+    },
+    {
+      "metricName": "Traffic",
+      "information": [
+        {
+          "totalSessionCount": "0",
+          "totalBotSessionCount": "0",
+          "distinctUserCount": "4",
+          "pagesPerSessionPercentage": 1,
+          "Url": null
+        },
+        {
+          "totalSessionCount": "30",
+          "totalBotSessionCount": "3",
+          "distinctUserCount": "21",
+          "pagesPerSessionPercentage": 1.2727272727272727,
+          "Url": "https://app.viway.id.vn/"
+        },
+        {
+          "totalSessionCount": "1",
+          "totalBotSessionCount": "0",
+          "distinctUserCount": "1",
+          "pagesPerSessionPercentage": 1,
+          "Url": "https://52.76.111.7/"
+        },
+        {
+          "totalSessionCount": "5",
+          "totalBotSessionCount": "0",
+          "distinctUserCount": "1",
+          "pagesPerSessionPercentage": 1.4,
+          "Url": "https://app.viway.id.vn/admin"
+        },
+        {
+          "totalSessionCount": "7",
+          "totalBotSessionCount": "1",
+          "distinctUserCount": "5",
+          "pagesPerSessionPercentage": 2.25,
+          "Url": "https://app.viway.id.vn/dashboard/workout"
+        },
+        {
+          "totalSessionCount": "5",
+          "totalBotSessionCount": "1",
+          "distinctUserCount": "4",
+          "pagesPerSessionPercentage": 2.1666666666666665,
+          "Url": "https://app.viway.id.vn/dashboard/profile"
+        },
+        {
+          "totalSessionCount": "5",
+          "totalBotSessionCount": "0",
+          "distinctUserCount": "4",
+          "pagesPerSessionPercentage": 1.6,
+          "Url": "https://app.viway.id.vn/assessment"
+        },
+        {
+          "totalSessionCount": "1",
+          "totalBotSessionCount": "1",
+          "distinctUserCount": "2",
+          "pagesPerSessionPercentage": 1,
+          "Url": "https://app.viway.id.vn/dashboard/profile/edit"
+        },
+        {
+          "totalSessionCount": "5",
+          "totalBotSessionCount": "1",
+          "distinctUserCount": "4",
+          "pagesPerSessionPercentage": 2.1666666666666665,
+          "Url": "https://app.viway.id.vn/dashboard/diet"
+        },
+        {
+          "totalSessionCount": "3",
+          "totalBotSessionCount": "1",
+          "distinctUserCount": "4",
+          "pagesPerSessionPercentage": 1,
+          "Url": "https://app.viway.id.vn/dashboard/coach"
+        },
+        {
+          "totalSessionCount": "9",
+          "totalBotSessionCount": "0",
+          "distinctUserCount": "8",
+          "pagesPerSessionPercentage": 1.5555555555555556,
+          "Url": "https://app.viway.id.vn/dashboard"
+        },
+        {
+          "totalSessionCount": "0",
+          "totalBotSessionCount": "1",
+          "distinctUserCount": "1",
+          "pagesPerSessionPercentage": 2,
+          "Url": "https://nura-prod-alb-1264968544.ap-southeast-1.elb.amazonaws.com/"
+        },
+        {
+          "totalSessionCount": "3",
+          "totalBotSessionCount": "0",
+          "distinctUserCount": "3",
+          "pagesPerSessionPercentage": 1,
+          "Url": "https://app.viway.id.vn/welcome"
+        },
+        {
+          "totalSessionCount": "4",
+          "totalBotSessionCount": "0",
+          "distinctUserCount": "4",
+          "pagesPerSessionPercentage": 1,
+          "Url": "https://app.viway.id.vn/onboarding"
+        }
+      ]
+    },
+    {
+      "metricName": "EngagementTime",
+      "information": [
+        {
+          "totalTime": "95",
+          "activeTime": "29",
+          "Url": "https://app.viway.id.vn/"
+        },
+        {
+          "totalTime": "1",
+          "activeTime": "1",
+          "Url": "https://52.76.111.7/"
+        },
+        {
+          "totalTime": "298",
+          "activeTime": "211",
+          "Url": "https://app.viway.id.vn/admin"
+        },
+        {
+          "totalTime": "488",
+          "activeTime": "115",
+          "Url": "https://app.viway.id.vn/dashboard/workout"
+        },
+        {
+          "totalTime": "142",
+          "activeTime": "19",
+          "Url": "https://app.viway.id.vn/dashboard/profile"
+        },
+        {
+          "totalTime": "418",
+          "activeTime": "62",
+          "Url": "https://app.viway.id.vn/assessment"
+        },
+        {
+          "totalTime": "12",
+          "activeTime": "12",
+          "Url": "https://app.viway.id.vn/dashboard/profile/edit"
+        },
+        {
+          "totalTime": "155",
+          "activeTime": "56",
+          "Url": "https://app.viway.id.vn/dashboard/diet"
+        },
+        {
+          "totalTime": "14",
+          "activeTime": "14",
+          "Url": "https://app.viway.id.vn/dashboard/coach"
+        },
+        {
+          "totalTime": "85",
+          "activeTime": "40",
+          "Url": "https://app.viway.id.vn/dashboard"
+        },
+        {
+          "totalTime": "55",
+          "activeTime": "55",
+          "Url": "https://app.viway.id.vn/welcome"
+        },
+        {
+          "totalTime": "45",
+          "activeTime": "30",
+          "Url": "https://app.viway.id.vn/onboarding"
+        }
+      ]
+    }
+  ]
+}

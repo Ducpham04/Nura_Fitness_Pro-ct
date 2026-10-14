@@ -1,0 +1,29 @@
+# =====================================================================
+# Caddyfile — SAU CUTOVER (Phase 4). Chỉ dùng file này SAU KHI đã đổi DNS
+# app.viway.id.vn tại tenten.vn sang A -> Elastic IP của EC2, và đã xác
+# nhận `dig +short app.viway.id.vn` trả về đúng IP đó.
+#
+#   cp deploy/ec2/Caddyfile.production deploy/ec2/Caddyfile
+#   docker compose -p fitnit-prod -f deploy/ec2/docker-compose.yml restart caddy
+#   docker logs -f fit-prod-caddy     # xem lấy cert (~10-30s)
+#
+# Caddy tự xin + tự gia hạn Let's Encrypt, tự redirect HTTP -> HTTPS.
+# Yêu cầu: cổng 80 VÀ 443 mở trong Security Group (80 dùng cho thử thách
+# HTTP-01; đóng 80 là không gia hạn được cert).
+# =====================================================================
+
+# Domain thật — KHÔNG có X-Robots-Tag ở đây. Thêm nhầm là site biến mất
+# khỏi Google.
+app.viway.id.vn {
+    encode gzip
+    reverse_proxy frontend:80
+}
+
+# Giữ hostname tạm thêm một thời gian để còn đường chẩn đoán khi app.* có
+# vấn đề. Xoá bản ghi DNS `ec2` khi đã chạy ổn định.
+ec2.viway.id.vn {
+    encode gzip
+    # Chặn index: nội dung trùng app.* -> tránh chia loãng thứ hạng.
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    reverse_proxy frontend:80
+}

@@ -1,14 +1,17 @@
 package com.example.fitchallenge.service;
 
 import com.example.fitchallenge.Entity.PaymentRequest;
+import com.example.fitchallenge.Entity.Transaction;
 import com.example.fitchallenge.Entity.User;
 import com.example.fitchallenge.repository.PaymentRequestRepository;
+import com.example.fitchallenge.repository.TransactionRepository;
 import com.example.fitchallenge.repository.User.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -32,6 +35,7 @@ import java.util.regex.Pattern;
 public class SepayWebhookService {
 
     private final PaymentRequestRepository paymentRequestRepository;
+    private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final AiPackageService aiPackageService;
 
@@ -62,7 +66,17 @@ public class SepayWebhookService {
         if (content == null || content.isBlank()) return new Result(false, "missing content");
 
         // ── Idempotency: giao dịch này đã activate rồi → trả ok, không làm gì ──
-        if (paymentRequestRepository.findFirstByGatewayRef(ref).isPresent()) {
+        PaymentRequest processed = paymentRequestRepository.findFirstByGatewayRef(ref).orElse(null);
+        if (processed != null) {
+            if (processed.getStatus() == PaymentRequest.Status.APPROVED) {
+                ensureTransaction(
+                        processed.getUser(),
+                        processed.getPackageCode(),
+                        processed.getPackageName(),
+                        processed.getPriceVnd(),
+                        ref,
+                        "SePay webhook retry/backfill");
+            }
             log.info("SePay webhook: ref={} đã xử lý trước đó, bỏ qua", ref);
             return new Result(true, "already processed");
         }
@@ -137,6 +151,8 @@ public class SepayWebhookService {
         req.setGatewayRef(ref);
         paymentRequestRepository.save(req);
 
+        ensureTransaction(user, pkgCode, pkgName, amount > 0 ? amount : priceVnd, ref, "SePay auto payment");
+
         log.info("SePay webhook: đã kích hoạt gói {} cho userId={} (nhận {}đ, ref={})",
                 pkgCode, userId, amount, ref);
         return new Result(true, "activated " + pkgCode + " for user " + userId);
@@ -171,8 +187,36 @@ public class SepayWebhookService {
                 .orElse(null);
     }
 
+    private void ensureTransaction(User user, String packageCode, String packageName,
+                                   long amount, String gatewayRef, String source) {
+        String reference = "SEPAY:" + gatewayRef;
+        if (transactionRepository.findFirstByReferenceOrderByCreatedAtDesc(reference).isPresent()) {
+            return;
+        }
+
+        Transaction tx = new Transaction();
+        tx.setUser(user);
+        tx.setType("ai_package");
+        tx.setAmount(BigDecimal.valueOf(amount));
+        tx.setReference(reference);
+        tx.setStatus(Transaction.TransactionStatus.COMPLETED);
+        tx.setDescription(limit("Gói AI " + safe(packageCode, packageName) + " - " + source, 255));
+        tx.setCreatedAt(ZonedDateTime.now());
+        transactionRepository.save(tx);
+    }
+
     // ── helpers ────────────────────────────────────────────────────────────────
     private static String str(Object o) { return o == null ? null : String.valueOf(o); }
+
+    private static String safe(String primary, String fallback) {
+        if (primary != null && !primary.isBlank()) return primary;
+        return fallback != null ? fallback : "";
+    }
+
+    private static String limit(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) return value;
+        return value.substring(0, maxLength);
+    }
 
     private static long parseLong(Object o) {
         if (o == null) return 0;
