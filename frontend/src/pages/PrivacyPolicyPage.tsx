@@ -4,7 +4,7 @@ import Logo from '../components/Logo';
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-obsidian font-inter">
+    <main className="min-h-screen bg-obsidian font-inter">
       {/* Header */}
       <div className="border-b border-white/[0.06] px-6 py-4">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
@@ -141,6 +141,6 @@ export default function PrivacyPolicyPage() {
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -434,7 +434,7 @@ export default function HomePage() {
                 <Dumbbell className="h-4 w-4" /> Tạo lịch tập
               </button>
               <button onClick={() => navigate('/dashboard/diet')}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-600">
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-700 px-3 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-800">
                 <Apple className="h-4 w-4" /> Tạo lịch ăn
               </button>
             </div>
@@ -757,7 +757,7 @@ export default function HomePage() {
 
             {/* Macro chi tiết */}
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
-              <span className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2 py-1 text-rose-600"><Beef className="h-3 w-3" /> Đạm {bodyMetrics.protG}g</span>
+              <span className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2 py-1 text-rose-600 dark:text-rose-300"><Beef className="h-3 w-3" /> Đạm {bodyMetrics.protG}g</span>
               <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-amber-600"><Wheat className="h-3 w-3" /> Tinh bột {bodyMetrics.carbG}g</span>
               <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1 text-blue-600"><Droplets className="h-3 w-3" /> Béo {bodyMetrics.fatG}g</span>
               <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-slate-600"><Scale className="h-3 w-3" /> Mỡ ~{bodyMetrics.bodyFat}%</span>

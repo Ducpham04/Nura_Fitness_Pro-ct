@@ -231,7 +231,7 @@ export default function Landing() {
             </button>
           </div>
 
-          <button className="text-white lg:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <button className="text-white lg:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label={mobileMenuOpen ? "Đóng menu" : "Mở menu"} aria-expanded={mobileMenuOpen}>
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
@@ -657,7 +657,7 @@ export default function Landing() {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-grotesk text-xl font-bold text-white">{plan.name}</h3>
                 {plan.comingSoon ? (
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 bg-white/10 border border-white/15 px-2.5 py-1 rounded-full">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-300 bg-white/10 border border-white/15 px-2.5 py-1 rounded-full">
                     Sắp có
                   </span>
                 ) : plan.highlight && (

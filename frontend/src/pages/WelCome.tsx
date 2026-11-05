@@ -18,7 +18,7 @@ export default function Welcome() {
   };
 
   return (
-    <div className="min-h-screen bg-obsidian flex items-center justify-center relative overflow-hidden font-inter px-6">
+    <main className="min-h-screen bg-obsidian flex items-center justify-center relative overflow-hidden font-inter px-6">
       {/* BG glows */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full pointer-events-none"
         style={{ background: 'radial-gradient(circle, rgba(0,122,255,0.08) 0%, transparent 70%)' }} />
@@ -51,6 +51,6 @@ export default function Welcome() {
       <div
         className={`fixed inset-0 z-50 bg-[#f4f6f2] pointer-events-none transition-opacity [transition-duration:450ms] ease-out ${leaving ? 'opacity-100' : 'opacity-0'}`}
       />
-    </div>
+    </main>
   );
 }

@@ -758,7 +758,7 @@ export default function ProfilePage() {
               {!deactivateConfirm ? (
                 <button
                   onClick={() => setDeactivateConfirm(true)}
-                  className="w-full py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-500 text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-500 dark:text-red-400 text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Vô hiệu hoá tài khoản
                 </button>
@@ -793,7 +793,7 @@ export default function ProfilePage() {
       {/* ── Logout ── */}
       <button
         onClick={handleLogout}
-        className="w-full rounded-[16px] border border-red-200 bg-red-50 px-5 py-3.5 flex items-center justify-center gap-2 text-red-500 hover:bg-red-100 transition-colors text-sm font-semibold"
+        className="w-full rounded-[16px] border border-red-200 bg-red-50 px-5 py-3.5 flex items-center justify-center gap-2 text-red-500 dark:text-red-400 hover:bg-red-100 transition-colors text-sm font-semibold"
       >
         <LogOut className="w-4 h-4" />
         Đăng xuất
