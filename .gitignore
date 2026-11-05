@@ -6,7 +6,7 @@
 !.env.example
 # Template/example files (không chứa secret) — phải version-control
 !.env.prod.example
-!frontEnd-Lastversion/.env.production
+!frontend/.env.production
 
 # Frontend (current folder)
 frontEnd-Lastversion/node_modules/

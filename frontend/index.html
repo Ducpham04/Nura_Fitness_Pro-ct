@@ -2,15 +2,25 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <!-- Google tag (gtag.js) — Google Analytics + xác minh Search Console -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-9GHVMTMD93"></script>
+    <!-- Google tag (gtag.js) — Google Analytics + xác minh Search Console.
+         Bật bằng VITE_GA_ID (đặt trong .env.production); để trống = tắt (dev/local). -->
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-9GHVMTMD93');
+      (function () {
+        var id = '%VITE_GA_ID%';
+        if (!id || id.indexOf('%') === 0 || id.length < 5) return;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=' + id;
+        document.head.appendChild(s);
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function () { window.dataLayer.push(arguments); };
+        window.gtag('js', new Date());
+        window.gtag('config', id);
+      })();
     </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="alternate icon" href="/favicon.ico" sizes="any" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <!-- Theme (dark/light) — set class trước khi render để tránh nháy màu -->
     <script>
@@ -39,10 +49,12 @@
     <meta property="og:image" content="https://app.viway.id.vn/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Viway — AI lập kế hoạch ăn và tập luyện theo ngân sách" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Viway — AI lập kế hoạch ăn & tập theo ngân sách" />
     <meta name="twitter:description" content="Giáo án cá nhân hoá theo thể trạng. Thực đơn Việt theo ngân sách. Bắt đầu miễn phí." />
     <meta name="twitter:image" content="https://app.viway.id.vn/og-image.png" />
+    <meta name="twitter:image:alt" content="Viway — AI lập kế hoạch ăn và tập luyện theo ngân sách" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- JSON-LD structured data — giúp Google hiểu đây là app sức khoẻ -->

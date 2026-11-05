@@ -65,7 +65,7 @@ export default function PaymentResultPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0d11] flex items-center justify-center p-4">
+    <main className="min-h-screen bg-[#0b0d11] flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-zinc-900 border border-zinc-700 rounded-2xl p-8 text-center shadow-2xl">
         {/* Icon */}
         <div className="flex justify-center mb-5">
@@ -134,6 +134,6 @@ export default function PaymentResultPage() {
           </p>
         )}
       </div>
-    </div>
+    </main>
   );
 }

@@ -82,7 +82,7 @@ export default function DashboardLayout() {
         setFeedbackRating(0);
         setFeedbackType('general');
       }, 1800);
-    } catch (e) {
+    } catch {
       // silent
     } finally {
       setFeedbackSending(false);

@@ -62,7 +62,8 @@ export function useAuth(): UseAuthReturn {
   }, []);
 
   const login = useCallback(async (credentials: LoginRequest): Promise<boolean> => {
-    setIsLoading(true);
+    // Không bật isLoading toàn cục: App sẽ thay route bằng spinner, làm unmount
+    // modal đăng nhập → mất thông báo lỗi khi sai mật khẩu. Form có loading riêng.
     setError(null);
     try {
       const success = await authService.login(credentials);
@@ -76,13 +77,12 @@ export function useAuth(): UseAuthReturn {
       const msg = err instanceof Error ? err.message : 'An error occurred';
       setError(msg);
       throw new Error(msg); // ném tiếp để trang Login hiển thị đúng message
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
   const loginWithGoogle = useCallback(async (idToken: string): Promise<boolean> => {
-    setIsLoading(true);
+    // Không bật isLoading toàn cục: App sẽ thay route bằng spinner, làm unmount
+    // modal đăng nhập → mất thông báo lỗi khi sai mật khẩu. Form có loading riêng.
     setError(null);
     try {
       const success = await authService.loginWithGoogle(idToken);
@@ -96,13 +96,12 @@ export function useAuth(): UseAuthReturn {
       const msg = err instanceof Error ? err.message : 'An error occurred';
       setError(msg);
       throw new Error(msg); // ném tiếp để trang Login hiển thị đúng message
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
   const register = useCallback(async (data: RegisterRequest): Promise<boolean> => {
-    setIsLoading(true);
+    // Không bật isLoading toàn cục: App sẽ thay route bằng spinner, làm unmount
+    // modal đăng nhập → mất thông báo lỗi khi sai mật khẩu. Form có loading riêng.
     setError(null);
     try {
       const success = await authService.register(data);
@@ -117,8 +116,6 @@ export function useAuth(): UseAuthReturn {
       const msg = err instanceof Error ? err.message : 'An error occurred';
       setError(msg);
       throw new Error(msg); // ném tiếp để trang Register hiển thị đúng message
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 

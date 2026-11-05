@@ -48,7 +48,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-obsidian flex items-center justify-center px-6">
+    <main className="min-h-screen bg-obsidian flex items-center justify-center px-6">
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="flex justify-center mb-8">
@@ -117,6 +117,7 @@ export default function ResetPasswordPage() {
                       className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/[0.09] transition-all pr-10"
                     />
                     <button type="button" onClick={() => setShowPwd(!showPwd)}
+                      aria-label={showPwd ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors">
                       {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -140,6 +141,7 @@ export default function ResetPasswordPage() {
                       className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-10 py-3.5 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/[0.09] transition-all pr-10"
                     />
                     <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                      aria-label={showConfirm ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors">
                       {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -189,6 +191,6 @@ export default function ResetPasswordPage() {
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

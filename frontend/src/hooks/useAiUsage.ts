@@ -28,7 +28,7 @@ export function useAiUsage(userId: number | null | undefined): UseAiUsageReturn 
       ]);
       if (usageRes.success && usageRes.data) setUsage(usageRes.data);
       if (pkgRes.success && pkgRes.data) setPackages(pkgRes.data);
-    } catch (e) {
+    } catch {
       setError('Không thể tải thông tin lượt AI');
     } finally {
       setLoading(false);

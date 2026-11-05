@@ -21,6 +21,13 @@ public interface UserService {
     /** Đăng nhập / tự đăng ký bằng Google: verify ID token rồi phát JWT của hệ thống. */
     JwtResponse loginWithGoogle(String idToken);
 
+    /**
+     * Đổi refresh token hợp lệ lấy cặp access + refresh token mới (xoay vòng).
+     * Ném BadCredentialsException nếu token sai/hết hạn/không phải refresh token
+     * hoặc tài khoản đã bị vô hiệu hoá.
+     */
+    JwtResponse refreshToken(String refreshToken);
+
     NotificationResponse logout(String token);
     UserDetails loadUserByEmail(String username);
     NotificationResponse getAllUsers();

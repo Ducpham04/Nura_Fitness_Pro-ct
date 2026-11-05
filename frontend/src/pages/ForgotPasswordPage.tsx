@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-obsidian flex items-center justify-center px-6">
+    <main className="min-h-screen bg-obsidian flex items-center justify-center px-6">
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="flex justify-center mb-8">
@@ -119,6 +119,6 @@ export default function ForgotPasswordPage() {
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -120,6 +120,7 @@ export default function LogbookPage() {
         <button
           onClick={loadLogs}
           disabled={loading}
+          aria-label="Tải lại nhật ký"
           className="w-9 h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] text-neutral-400 hover:text-white flex items-center justify-center transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -167,7 +168,7 @@ export default function LogbookPage() {
       ) : grouped.length === 0 ? (
         <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-12 text-center">
           <Dumbbell className="w-10 h-10 text-neutral-700 mx-auto mb-4" />
-          <h3 className="text-white font-semibold mb-2">Chưa có nhật ký nào</h3>
+          <h2 className="text-white font-semibold mb-2">Chưa có nhật ký nào</h2>
           <p className="text-neutral-500 text-sm mb-6">Hoàn thành bài tập đầu tiên để bắt đầu ghi nhật ký.</p>
           <Link to="/dashboard/workout" className="btn-lime px-5 py-2.5 text-sm font-bold inline-flex items-center gap-2">
             <Dumbbell className="w-4 h-4" /> Bắt đầu tập

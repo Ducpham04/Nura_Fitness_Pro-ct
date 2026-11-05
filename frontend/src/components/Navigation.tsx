@@ -86,7 +86,7 @@ export default function Navigation() {
         </div>
       </nav>
 
-      <div className="fixed inset-x-0 top-0 z-50 border-b border-black/[0.06] bg-[#F1F5F9]/94 px-3 py-2.5 backdrop-blur-xl dark:border-white/[0.06] dark:bg-[#0a0a0c]/94 md:hidden">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-black/[0.06] bg-[#F1F5F9]/94 px-3 py-2.5 backdrop-blur-xl dark:border-white/[0.06] dark:bg-[#0a0a0c]/94 md:hidden">
         <div className="mx-auto flex max-w-[430px] items-center justify-between gap-3">
           <Link to="/dashboard" className="flex min-w-0 items-center gap-2" aria-label="Viway dashboard">
             <Logo dark={theme === 'dark'} size={38} wordmarkClass="text-xl" />
@@ -111,7 +111,7 @@ export default function Navigation() {
             </button>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Mobile Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 flex min-h-[68px] items-stretch justify-around border-t border-black/[0.06] bg-[#F1F5F9]/96 px-1.5 pt-2 backdrop-blur-2xl bottom-nav-safe dark:border-white/5 dark:bg-[#0a0a0c]/94 md:hidden">

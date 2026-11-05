@@ -203,7 +203,8 @@ function ChallengesView() {
     const res = await rewardService.getBalance(user.id);
     if (res.success && typeof res.data === 'number') setWalletPoints(res.data);
   };
-  useEffect(() => { loadBalance(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ tải lại khi đổi user
+  useEffect(() => { loadBalance(); }, [user?.id]);
 
   const mapDifficulty = (difficulty?: string): ChallengeUI['difficulty'] => {
     if (difficulty === 'EASY') return 'beginner';
@@ -211,7 +212,8 @@ function ChallengesView() {
     return 'intermediate';
   };
 
-  useEffect(() => { loadChallenges(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ tải lại khi đổi user
+  useEffect(() => { loadChallenges(); }, [user?.id]);
 
   const loadChallenges = async () => {
     try {

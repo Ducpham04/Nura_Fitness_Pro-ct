@@ -197,7 +197,7 @@ export default function Onboarding() {
 
       const ref = localStorage.getItem('pendingReferral');
       if (ref?.trim()) {
-        try { await userService.applyReferralCode(ref.trim().toUpperCase()); } catch {}
+        try { await userService.applyReferralCode(ref.trim().toUpperCase()); } catch { /* mã giới thiệu không hợp lệ → bỏ qua */ }
         localStorage.removeItem('pendingReferral');
       }
 
@@ -223,7 +223,7 @@ export default function Onboarding() {
   const ok = canAdvance();
 
   return (
-    <div
+    <main
       className="min-h-screen flex items-center justify-center px-4 py-4 font-inter text-white"
       style={{ background: '#0c0d11' }}
     >
@@ -240,6 +240,9 @@ export default function Onboarding() {
           <button
             onClick={() => setStep(s => s - 1)}
             disabled={step === 0 || isSubmitting}
+            aria-label="Quay lại bước trước"
+            aria-hidden={step === 0 || undefined}
+            tabIndex={step === 0 ? -1 : undefined}
             className={`flex h-9 w-9 items-center justify-center rounded-full border transition-all ${
               step === 0
                 ? 'opacity-0 pointer-events-none border-transparent'
@@ -412,6 +415,6 @@ export default function Onboarding() {
         </button>
 
       </div>
-    </div>
+    </main>
   );
 }

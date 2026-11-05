@@ -253,9 +253,10 @@ export default function AICoachPage() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && send()}
                 placeholder="Hỏi Coach bất cứ điều gì..."
+                aria-label="Nhập câu hỏi cho AI Coach"
                 className="w-full bg-white border border-slate-200 rounded-2xl pl-5 pr-16 py-4 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-teal-300 transition-all"
               />
-              <button onClick={() => send()} disabled={!input.trim() || isTyping}
+              <button onClick={() => send()} disabled={!input.trim() || isTyping} aria-label="Gửi tin nhắn"
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 bg-teal-700 p-2.5 rounded-xl hover:bg-teal-800 active:scale-95 transition-all disabled:opacity-40">
                 <Send className="w-5 h-5 text-white" />
               </button>
@@ -266,9 +267,9 @@ export default function AICoachPage() {
         {/* Sidebar — DỮ LIỆU THẬT */}
         <div className="w-full lg:w-72 flex flex-col gap-5">
           <div className="rounded-[18px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.06)] p-6">
-            <h3 className="font-grotesk font-bold text-slate-950 text-base mb-3 flex items-center gap-2.5">
+            <h2 className="font-grotesk font-bold text-slate-950 text-base mb-3 flex items-center gap-2.5">
               <Zap className="w-4 h-4 text-teal-700" /> Chỉ số của bạn
-            </h3>
+            </h2>
             {/* AI credit badge */}
             {usage && (
               <div className="mb-4">
@@ -312,9 +313,9 @@ export default function AICoachPage() {
 
           {/* Mục tiêu kế tiếp — buổi tập thật hôm nay */}
           <div className="rounded-[18px] border border-teal-100 bg-[linear-gradient(135deg,#f0fdfa,#ffffff_62%,#fff7ed)] p-6 flex-1 dark:border-teal-400/20 dark:bg-[linear-gradient(135deg,#0f2a28,#111827_62%,#1f1a12)]">
-            <h3 className="font-grotesk font-bold text-slate-950 text-base mb-3 flex items-center gap-2.5">
+            <h2 className="font-grotesk font-bold text-slate-950 text-base mb-3 flex items-center gap-2.5">
               <Sparkles className="w-4 h-4 text-blue-600" /> Việc cần làm
-            </h3>
+            </h2>
             {nextWorkout ? (
               <>
                 <p className="text-slate-600 text-sm leading-relaxed mb-5">

@@ -45,7 +45,7 @@ FE hiện **chỉ chạy `vite dev`** — không có Dockerfile, không có stat
 | Biến | Giá trị hiện tại (KHÔNG dùng cho prod) | Cần |
 |---|---|---|
 | `POSTGRES_PASSWORD` / `SPRING_DATASOURCE_PASSWORD` | `123456` | Mật khẩu mạnh, khớp nhau |
-| `JWT_SECRET` | `du-an-safjhdskfjskjliuuasdhaos-2321` | Chuỗi ngẫu nhiên ≥ 32 ký tự |
+| `JWT_SECRET` | `local-dev-only-jwt-secret-change-me-…` (chỉ dev) | Chuỗi ngẫu nhiên ≥ 32 ký tự |
 | `GROQ_API_KEY` | (chưa có) | Key thật từ console.groq.com |
 
 → Tạo file `.env` production (KHÔNG commit), ví dụ:

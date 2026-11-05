@@ -231,7 +231,7 @@ export default function Landing() {
             </button>
           </div>
 
-          <button className="text-white lg:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <button className="text-white lg:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label={mobileMenuOpen ? "Đóng menu" : "Mở menu"} aria-expanded={mobileMenuOpen}>
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
@@ -304,10 +304,15 @@ export default function Landing() {
             <div className="rounded-[2rem] border border-white/[0.08] bg-white/[0.04] p-2 shadow-[0_40px_90px_rgba(0,0,0,0.35)]">
               <div className="relative min-h-[520px] overflow-hidden rounded-[1.55rem] bg-[#090a0b] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] max-md:min-h-[430px]">
                 <img
-                  src="/images/viway-hero-training.jpg"
+                  src="/images/viway-hero-training.webp"
                   alt="Người dùng tập luyện tại nhà cùng gợi ý AI"
+                  width={1280}
+                  height={720}
                   className="absolute inset-0 h-full w-full object-cover object-center opacity-[0.88]"
                   loading="eager"
+                  // React 18 chưa map prop fetchPriority → truyền thẳng attribute HTML
+                  {...{ fetchpriority: 'high' }}
+                  decoding="async"
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-[#08090a]/88 via-[#08090a]/35 to-transparent" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#08090a]/92 via-transparent to-transparent" />
@@ -535,8 +540,11 @@ export default function Landing() {
           <div className="reveal relative overflow-hidden rounded-3xl border border-white/[0.08]">
             <img
               src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1600&q=80"
+              srcSet="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=75 800w, https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1600&q=80 1600w"
+              sizes="(max-width: 1280px) 100vw, 1216px"
               alt="Người tập gym với hướng dẫn AI theo dõi tư thế và cường độ"
               loading="lazy"
+              decoding="async"
               className="h-[460px] w-full object-cover md:h-[520px]"
             />
             {/* overlay tối + gradient để chữ nổi */}
@@ -617,8 +625,11 @@ export default function Landing() {
           <div className="order-1 h-64 md:order-2 md:h-full">
             <img
               src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80"
+              srcSet="https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=640&q=75 640w, https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80 1200w"
+              sizes="(max-width: 768px) 100vw, 50vw"
               alt="Thực đơn Việt theo ngân sách — AI tính sẵn calo và macro từng bữa"
               loading="lazy"
+              decoding="async"
               className="h-full w-full object-cover"
             />
           </div>
@@ -646,7 +657,7 @@ export default function Landing() {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-grotesk text-xl font-bold text-white">{plan.name}</h3>
                 {plan.comingSoon ? (
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 bg-white/10 border border-white/15 px-2.5 py-1 rounded-full">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-300 bg-white/10 border border-white/15 px-2.5 py-1 rounded-full">
                     Sắp có
                   </span>
                 ) : plan.highlight && (

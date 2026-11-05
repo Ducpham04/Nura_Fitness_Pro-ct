@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AuthProvider, useAuthContext } from './context/AuthContext';
+import RouteMeta from './components/RouteMeta';
 
 // Lazy-load tất cả pages để giảm initial bundle (~724KB → chunk riêng per-route)
 const Landing = lazy(() => import('./pages/Landing'));
@@ -131,6 +132,7 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
+        <RouteMeta />
         <AppContent />
         <Toaster
           richColors

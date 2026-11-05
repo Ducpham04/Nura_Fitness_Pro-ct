@@ -127,6 +127,7 @@ export default function ProfileEditPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate('/dashboard/profile')}
+          aria-label="Quay lại hồ sơ"
           className="w-9 h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -139,15 +140,16 @@ export default function ProfileEditPage() {
 
       {/* Số đo cơ thể */}
       <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 space-y-4">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+        <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <Scale className="w-4 h-4 text-neutral-500" /> Thông số cơ thể
-        </h3>
+        </h2>
         {numFields.map(({ field, label, unit, icon: Icon }) => (
           <div key={field}>
-            <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{label}</label>
+            <label htmlFor={`profile-${field}`} className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{label}</label>
             <div className="relative">
-              <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
+              <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" aria-hidden="true" />
               <input
+                id={`profile-${field}`}
                 type="number"
                 value={form[field]}
                 onChange={e => update(field, e.target.value)}
@@ -177,9 +179,9 @@ export default function ProfileEditPage() {
 
       {/* Mức độ vận động */}
       <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 space-y-4">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+        <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <Activity className="w-4 h-4 text-neutral-500" /> Mức độ vận động hằng ngày
-        </h3>
+        </h2>
         <p className="text-neutral-500 text-xs -mt-2">
           Ảnh hưởng trực tiếp tới lượng calo khuyến nghị & kế hoạch AI — chọn đúng mức thực tế.
         </p>
@@ -198,9 +200,9 @@ export default function ProfileEditPage() {
 
       {/* Mục tiêu */}
       <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 space-y-4">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+        <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <Target className="w-4 h-4 text-neutral-500" /> Mục tiêu tập luyện
-        </h3>
+        </h2>
         {goals.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
             {goals.map((g: any) => (
@@ -218,6 +220,7 @@ export default function ProfileEditPage() {
             type="text"
             value={form.goal}
             onChange={e => update('goal', e.target.value)}
+            aria-label="Mục tiêu"
             placeholder="Nhập mục tiêu"
             className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 py-3.5 text-white focus:outline-none focus:border-lime/40"
           />
@@ -226,14 +229,15 @@ export default function ProfileEditPage() {
 
       {/* Ngân sách */}
       <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5 space-y-3">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+        <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <Wallet className="w-4 h-4 text-neutral-500" /> Ngân sách ăn uống / ngày
-        </h3>
+        </h2>
         <div className="relative">
           <input
             type="number"
             value={form.budget}
             onChange={e => update('budget', e.target.value)}
+            aria-label="Ngân sách ăn uống mỗi ngày (VNĐ)"
             placeholder="80000"
             step={5000}
             className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-4 pr-16 py-3.5 text-white focus:outline-none focus:border-lime/40"
@@ -274,7 +278,7 @@ export default function ProfileEditPage() {
               <div className="w-9 h-9 rounded-full bg-lime/15 flex items-center justify-center">
                 <Check className="w-5 h-5 text-lime" />
               </div>
-              <h3 className="font-grotesk font-bold text-white">Chỉ số đã được tính lại</h3>
+              <h2 className="font-grotesk font-bold text-white">Chỉ số đã được tính lại</h2>
             </div>
             <p className="text-neutral-400 text-sm leading-relaxed">
               Kế hoạch ăn & lịch tập hiện tại vẫn dựa trên hồ sơ cũ.

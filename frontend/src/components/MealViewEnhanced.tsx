@@ -65,7 +65,7 @@ const mapMealDetailToMeal = (m: any, type: string): Meal => {
         }));
       }
     }
-  } catch {}
+  } catch { /* JSON không hợp lệ → dùng fallback bên dưới */ }
   const fallback = ingredients.map(i => i.name).filter(Boolean).slice(0, 2).join(' + ') || 'Món ăn';
   return {
     id: m.pmdId, mealDetailId: m.pmdId,
@@ -513,7 +513,6 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
   const currentSpent = currentDay?.totalPrice || 0;
   const dailyBudget = weeklyPlan?.dailyBudget || budget;
   const leftBudget = dailyBudget - currentSpent;
-  const needShoppingCount = weeklyPlan?.shoppingList?.length ?? 0;
   const naturalLogTotal = naturalLogResult?.total;
   const naturalLogCalories = toNumber(naturalLogTotal?.calories ?? naturalLogResult?.total_calories);
   const naturalLogProtein = toNumber(naturalLogTotal?.protein_g ?? naturalLogTotal?.protein);
@@ -693,7 +692,9 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
       <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-[#121216] shadow-sm">
         <img
           src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1400&q=80"
-          alt="" aria-hidden="true"
+          srcSet="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=75 800w, https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1400&q=80 1400w"
+          sizes="(max-width: 768px) 100vw, 768px"
+          alt="" aria-hidden="true" decoding="async"
           className="absolute inset-0 w-full h-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-tr from-black/72 via-black/40 to-black/08" />

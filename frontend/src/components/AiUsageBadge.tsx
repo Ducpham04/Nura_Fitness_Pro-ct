@@ -56,7 +56,7 @@ export const AiUsageBadge: React.FC<AiUsageBadgeProps> = ({
       <span className="text-[10px] leading-none">⚡</span>
       <span>{label}</span>
       {!isUnlimited && (
-        <span className="opacity-60 font-normal">lượt</span>
+        <span className="opacity-80 font-normal">lượt</span>
       )}
     </button>
   );

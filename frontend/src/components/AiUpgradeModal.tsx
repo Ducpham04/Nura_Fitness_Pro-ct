@@ -74,6 +74,8 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
       const plus = packages.find(p => p.code === 'PLUS');
       if (plus) setSelectedId(plus.id);
     }
+    // Chỉ auto-chọn khi mở modal / khi danh sách gói tải xong — không chạy lại khi user đổi lựa chọn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, packages]);
 
   // Load payment config (QR URL) — fetch lại MỖI lần mở modal để luôn lấy QR mới nhất
@@ -98,6 +100,8 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
     apiClient.get(`/ai-packages/${selectedId}/payment-qr`, { headers: { userId: userId.toString() } })
       .then(res => { if (res.success && res.data) setQrInfo(res.data as any); })
       .catch(() => setQrInfo(null));
+    // Chỉ tạo lại QR khi đổi gói / mở modal; packages refetch không được reset trạng thái thanh toán.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, selectedId]);
 
   const selectedPkg = packages.find(p => p.id === selectedId);
@@ -140,6 +144,8 @@ export const AiUpgradeModal: React.FC<AiUpgradeModalProps> = ({
       stopped = true;
       window.clearInterval(interval);
     };
+    // Phụ thuộc vào các trường nguyên thủy của selectedPkg để tránh khởi động lại polling khi object đổi tham chiếu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, onUpgradeSuccess, paymentPhase, selectedPkg?.code, selectedPkg?.priceVnd, usage?.packageCode, userId]);
 
   if (!isOpen) return null;

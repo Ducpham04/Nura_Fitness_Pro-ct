@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: fit_challenge
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}  # dev-only default
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
@@ -28,7 +28,7 @@ services:
     restart: always
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}  # dev-only default
     ports:
       - "8081:80"
     depends_on:
@@ -56,7 +56,8 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/fit_challenge
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-123456}  # dev-only default
+      JWT_SECRET: ${JWT_SECRET:-local-dev-only-jwt-secret-change-me-0123456789}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_SHOW_SQL: "true"
       SPRING_PROFILES_ACTIVE: dev

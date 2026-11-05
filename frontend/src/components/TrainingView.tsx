@@ -444,7 +444,7 @@ function TrainingView() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, i18n.language]);
 
   useEffect(() => {
     loadTrainingSchedule();
@@ -2192,7 +2192,7 @@ function TrainingView() {
                         <div className="relative">
                           <div className="h-12 w-12 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
                             {ex.imageUrl ? (
-                              <img src={ex.imageUrl} alt="" className="h-full w-full object-cover" />
+                              <img src={ex.imageUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center">
                                 <Dumbbell className="h-5 w-5 text-slate-600" />

@@ -25,10 +25,8 @@ public class GoalController {
     @Operation(summary = "Get all fitness goals", description = "Retrieve list of available fitness goals for users")
     public ResponseEntity<NotificationResponse> getAllGoals() {
         List<goalsDTOpayload> goals = goalService.getGoals();
-        if (goals.isEmpty()) {
-            return ResponseEntity.badRequest()
-                    .body(new NotificationResponse(false, "No goals found"));
-        }
+        // An empty catalogue is a valid state (fresh DB), not a client error —
+        // the frontend falls back to its built-in goal list when this is empty.
         return ResponseEntity.ok(
                 new NotificationResponse(true, "Goals retrieved successfully", goals)
         );

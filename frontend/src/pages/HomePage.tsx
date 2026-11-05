@@ -357,7 +357,7 @@ export default function HomePage() {
       <motion.section variants={fadeScale}
         className="mx-auto w-full overflow-hidden bg-[#f7fbfa] p-0 text-[#111827] min-[460px]:rounded-[28px] min-[460px]:p-3 min-[460px]:shadow-[0_28px_90px_-46px_rgba(20,96,86,0.45)]">
         <div className="relative overflow-hidden bg-slate-900 text-white shadow-[0_22px_50px_-30px_rgba(15,23,42,0.6)] min-[460px]:rounded-[22px]">
-          <img src="/images/viway-report-training-daylight.png" alt="Người dùng Viway sau một tuần tập luyện" className="h-[360px] w-full object-cover object-[58%_center] min-[390px]:h-[376px]" />
+          <img src="/images/viway-report-training-daylight.webp" alt="Người dùng Viway sau một tuần tập luyện" width={1280} height={731} decoding="async" className="h-[360px] w-full object-cover object-[58%_center] min-[390px]:h-[376px]" />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/82 via-slate-950/36 to-transparent" />
           <div className="absolute left-4 top-5 max-w-[210px]">
             <p className="mb-2 text-xs font-bold text-teal-300">{greeting}, {userName}</p>
@@ -434,7 +434,7 @@ export default function HomePage() {
                 <Dumbbell className="h-4 w-4" /> Tạo lịch tập
               </button>
               <button onClick={() => navigate('/dashboard/diet')}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-600">
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-700 px-3 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-800">
                 <Apple className="h-4 w-4" /> Tạo lịch ăn
               </button>
             </div>
@@ -704,7 +704,7 @@ export default function HomePage() {
               </div>
             </div>
             <Link to="/dashboard/logbook" className="relative block overflow-hidden rounded-2xl">
-              <img src="/images/viway-hero-training-bright.png" alt="Ảnh tiến độ tập luyện" className="h-[86px] w-[86px] object-cover" />
+              <img src="/images/viway-hero-training-bright-thumb.webp" alt="Ảnh tiến độ tập luyện" width={86} height={86} loading="lazy" decoding="async" className="h-[86px] w-[86px] object-cover" />
               <span className="absolute inset-y-0 right-2 my-auto grid h-8 w-8 place-items-center rounded-full bg-white text-xl text-slate-900 shadow-md">›</span>
             </Link>
           </div>
@@ -757,7 +757,7 @@ export default function HomePage() {
 
             {/* Macro chi tiết */}
             <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
-              <span className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2 py-1 text-rose-600"><Beef className="h-3 w-3" /> Đạm {bodyMetrics.protG}g</span>
+              <span className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2 py-1 text-rose-600 dark:text-rose-300"><Beef className="h-3 w-3" /> Đạm {bodyMetrics.protG}g</span>
               <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-amber-600"><Wheat className="h-3 w-3" /> Tinh bột {bodyMetrics.carbG}g</span>
               <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-1 text-blue-600"><Droplets className="h-3 w-3" /> Béo {bodyMetrics.fatG}g</span>
               <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-slate-600"><Scale className="h-3 w-3" /> Mỡ ~{bodyMetrics.bodyFat}%</span>

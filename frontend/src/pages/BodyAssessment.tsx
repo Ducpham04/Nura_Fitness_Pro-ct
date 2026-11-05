@@ -160,7 +160,7 @@ function BodyCompBar({ weight, fatPct }: { weight: number; fatPct: number }) {
 export default function BodyAssessment() {
   const navigate = useNavigate();
   const location = useLocation();
-  const state = (location.state || {}) as AssessmentState;
+  const state = useMemo(() => (location.state || {}) as AssessmentState, [location.state]);
   const hasData = !!(state.weight && state.height && state.age && state.gender);
 
   useEffect(() => {
