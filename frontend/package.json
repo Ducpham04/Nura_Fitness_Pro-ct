@@ -13,7 +13,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
-    "screenshot": "mkdir -p screenshots && playwright test e2e/screenshot-all.spec.ts"
+    "screenshot": "mkdir -p screenshots && SCREENSHOTS=1 playwright test e2e/screenshot-all.spec.ts --project=desktop"
   },
   "dependencies": {
     "@number-flow/react": "^0.6.1",

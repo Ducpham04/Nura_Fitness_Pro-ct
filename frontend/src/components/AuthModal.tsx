@@ -83,10 +83,10 @@ function LoginForm({ onSuccess, onSwitchTab }: { onSuccess: () => void; onSwitch
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div>
-          <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.email')}</label>
+          <label htmlFor="login-email" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.email')}</label>
           <div className="relative">
             <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+            <input id="login-email" type="email" value={email} onChange={e => setEmail(e.target.value)}
               placeholder="your@email.com" required autoComplete="email"
               className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-10 py-3 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/[0.09] transition-all"
               disabled={loading} />
@@ -94,15 +94,16 @@ function LoginForm({ onSuccess, onSwitchTab }: { onSuccess: () => void; onSwitch
         </div>
 
         <div>
-          <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.password')}</label>
+          <label htmlFor="login-password" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.password')}</label>
           <div className="relative">
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
-            <input type={showPassword ? 'text' : 'password'} value={password}
+            <input id="login-password" type={showPassword ? 'text' : 'password'} value={password}
               onChange={e => setPassword(e.target.value)} placeholder="••••••••" required
               autoComplete="current-password"
               className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-10 py-3 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/[0.09] transition-all pr-10"
               disabled={loading} />
             <button type="button" onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors">
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -212,10 +213,10 @@ function RegisterForm({ onSuccess, onSwitchTab }: { onSuccess: () => void; onSwi
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.name')}</label>
+          <label htmlFor="register-name" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.name')}</label>
           <div className="relative">
             <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
-            <input type="text" value={name} onChange={e => setName(e.target.value)}
+            <input id="register-name" type="text" value={name} onChange={e => setName(e.target.value)}
               placeholder={t('auth.namePlaceholder')} autoComplete="name"
               className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-10 py-3 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/[0.09] transition-all"
               disabled={loading} />
@@ -223,10 +224,10 @@ function RegisterForm({ onSuccess, onSwitchTab }: { onSuccess: () => void; onSwi
         </div>
 
         <div>
-          <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.email')}</label>
+          <label htmlFor="register-email" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.email')}</label>
           <div className="relative">
             <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+            <input id="register-email" type="email" value={email} onChange={e => setEmail(e.target.value)}
               placeholder="your@email.com" required autoComplete="email"
               className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-10 py-3 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/[0.09] transition-all"
               disabled={loading} />
@@ -234,15 +235,16 @@ function RegisterForm({ onSuccess, onSwitchTab }: { onSuccess: () => void; onSwi
         </div>
 
         <div>
-          <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.password')}</label>
+          <label htmlFor="register-password" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.password')}</label>
           <div className="relative">
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
-            <input type={showPassword ? 'text' : 'password'} value={password}
+            <input id="register-password" type={showPassword ? 'text' : 'password'} value={password}
               onChange={e => setPassword(e.target.value)} placeholder="••••••••" required minLength={8}
               autoComplete="new-password"
               className="w-full bg-white/[0.06] border border-white/10 rounded-2xl px-10 py-3 text-white placeholder-neutral-500 focus:outline-none focus:border-lime/40 focus:bg-white/[0.09] transition-all pr-10"
               disabled={loading} />
             <button type="button" onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors">
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -251,10 +253,10 @@ function RegisterForm({ onSuccess, onSwitchTab }: { onSuccess: () => void; onSwi
         </div>
 
         <div>
-          <label className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.confirmPassword')}</label>
+          <label htmlFor="register-confirm" className="text-neutral-400 text-xs font-medium uppercase tracking-wider mb-2 block">{t('auth.confirmPassword')}</label>
           <div className="relative">
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
-            <input type={showConfirm ? 'text' : 'password'} value={confirmPassword}
+            <input id="register-confirm" type={showConfirm ? 'text' : 'password'} value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" required minLength={8}
               autoComplete="new-password"
               className={`w-full bg-white/[0.06] border rounded-2xl px-10 py-3 text-white placeholder-neutral-500 focus:outline-none focus:bg-white/[0.09] transition-all pr-10 ${
@@ -262,6 +264,7 @@ function RegisterForm({ onSuccess, onSwitchTab }: { onSuccess: () => void; onSwi
               }`}
               disabled={loading} />
             <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+              aria-label={showConfirm ? t('auth.hidePassword') : t('auth.showPassword')}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors">
               {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -346,7 +349,12 @@ export default function AuthModal({ defaultTab = 'login', onClose }: AuthModalPr
       className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-6"
       style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
     >
-      <div className="relative w-full max-w-md animate-fade-in">
+      <div
+        className="relative w-full max-w-md animate-fade-in"
+        role="dialog"
+        aria-modal="true"
+        aria-label={tab === 'login' ? 'Đăng nhập' : 'Đăng ký'}
+      >
         {/* Value prop pills (login tab only) */}
         {tab === 'login' && (
           <div className="flex items-center justify-center gap-2 mb-4 flex-wrap">
@@ -375,7 +383,9 @@ export default function AuthModal({ defaultTab = 'login', onClose }: AuthModalPr
               {(['login', 'register'] as Tab[]).map(t => (
                 <button
                   key={t}
+                  type="button"
                   onClick={() => setTab(t)}
+                  aria-pressed={tab === t}
                   className={`px-3 py-1.5 rounded-[10px] text-xs font-bold uppercase tracking-wider transition-all ${
                     tab === t ? 'bg-lime text-black' : 'text-neutral-400 hover:text-white'
                   }`}
