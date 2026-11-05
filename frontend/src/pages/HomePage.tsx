@@ -357,7 +357,7 @@ export default function HomePage() {
       <motion.section variants={fadeScale}
         className="mx-auto w-full overflow-hidden bg-[#f7fbfa] p-0 text-[#111827] min-[460px]:rounded-[28px] min-[460px]:p-3 min-[460px]:shadow-[0_28px_90px_-46px_rgba(20,96,86,0.45)]">
         <div className="relative overflow-hidden bg-slate-900 text-white shadow-[0_22px_50px_-30px_rgba(15,23,42,0.6)] min-[460px]:rounded-[22px]">
-          <img src="/images/viway-report-training-daylight.png" alt="Người dùng Viway sau một tuần tập luyện" className="h-[360px] w-full object-cover object-[58%_center] min-[390px]:h-[376px]" />
+          <img src="/images/viway-report-training-daylight.webp" alt="Người dùng Viway sau một tuần tập luyện" width={1280} height={731} decoding="async" className="h-[360px] w-full object-cover object-[58%_center] min-[390px]:h-[376px]" />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/82 via-slate-950/36 to-transparent" />
           <div className="absolute left-4 top-5 max-w-[210px]">
             <p className="mb-2 text-xs font-bold text-teal-300">{greeting}, {userName}</p>
@@ -704,7 +704,7 @@ export default function HomePage() {
               </div>
             </div>
             <Link to="/dashboard/logbook" className="relative block overflow-hidden rounded-2xl">
-              <img src="/images/viway-hero-training-bright.png" alt="Ảnh tiến độ tập luyện" className="h-[86px] w-[86px] object-cover" />
+              <img src="/images/viway-hero-training-bright-thumb.webp" alt="Ảnh tiến độ tập luyện" width={86} height={86} loading="lazy" decoding="async" className="h-[86px] w-[86px] object-cover" />
               <span className="absolute inset-y-0 right-2 my-auto grid h-8 w-8 place-items-center rounded-full bg-white text-xl text-slate-900 shadow-md">›</span>
             </Link>
           </div>

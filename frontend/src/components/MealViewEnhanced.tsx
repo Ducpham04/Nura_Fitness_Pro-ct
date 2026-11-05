@@ -692,7 +692,9 @@ function MealViewEnhanced({ budget = 80000 }: Props) {
       <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-[#121216] shadow-sm">
         <img
           src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1400&q=80"
-          alt="" aria-hidden="true"
+          srcSet="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=75 800w, https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1400&q=80 1400w"
+          sizes="(max-width: 768px) 100vw, 768px"
+          alt="" aria-hidden="true" decoding="async"
           className="absolute inset-0 w-full h-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-tr from-black/72 via-black/40 to-black/08" />
