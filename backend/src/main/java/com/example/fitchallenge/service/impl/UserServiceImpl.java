@@ -88,7 +88,7 @@ public class UserServiceImpl implements UserService {
         // 4. Tạo user mới
         User user = new User();
         String fullName = registerRequestAdmin.getFullName().trim();
-        user.setUserName(fullName);
+        user.setUserName(uniqueUserName(fullName, null));
         user.setFullName(fullName);
         user.setEmail(registerRequestAdmin.getEmail().trim().toLowerCase());
         user.setPassword(passwordEncoder.encode(registerRequestAdmin.getPassword()));
@@ -147,7 +147,7 @@ public class UserServiceImpl implements UserService {
         String fullName = registerRequestCustomer.getFullName() != null ? registerRequestCustomer.getFullName().trim() : "New User";
 
         newUser.setFullName(fullName);
-        newUser.setUserName(fullName);
+        newUser.setUserName(uniqueUserName(fullName, null));
         newUser.setEmail(email);
         newUser.setPassword(passwordEncoder.encode(registerRequestCustomer.getPassword()));
         newUser.setRole(userRole);
@@ -284,6 +284,28 @@ public class UserServiceImpl implements UserService {
         return "R" + Long.toString(System.currentTimeMillis(), 36).toUpperCase().substring(0, 7);
     }
 
+    /**
+     * Cột users.username là UNIQUE nhưng được lấy từ họ tên — hai người cùng tên
+     * (rất phổ biến, vd "Nguyễn Văn An") trước đây làm đăng ký lỗi 500.
+     * Giữ nguyên họ tên khi chưa ai dùng; nếu trùng thì thêm hậu tố ngắn.
+     */
+    private String uniqueUserName(String desired, Long excludeUserId) {
+        String base = (desired == null || desired.isBlank()) ? "user" : desired.trim();
+        if (base.length() > 90) base = base.substring(0, 90);
+        String candidate = base;
+        java.util.concurrent.ThreadLocalRandom rnd = java.util.concurrent.ThreadLocalRandom.current();
+        for (int i = 0; i < 20 && isUserNameTaken(candidate, excludeUserId); i++) {
+            candidate = base + " #" + (1000 + rnd.nextInt(9000));
+        }
+        return candidate;
+    }
+
+    private boolean isUserNameTaken(String userName, Long excludeUserId) {
+        return excludeUserId == null
+                ? userRepository.existsByUserName(userName)
+                : userRepository.existsByUserNameAndIdNot(userName, excludeUserId);
+    }
+
     /** Làm sạch giá trị attribution từ FE: bỏ ký tự lạ, lowercase, cắt độ dài. */
     private String sanitizeAttribution(String value, int maxLen) {
         if (value == null) return null;
@@ -292,6 +314,36 @@ public class UserServiceImpl implements UserService {
         return cleaned.length() > maxLen ? cleaned.substring(0, maxLen) : cleaned;
     }
 
+
+    @Override
+    public JwtResponse refreshToken(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()
+                || !jwtTokenProvider.validateToken(refreshToken)
+                || !jwtTokenProvider.isRefreshToken(refreshToken)) {
+            throw new org.springframework.security.authentication.BadCredentialsException("Invalid refresh token");
+        }
+
+        String email = jwtTokenProvider.getEmailFromToken(refreshToken);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new org.springframework.security.authentication.BadCredentialsException("Invalid refresh token"));
+
+        if (user.getStatus() != null && "inactive".equalsIgnoreCase(user.getStatus().trim())) {
+            throw new org.springframework.security.authentication.DisabledException(
+                    "Tài khoản đã bị vô hiệu hoá. Vui lòng liên hệ hỗ trợ.");
+        }
+
+        // Role đọc lại từ DB (không tin role cũ) — đổi quyền có hiệu lực ngay lần refresh kế tiếp
+        String token = jwtTokenProvider.generateToken(user.getEmail(), user.getRole().getRoleName());
+        String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
+
+        JwtResponse.JwtUserInfoDTO userInfo = new JwtResponse.JwtUserInfoDTO(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName() != null ? user.getFullName() : user.getUserName(),
+                user.getRole().getRoleName()
+        );
+        return new JwtResponse(token, newRefreshToken, userInfo);
+    }
 
     @Override
     public JwtResponse login(LoginRequest loginRequest) {
@@ -861,7 +913,7 @@ public class UserServiceImpl implements UserService {
 
         // Create user
         User user = new User();
-        user.setUserName(request.getFullName());
+        user.setUserName(uniqueUserName(request.getFullName(), null));
         user.setFullName(request.getFullName());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -883,7 +935,7 @@ public class UserServiceImpl implements UserService {
 
         // Update fields
         if (request.getFullName() != null) {
-            user.setUserName(request.getFullName());
+            user.setUserName(uniqueUserName(request.getFullName(), user.getId()));
             user.setFullName(request.getFullName());
         }
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {

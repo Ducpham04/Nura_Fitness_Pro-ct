@@ -86,6 +86,16 @@ public class JwtTokenProvider {
                 .compact();
     }
     
+    // ✅ Refresh token mang claim type=refresh — không được dùng như access token
+    public boolean isRefreshToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(Keys.hmacShaKeyFor(jwtSecret.getBytes()))
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return "refresh".equals(claims.get("type", String.class));
+    }
+
     // ✅ Kiểm tra token hợp lệ
     public boolean validateToken(String token) {
         try {

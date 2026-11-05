@@ -98,13 +98,18 @@ public class SecurityConfig {
                                 .requestMatchers(
                                     "/api/auth/login", "/api/auth/register",
                                     "/api/auth/forgot-password", "/api/auth/reset-password",
+                                    "/api/auth/refresh",
                                     "/api/auth/google"
                                 ).permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/goals", "/api/goals/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/foods", "/api/foods/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/challenges/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/training-plans/**").permitAll()
-                                .requestMatchers("/api/files/**", "/uploads/**").permitAll()
+                                // Đọc file/URL media: public. Upload: chỉ tài khoản nội dung
+                                // (trước đây ai cũng upload được → lạm dụng storage).
+                                .requestMatchers(HttpMethod.GET, "/api/files/**").permitAll()
+                                .requestMatchers("/uploads/**").permitAll()
+                                .requestMatchers("/api/files/**").hasAnyAuthority("ADMIN", "EDITOR")
                                 // AI Packages: list public, VNPay callbacks public
                                 .requestMatchers(HttpMethod.GET, "/api/ai-packages", "/api/ai-packages/**").permitAll()
                                 .requestMatchers("/api/ai-packages/payment/**").permitAll()

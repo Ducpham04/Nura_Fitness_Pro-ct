@@ -160,6 +160,22 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/auth/refresh")
+    @Operation(summary = "Exchange a refresh token for a new access + refresh token pair")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "New tokens issued"),
+        @ApiResponse(responseCode = "401", description = "Refresh token invalid, expired or account disabled")
+    })
+    public ResponseEntity<?> refresh(@RequestBody(required = false) java.util.Map<String, String> body) {
+        String refreshToken = body != null ? body.get("refreshToken") : null;
+        try {
+            return ResponseEntity.ok(userService.refreshToken(refreshToken));
+        } catch (org.springframework.security.core.AuthenticationException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new NotificationResponse(false, "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."));
+        }
+    }
+
     @PostMapping("/auth/logout")
     @Operation(summary = "User logout")
     public ResponseEntity<NotificationResponse> logout(HttpServletRequest request) {

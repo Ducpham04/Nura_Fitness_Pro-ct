@@ -35,8 +35,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // Bỏ qua upload file static
-        if (path.startsWith("/uploads/") || path.startsWith("/api/files/")) {
+        // Bỏ qua file static. /api/files/** vẫn đi qua filter vì upload cần xác thực.
+        if (path.startsWith("/uploads/")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -45,7 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (token != null) {
             try {
-                if (jwtTokenProvider.validateToken(token)) {
+                if (jwtTokenProvider.validateToken(token) && !jwtTokenProvider.isRefreshToken(token)) {
                     String email = jwtTokenProvider.getEmailFromToken(token);
                     String role = jwtTokenProvider.getRoleFromToken(token);
 
