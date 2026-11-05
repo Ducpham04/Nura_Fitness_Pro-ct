@@ -197,7 +197,7 @@ export default function Onboarding() {
 
       const ref = localStorage.getItem('pendingReferral');
       if (ref?.trim()) {
-        try { await userService.applyReferralCode(ref.trim().toUpperCase()); } catch {}
+        try { await userService.applyReferralCode(ref.trim().toUpperCase()); } catch { /* mã giới thiệu không hợp lệ → bỏ qua */ }
         localStorage.removeItem('pendingReferral');
       }
 

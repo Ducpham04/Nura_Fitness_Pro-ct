@@ -1026,6 +1026,8 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (user?.role === 'ADMIN' || user?.role === 'EDITOR') void loadTab();
+    // loadTab đọc activeTab hiện tại; không đưa vào deps để tránh refetch mỗi lần render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, user?.role]);
 
   // Refetch báo cáo tăng trưởng khi đổi khoảng ngày (30/90)
@@ -1035,6 +1037,8 @@ export default function AdminPanel() {
     apiClient.get(`/admin/dashboard/growth-stats?days=${growthDays}`)
       .then(res => { if (res.success) setGrowth(res.data as GrowthStatsData); })
       .finally(() => setGrowthLoading(false));
+    // Lần tải đầu do loadTab xử lý; effect này chỉ refetch khi đổi khoảng ngày.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [growthDays]);
 
   // Refetch funnel activation khi đổi cohort (toàn bộ / 30 / 90 ngày)
@@ -1044,6 +1048,8 @@ export default function AdminPanel() {
     apiClient.get(`/admin/dashboard/funnel-stats?days=${funnelDays}`)
       .then(res => { if (res.success) setFunnel(res.data as FunnelStatsData); })
       .finally(() => setFunnelLoading(false));
+    // Lần tải đầu do loadTab xử lý; effect này chỉ refetch khi đổi cohort.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [funnelDays]);
 
   // Tải danh sách thực phẩm cho dropdown chọn nguyên liệu (chỉ khi vào tab Món ăn)
@@ -1065,7 +1071,7 @@ export default function AdminPanel() {
   function toggleGroup(id: string) {
     setOpenGroups(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   }
@@ -1524,7 +1530,7 @@ export default function AdminPanel() {
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               {/* DAU / WAU / MAU + tổng user */}
-              {!loading && dashboard.userStats && (() => {
+              {!loading && !!dashboard.userStats && (() => {
                 const us = dashboard.userStats as UserStatsData;
                 const cards = [
                   { label: 'Đăng nhập hôm nay',  value: us.loggedInToday  ?? 0, sub: 'DAU', color: 'text-emerald-400', bg: 'border-emerald-400/20' },
@@ -1637,7 +1643,7 @@ export default function AdminPanel() {
               })()}
 
               {/* Activity feed: biểu đồ 7 ngày + danh sách đăng ký / đăng nhập gần đây */}
-              {!loading && dashboard.userStats && (() => {
+              {!loading && !!dashboard.userStats && (() => {
                 const us = dashboard.userStats as UserStatsData;
                 const daily7 = us.dailyLoginsLast7Days ?? [];
                 const maxVal = Math.max(...daily7.map(d => d.count), 1);

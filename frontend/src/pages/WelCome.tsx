@@ -49,7 +49,7 @@ export default function Welcome() {
 
       {/* Lớp phủ chuyển cảnh tối → sáng */}
       <div
-        className={`fixed inset-0 z-50 bg-[#f4f6f2] pointer-events-none transition-opacity duration-[450ms] ease-out ${leaving ? 'opacity-100' : 'opacity-0'}`}
+        className={`fixed inset-0 z-50 bg-[#f4f6f2] pointer-events-none transition-opacity [transition-duration:450ms] ease-out ${leaving ? 'opacity-100' : 'opacity-0'}`}
       />
     </div>
   );

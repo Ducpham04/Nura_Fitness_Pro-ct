@@ -444,7 +444,7 @@ function TrainingView() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, i18n.language]);
 
   useEffect(() => {
     loadTrainingSchedule();

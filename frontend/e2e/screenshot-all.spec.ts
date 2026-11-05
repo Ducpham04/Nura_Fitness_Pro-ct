@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import path from 'path';
 
 const OUT_DIR = path.join(process.cwd(), 'screenshots');

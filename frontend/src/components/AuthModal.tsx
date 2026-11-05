@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Mail, Lock, User, Gift, Eye, EyeOff, Check,
-  ArrowRight, AlertTriangle, AlertCircle, X, Zap, Activity, Shield,
+  ArrowRight, AlertCircle, X, Zap, Activity, Shield,
 } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuthContext } from '../context/AuthContext';

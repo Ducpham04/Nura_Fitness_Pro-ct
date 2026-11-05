@@ -413,7 +413,7 @@ export default function AIFoodScanner({ onAnalysisComplete, onQuotaExceeded }: P
                     }));
                     onAnalysisComplete?.(result);
                   }
-                } catch (err) {
+                } catch {
                   setError('Ghi bữa ăn thất bại');
                 } finally {
                   setIsAnalyzing(false);
