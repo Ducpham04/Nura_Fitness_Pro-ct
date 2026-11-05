@@ -4,7 +4,7 @@ import {
   Activity, AlertCircle, ArrowLeft, ArrowUpDown, Banknote, BarChart3,
   BookOpen, Bot, CheckCircle, ChevronDown, ChevronLeft, ChevronRight,
   ChevronsLeft, ChevronsRight, ClipboardList, Database, Dumbbell, Edit3,
-  ExternalLink, Gift, Layers, ListChecks, Loader2, LogOut, Play, Plus,
+  ExternalLink, Gift, Layers, ListChecks, Loader2, LogOut, Menu, Play, Plus,
   RefreshCcw, Save, Search, Settings, Shield, SortAsc, SortDesc, Target,
   Trash2, TrendingUp, Trophy, Upload, Utensils, Users, WalletCards, X, Zap,
 } from 'lucide-react';
@@ -879,6 +879,8 @@ export default function AdminPanel() {
   const [formFiles, setFormFiles]     = useState<Record<string, File>>({});
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [openGroups, setOpenGroups]   = useState<Set<string>>(new Set(['analytics', 'usersGroup']));
+  // Sidebar dạng drawer cho màn < lg (desktop luôn hiển thị sidebar cố định)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [exerciseAudit, setExerciseAudit] = useState<ExerciseMetadataAuditReport | null>(null);
   const [exerciseAuditLoading, setExerciseAuditLoading] = useState(false);
   const [aiStats, setAiStats] = useState<AiStatsData | null>(null);
@@ -1018,6 +1020,14 @@ export default function AdminPanel() {
 
   const totalPages = Math.ceil(filteredRows.length / PAGE_SIZE);
 
+  // Đóng drawer menu bằng phím Esc
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobileNavOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mobileNavOpen]);
+
   // auto-open group containing active tab
   useEffect(() => {
     const g = NAV.find(n => n.children?.some(c => c.id === activeTab));
@@ -1078,6 +1088,7 @@ export default function AdminPanel() {
 
   function changeTab(tab: AdminTab) {
     setActiveTab(tab);
+    setMobileNavOpen(false);
     setEditing(null);
     setSearch('');
     setError(null);
@@ -1424,7 +1435,18 @@ export default function AdminPanel() {
     <div className="flex min-h-screen bg-[#0a0b0e] text-slate-100">
 
       {/* ── Sidebar ─────────────────────────────────────────────────────── */}
-      <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col border-r border-white/5 bg-[#0f1117] lg:flex">
+      {mobileNavOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/60 lg:hidden"
+          onClick={() => setMobileNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        id="admin-sidebar"
+        aria-label="Điều hướng quản trị"
+        className={`fixed left-0 top-0 z-40 h-screen w-64 flex-col border-r border-white/5 bg-[#0f1117] lg:z-auto lg:flex ${mobileNavOpen ? 'flex' : 'hidden'}`}
+      >
         {/* Logo */}
         <div className="flex items-center gap-3 border-b border-white/5 px-5 py-5">
           <Logo size={34} showWordmark={false} />
@@ -1479,12 +1501,22 @@ export default function AdminPanel() {
       </aside>
 
       {/* ── Main ────────────────────────────────────────────────────────── */}
-      <main className="flex min-h-screen flex-1 flex-col lg:ml-64">
+      <main className="flex min-h-screen min-w-0 flex-1 flex-col lg:ml-64">
 
         {/* Top bar */}
-        <div className="sticky top-0 z-20 border-b border-white/5 bg-[#0a0b0e]/80 backdrop-blur-md px-6 py-4 flex items-center justify-between gap-4">
+        <div className="sticky top-0 z-20 border-b border-white/5 bg-[#0a0b0e]/80 backdrop-blur-md px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white/5">
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(true)}
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 lg:hidden"
+              aria-label="Mở menu quản trị"
+              aria-controls="admin-sidebar"
+              aria-expanded={mobileNavOpen}
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+            <div className="hidden h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white/5 sm:flex">
               <ActiveIcon className="h-4 w-4 text-slate-400" />
             </div>
             <div className="min-w-0">
@@ -1505,6 +1537,7 @@ export default function AdminPanel() {
             )}
             <button
               onClick={() => void loadTab()}
+              aria-label="Làm mới dữ liệu"
               className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-sm text-slate-300 hover:bg-white/10 transition"
             >
               <RefreshCcw className="h-3.5 w-3.5" />
@@ -1514,13 +1547,13 @@ export default function AdminPanel() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-4 sm:p-6">
           {/* Error banner */}
           {error && (
             <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-300">
               <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-400" />
               <span>{error}</span>
-              <button onClick={() => setError(null)} className="ml-auto flex-shrink-0">
+              <button onClick={() => setError(null)} className="ml-auto flex-shrink-0" aria-label="Đóng thông báo lỗi">
                 <X className="h-4 w-4 text-red-400" />
               </button>
             </div>
