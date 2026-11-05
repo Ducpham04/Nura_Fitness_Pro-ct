@@ -3,14 +3,22 @@
 Populate image_url + video_url for all 98 exercises.
 Images: free-exercise-db (GitHub, no key needed)
 Videos: YouTube Data API v3 (skips exercises already populated)
+
+Usage:
+    export YOUTUBE_API_KEY=...   # console.cloud.google.com → YouTube Data API v3
+    export DB_URL=postgresql://user:pass@localhost:5432/fit_challenge
+    python scripts/run_media_populate.py
 """
-import re, time, unicodedata, json
+import os, re, sys, time, unicodedata, json
 import requests
 import psycopg2
 
 # ── Config ──────────────────────────────────────────────────────────
-YOUTUBE_KEY = "AIzaSyBs6b7KbN77xZLYmlVaGPf1599evOFkyes"
-DB_URL      = "postgresql://postgres:123456@localhost:5432/fit_challenge"
+# Secrets come from the environment — never hard-code keys in this file.
+YOUTUBE_KEY = os.getenv("YOUTUBE_API_KEY", "")
+DB_URL      = os.getenv("DB_URL", "")
+if not YOUTUBE_KEY or not DB_URL:
+    sys.exit("Missing YOUTUBE_API_KEY and/or DB_URL environment variables (see docstring).")
 
 IMAGE_BASE  = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/"
 FREE_DB_URL = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json"
