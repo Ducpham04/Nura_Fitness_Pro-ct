@@ -34,6 +34,9 @@ jobs:
         run: |
           npm ci
 
+      - name: Install Chromium for prerender
+        run: npx playwright install --with-deps chromium-headless-shell
+
       - name: Build
         env:
           # CI build should not rely on runtime hostname detection
@@ -53,6 +56,25 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: fit_challenge
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/fit_challenge
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ci-only-test-secret-not-used-anywhere-0123456789
     steps:
       - name: Checkout
         uses: actions/checkout@v4
