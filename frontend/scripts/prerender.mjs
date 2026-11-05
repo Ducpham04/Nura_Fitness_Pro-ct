@@ -84,7 +84,11 @@ async function main() {
   const { server, port } = await startServer();
   // --no-sandbox: bắt buộc khi chạy trong Docker build (user root);
   // chỉ render nội dung cục bộ của chính mình nên an toàn.
-  const browser = await chromium.launch({ args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+  // CHROMIUM_PATH (tuỳ chọn): dùng Chromium có sẵn thay vì bản Playwright tải về.
+  const browser = await chromium.launch({
+    args: ['--no-sandbox', '--disable-dev-shm-usage'],
+    executablePath: process.env.CHROMIUM_PATH || undefined,
+  });
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
 
   // Chặn request ra ngoài (analytics, fonts, Clarity, Sentry...) — vừa nhanh
