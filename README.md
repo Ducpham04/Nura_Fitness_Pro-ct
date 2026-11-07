@@ -11,8 +11,10 @@
   <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white"/>
 </p>
 
-<!-- TODO: thay bằng ảnh chụp dashboard / trang kế hoạch (không dùng màn đăng nhập) -->
-<p align="center"><img src="docs/screenshots/dashboard.png" width="85%" alt="Viway dashboard"/></p>
+<p align="center">
+  <img src="docs/screenshots/workout-flow-desktop.png" width="74%" alt="Viway workout flow — overview, weekly plan, session detail, live training with AI coach"/>
+  <img src="docs/screenshots/workout-flow-mobile.png" width="20%" alt="Viway on mobile"/>
+</p>
 
 ## Features
 
