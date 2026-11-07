@@ -71,3 +71,15 @@ temp/
 # Playwright MCP scratch
 .playwright-mcp/
 deploy/ec2/Caddyfile
+
+# AI tooling (local only)
+CLAUDE.md
+.claude/
+**/.claude/
+.agents/
+.windsurf/
+windsurfrules
+skills-lock.json
+.codex/
+.impeccable/
+response.json
