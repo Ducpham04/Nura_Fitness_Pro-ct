@@ -46,15 +46,29 @@ Only Nginx is exposed publicly; the backend, AI service and database talk over t
 | REST API | 250+ endpoints across 50+ controllers, documented with OpenAPI / Swagger |
 | Data model | 43 JPA entities, 37-table schema versioned with Flyway (schema + seed data) |
 | Security | Spring Security + JWT, role-based access (user / admin) |
-| Deployment | 4 services with Docker Compose, Nginx reverse proxy, GitHub Actions CI |
+| Deployment | 4 services with Docker Compose on AWS, Nginx reverse proxy, GitHub Actions CI |
 | Observability | Spring Boot Actuator health checks, Sentry error tracking |
+
+## Deployment on AWS
+
+Viway runs on AWS in `ap-southeast-1` (Singapore). It started on ECS Fargate and was later consolidated onto one EC2 instance to cut cost.
+
+| Area | What is in place |
+| --- | --- |
+| First setup | 4 ECS Fargate services behind an ALB, images in ECR, RDS PostgreSQL, uploads in S3, secrets in Secrets Manager, CloudWatch log group per service |
+| Cost optimization | Moved to one ARM (t4g) EC2 instance running Docker Compose: monthly bill went from about $89 to about $30 |
+| Spend management | AWS Budgets email alert at $40/month; EventBridge Scheduler stops the instance from 0:00 to 6:00 (Vietnam time) |
+| Backup | Daily `pg_dump` to a private, versioned S3 bucket via cron and the instance IAM role (no stored access keys) |
+| Security | No public SSH (access through SSM Session Manager), Security Group open on 80/443 only, encrypted EBS, IMDSv2, least-privilege IAM roles |
+
+Details: [AWS architecture](docs/aws-deployment-architecture.md) · [EC2 migration](deploy/ec2/README.md) · [ECS setup](deploy/ecs/README.md) · [cost scripts](infra/README.md) · [S3 backup script](scripts/backup-db-to-s3.sh)
 
 ## Tech stack
 
 **Backend:** Java 17 · Spring Boot 3.5 · Spring Security · Spring Data JPA · Flyway · JWT (jjwt) · springdoc-openapi · AWS S3 SDK · Sentry
 **AI services:** Python · FastAPI · LLM API (Groq) · MediaPipe
 **Frontend:** React 18 · TypeScript · Vite · Tailwind CSS
-**Infra:** PostgreSQL 16 · Docker Compose · Nginx · GitHub Actions
+**Infra:** PostgreSQL · Docker Compose · Nginx · GitHub Actions · AWS (EC2, ECS Fargate, ECR, RDS, S3, IAM, CloudWatch, Budgets)
 
 ## Project structure
 
