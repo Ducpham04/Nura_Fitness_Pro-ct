@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://app.viway.id.vn/"><img src="https://img.shields.io/badge/Live%20demo-app.viway.id.vn-D4FF00?style=for-the-badge&labelColor=111111"/></a>
+  <a href="https://app.viway.id.vn/"><img src="https://img.shields.io/badge/UI%20demo-app.viway.id.vn-D4FF00?style=for-the-badge&labelColor=111111"/></a>
   <img src="https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white"/>
   <img src="https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white"/>
   <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white"/>
@@ -46,12 +46,12 @@ Only Nginx is exposed publicly; the backend, AI service and database talk over t
 | REST API | 250+ endpoints across 50+ controllers, documented with OpenAPI / Swagger |
 | Data model | 43 JPA entities, 37-table schema versioned with Flyway (schema + seed data) |
 | Security | Spring Security + JWT, role-based access (user / admin) |
-| Deployment | 4 services with Docker Compose on AWS, Nginx reverse proxy, GitHub Actions CI |
+| Deployment | 4 services with Docker Compose (previously on AWS), Nginx reverse proxy, GitHub Actions CI |
 | Observability | Spring Boot Actuator health checks, Sentry error tracking |
 
 ## Deployment on AWS
 
-Viway runs on AWS in `ap-southeast-1` (Singapore). It started on ECS Fargate and was later consolidated onto one EC2 instance to cut cost.
+Viway ran on AWS in `ap-southeast-1` (Singapore) as a personal project. It started on ECS Fargate and was later consolidated onto one EC2 instance to cut cost. The AWS environment is now shut down; app.viway.id.vn shows the interface only.
 
 | Area | What is in place |
 | --- | --- |
